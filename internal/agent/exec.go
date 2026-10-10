@@ -554,6 +554,16 @@ func (e *Executor) RunTask(ctx context.Context, t model.AgentTask) {
 		if err := e.Recon(ctx); err != nil {
 			e.log.Warn("inventory after installing super", "err", err)
 		}
+	case "onboarding":
+		var ob model.AgentOnboarding
+		if b, err := jsonMarshal(t.Payload["onboarding"]); err == nil {
+			jsonUnmarshal(b, &ob)
+		}
+		if ob.RunID == "" {
+			res.Status, res.Error = "failed", "task payload missing onboarding"
+			break
+		}
+		apply(e.RunOnboarding(ctx, ob))
 	case "collect_diagnostics":
 		apply(e.CollectDiagnostics(ctx, str(t.Payload["bundle_id"])))
 	case "notify":

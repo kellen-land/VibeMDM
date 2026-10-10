@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/vibemdm/vibemdm/internal/model"
+	"github.com/vibemdm/vibemdm/internal/onboarding"
 	"github.com/vibemdm/vibemdm/internal/store"
 	"github.com/vibemdm/vibemdm/internal/webhook"
 )
@@ -75,6 +76,8 @@ func (h *Handler) registerParity(mux *http.ServeMux) {
 	})
 	mux.Handle("POST /agent/v1/app-installs/{id}/result", a(h.appInstallResult))
 	mux.Handle("POST /agent/v1/compliance-scans/{id}", a(h.complianceResult))
+	mux.Handle("POST /agent/v1/onboarding/{id}/user-entry", a(h.onboardingUserEntry))
+	mux.Handle("POST /agent/v1/onboarding/{id}", a(h.onboardingResult))
 	mux.Handle("POST /agent/v1/restricted-events", a(h.restrictedEvent))
 	mux.Handle("POST /agent/v1/logs", a(h.ingestLogs))
 	mux.Handle("PUT /agent/v1/diagnostics/{id}", a(h.uploadDiagnostics))
@@ -122,6 +125,51 @@ func (h *Handler) complianceResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.log.Info("compliance scan stored", "computer", comp.Name, "passed", scan.Passed, "failed", scan.Failed, "remediated", scan.Remediated, "errors", scan.Errors)
+	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+// onboardingUserEntry stores what the user typed in the welcome dialog and
+// applies it to the computer record (name, asset tag, building, ...).
+func (h *Handler) onboardingUserEntry(w http.ResponseWriter, r *http.Request) {
+	comp := computerFrom(r.Context())
+	var req struct {
+		UserEntry map[string]string `json:"user_entry"`
+	}
+	if err := decode(r, &req); err != nil {
+		writeErr(w, 400, "invalid JSON")
+		return
+	}
+	clean := map[string]string{}
+	for k, v := range req.UserEntry {
+		if _, ok := onboarding.FieldKeys[k]; ok && len(v) <= 256 {
+			clean[k] = v
+		}
+	}
+	if err := h.st.StartOnboardingRun(r.Context(), r.PathValue("id"), comp.ID, clean); err != nil {
+		writeErr(w, 404, "onboarding run not found")
+		return
+	}
+	if h.onboarding != nil {
+		if err := h.onboarding.ApplyUserEntry(r.Context(), comp, clean); err != nil {
+			h.log.Warn("applying onboarding user entry", "computer", comp.Name, "err", err)
+		}
+	}
+	h.st.Audit(r.Context(), "agent", "onboarding.user_entry", "computer", comp.ID, map[string]any{"fields": len(clean)})
+	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+func (h *Handler) onboardingResult(w http.ResponseWriter, r *http.Request) {
+	comp := computerFrom(r.Context())
+	var sub model.AgentOnboardingSubmit
+	if err := decode(r, &sub); err != nil {
+		writeErr(w, 400, "invalid JSON")
+		return
+	}
+	if err := h.st.CompleteOnboardingRun(r.Context(), r.PathValue("id"), comp.ID, sub); err != nil {
+		writeErr(w, 404, "onboarding run not found or already finished")
+		return
+	}
+	h.log.Info("onboarding finished", "computer", comp.Name, "status", sub.Status, "steps", len(sub.Steps))
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 

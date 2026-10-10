@@ -39,6 +39,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/health"
 	"github.com/vibemdm/vibemdm/internal/logsink"
 	"github.com/vibemdm/vibemdm/internal/mdmsvc"
+	"github.com/vibemdm/vibemdm/internal/onboarding"
 	"github.com/vibemdm/vibemdm/internal/policy"
 	"github.com/vibemdm/vibemdm/internal/scepsrv"
 	"github.com/vibemdm/vibemdm/internal/secrets"
@@ -59,6 +60,7 @@ type Server struct {
 	hooks      *webhook.Dispatcher
 	health     *health.Engine
 	superSvc   *superwf.Service
+	onboarding *onboarding.Service
 	compliance *compliance.Service
 	escrow     *escrow.Identity
 	cmdr       *mdmsvc.Commander
@@ -204,6 +206,8 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	s.compliance = compliance.NewService(st, notifier.Notify, logger.With("component", "compliance"))
 	agentHandler.WithCompliance(s.compliance)
 	s.superSvc = superwf.New(st, notifier.Notify, logger.With("component", "super"))
+	s.onboarding = onboarding.New(st, engine, notifier.Notify, logger.With("component", "onboarding"))
+	agentHandler.WithOnboarding(s.onboarding)
 	agentHandler.Register(s.mux)
 
 	// Health: misconfiguration detection, remediation and self-healing.
@@ -222,7 +226,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	authn := auth.New(st, secure, cfg.SessionTTL)
 	adminAPI := api.New(api.Deps{
 		Cfg: cfg, Store: st, Auth: authn, Commander: commander, Engine: engine, Notifier: notifier, SCEP: scepServer,
-		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Health: s.health, Compliance: s.compliance, Super: s.superSvc, Log: logger.With("component", "api"),
+		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Health: s.health, Compliance: s.compliance, Super: s.superSvc, Onboarding: s.onboarding, Log: logger.With("component", "api"),
 	})
 	adminAPI.Register(s.mux)
 

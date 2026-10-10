@@ -18,6 +18,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/escrow"
 	"github.com/vibemdm/vibemdm/internal/health"
 	"github.com/vibemdm/vibemdm/internal/mdmsvc"
+	"github.com/vibemdm/vibemdm/internal/onboarding"
 	"github.com/vibemdm/vibemdm/internal/policy"
 	"github.com/vibemdm/vibemdm/internal/scepsrv"
 	"github.com/vibemdm/vibemdm/internal/shell"
@@ -41,14 +42,15 @@ type Handler struct {
 		storage.PushCertStore
 		storage.PushCertStorer
 	}
-	profile    func(ctx context.Context) ([]byte, error)
-	shellHub   *shell.Hub
-	hooks      *webhook.Dispatcher
-	escrow     *escrow.Identity
-	health     *health.Engine
-	compliance *compliance.Service
-	superSvc   *superwf.Service
-	log        *slog.Logger
+	profile       func(ctx context.Context) ([]byte, error)
+	shellHub      *shell.Hub
+	hooks         *webhook.Dispatcher
+	escrow        *escrow.Identity
+	health        *health.Engine
+	compliance    *compliance.Service
+	superSvc      *superwf.Service
+	onboardingSvc *onboarding.Service
+	log           *slog.Logger
 }
 
 // Deps are the handler dependencies.
@@ -71,12 +73,13 @@ type Deps struct {
 	Health     *health.Engine
 	Compliance *compliance.Service
 	Super      *superwf.Service
+	Onboarding *onboarding.Service
 	Log        *slog.Logger
 }
 
 // New creates the handler.
 func New(d Deps) *Handler {
-	return &Handler{cfg: d.Cfg, st: d.Store, auth: d.Auth, cmdr: d.Commander, engine: d.Engine, notifier: d.Notifier, scep: d.SCEP, pushStore: d.PushStore, profile: d.Profile, shellHub: d.ShellHub, hooks: d.Hooks, escrow: d.Escrow, health: d.Health, compliance: d.Compliance, superSvc: d.Super, log: d.Log}
+	return &Handler{cfg: d.Cfg, st: d.Store, auth: d.Auth, cmdr: d.Commander, engine: d.Engine, notifier: d.Notifier, scep: d.SCEP, pushStore: d.PushStore, profile: d.Profile, shellHub: d.ShellHub, hooks: d.Hooks, escrow: d.Escrow, health: d.Health, compliance: d.Compliance, superSvc: d.Super, onboardingSvc: d.Onboarding, log: d.Log}
 }
 
 // ---- helpers ----
@@ -212,6 +215,16 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("DELETE /api/v1/custom-schemas/{id}", h.deleteSchema)
 	r("POST /api/v1/custom-schemas/{id}/preview", h.previewSchemaProfile)
 	r("POST /api/v1/custom-schemas/{id}/profiles", h.saveSchemaProfile)
+
+	// White-glove onboarding (swiftDialog)
+	r("GET /api/v1/onboarding/workflows", h.listWorkflows)
+	r("POST /api/v1/onboarding/workflows", h.saveWorkflow)
+	r("GET /api/v1/onboarding/workflows/{id}", h.getWorkflow)
+	r("PUT /api/v1/onboarding/workflows/{id}", h.saveWorkflow)
+	r("DELETE /api/v1/onboarding/workflows/{id}", h.deleteWorkflow)
+	r("GET /api/v1/onboarding/workflows/{id}/runs", h.listOnboardingRuns)
+	r("POST /api/v1/onboarding/workflows/{id}/run", h.runWorkflow)
+	r("GET /api/v1/computers/{id}/onboarding", h.computerOnboarding)
 
 	// Identity (XCreds cloud login)
 	r("GET /api/v1/identity/xcreds", h.getXCreds)

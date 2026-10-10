@@ -187,6 +187,16 @@ func (c *Client) SubmitComplianceScan(ctx context.Context, scanID string, sub mo
 	return c.do(ctx, "POST", "/agent/v1/compliance-scans/"+scanID, sub, nil, 2*time.Minute)
 }
 
+// OnboardingUserEntry sends the values collected in the welcome dialog.
+func (c *Client) OnboardingUserEntry(ctx context.Context, runID string, entry map[string]string) error {
+	return c.do(ctx, "POST", "/agent/v1/onboarding/"+runID+"/user-entry", map[string]any{"user_entry": entry}, nil, 0)
+}
+
+// SubmitOnboarding reports a finished onboarding run.
+func (c *Client) SubmitOnboarding(ctx context.Context, runID string, sub model.AgentOnboardingSubmit) error {
+	return c.do(ctx, "POST", "/agent/v1/onboarding/"+runID, sub, nil, 0)
+}
+
 // SubmitAppInstallResult reports an app catalog install outcome.
 func (c *Client) SubmitAppInstallResult(ctx context.Context, logID, status, logText string) error {
 	return c.do(ctx, http.MethodPost, "/agent/v1/app-installs/"+logID+"/result", map[string]string{"status": status, "log": logText}, nil, 0)

@@ -22,6 +22,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/compliance"
 	"github.com/vibemdm/vibemdm/internal/enroll"
 	"github.com/vibemdm/vibemdm/internal/model"
+	"github.com/vibemdm/vibemdm/internal/onboarding"
 	"github.com/vibemdm/vibemdm/internal/policy"
 	"github.com/vibemdm/vibemdm/internal/shell"
 	"github.com/vibemdm/vibemdm/internal/store"
@@ -45,6 +46,13 @@ type Handler struct {
 	version  string
 
 	compliance *compliance.Service
+	onboarding *onboarding.Service
+}
+
+// WithOnboarding enables white-glove onboarding.
+func (h *Handler) WithOnboarding(svc *onboarding.Service) *Handler {
+	h.onboarding = svc
+	return h
 }
 
 // WithCompliance enables mSCP compliance result submission.
@@ -216,6 +224,9 @@ func (h *Handler) checkin(w http.ResponseWriter, r *http.Request) {
 	if req.Trigger == "" {
 		req.Trigger = "checkin"
 	}
+	if h.onboarding != nil {
+		h.onboarding.MaybeStart(r.Context(), comp, req.ConsoleUser)
+	}
 	if err := h.st.TouchAgentCheckin(r.Context(), comp.ID, req); err != nil {
 		h.log.Error("touch checkin", "err", err)
 	}
@@ -362,6 +373,7 @@ func (h *Handler) taskResult(w http.ResponseWriter, r *http.Request) {
 	if res.Status == "failed" {
 		// A compliance scan whose task failed before submitting results is closed here.
 		h.st.FailComplianceScanByTask(r.Context(), r.PathValue("id"), firstNonEmptyStr(res.Error, res.Stderr, "agent task failed"))
+		h.st.FailOnboardingRunByTask(r.Context(), r.PathValue("id"), firstNonEmptyStr(res.Error, res.Stderr, "agent task failed"))
 	}
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }

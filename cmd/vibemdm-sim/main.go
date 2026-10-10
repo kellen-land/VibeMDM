@@ -660,6 +660,47 @@ func (d *device) runTask(ctx context.Context, c *agent.Client, t model.AgentTask
 			break
 		}
 		res.Stdout = fmt.Sprintf("[simulator] %s: %d passed, %d failed, %d remediated", scan.Baseline, counts["pass"], counts["fail"], counts["remediated"])
+	case "onboarding":
+		var ob model.AgentOnboarding
+		if b, err := json.Marshal(t.Payload["onboarding"]); err == nil {
+			json.Unmarshal(b, &ob)
+		}
+		entry := map[string]string{}
+		for _, f := range ob.Fields {
+			switch {
+			case len(f.Options) > 0:
+				entry[f.Key] = f.Options[d.idx%len(f.Options)]
+			case f.Key == "asset_tag":
+				entry[f.Key] = fmt.Sprintf("A-%04d", 1000+d.idx)
+			case f.Key == "computer_name":
+				entry[f.Key] = d.name + "-Onboarded"
+			default:
+				entry[f.Key] = "sim-" + f.Key
+			}
+		}
+		if ob.ComputerNameTemplate != "" && entry["computer_name"] == "" {
+			entry["computer_name"] = strings.NewReplacer("{serial}", d.serial, "{asset_tag}", entry["asset_tag"], "{user}", "alice", "{model}", "MBP").Replace(ob.ComputerNameTemplate)
+		}
+		c.OnboardingUserEntry(ctx, ob.RunID, entry)
+		sub := model.AgentOnboardingSubmit{Status: "completed", UserEntry: entry}
+		for _, st := range ob.Steps {
+			r := model.OnboardingStepResult{Title: st.Title, Type: st.Type, Status: "success", DurationMS: 1200}
+			if strings.Contains(strings.ToLower(st.Title), "fail") {
+				r.Status, r.Detail = "failed", "simulated failure"
+				if !st.ContinueOnError {
+					sub.Status = "failed"
+				}
+			}
+			sub.Steps = append(sub.Steps, r)
+			if sub.Status == "failed" {
+				break
+			}
+		}
+		sub.Log = fmt.Sprintf("[simulator] onboarding with %d field(s) and %d step(s)", len(entry), len(sub.Steps))
+		if err := c.SubmitOnboarding(ctx, ob.RunID, sub); err != nil {
+			res.Status, res.Error = "failed", err.Error()
+		}
+		res.Stdout = sub.Log
 	case "install_super":
 		d.superVer = str(t.Payload["version"])
 		res.Stdout = "[simulator] super " + d.superVer + " installed (auth: " + str(t.Payload["auth_mode"]) + ")"

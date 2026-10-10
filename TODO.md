@@ -18,7 +18,7 @@
 - [x] Check security/ensure hardening
     - Ran a full security audit and fixed every high and medium finding (forced bootstrap password change, trusted-proxy rate limiting, one-time SCEP challenges, agent takeover protection, security headers, viewer redaction, shell limits, SSRF-safe webhooks, safer agent sockets and installer) and documented the model in docs/security.md.
 - [ ] A native white glove enrollment guide like Jamf Setup Manager utilizing Swift Dialog with native, easy to configure profiles in the GUI.
-    - In progress: onboarding workflow data model and storage are done; agent swiftDialog flow, API and UI are next.
+    - In progress: scoped onboarding workflows run by the agent with swiftDialog (welcome form for name/asset tag/department/etc., naming template, app/policy/script/recon/wait steps with a live progress list, final restart/logout) plus the API are done and tested with the simulator; the workflow editor UI is next.
 - [x] Enrollment via Apple Configurator being preferred due to not having access to an Apple Business account.
     - Added a Configurator enrollment URL that supervises and enrolls iPhone and iPad over USB without Apple Business Manager, and wrote docs/enrollment.md explaining that Macs can't be supervised this way and enroll as user-approved instead.
 - [x] Build an MDM command inspector that traces each command end to end—queueing, APNs wake-up, device check-in, delivered plist, response, and follow-up—with a per-device timeline, readable summaries, searchable raw payloads, and sensitive data redacted by default.
@@ -26,3 +26,4 @@
 - [x] Health & misconfiguration detection framework: detect potential misconfigurations and fleet issues, explain them, offer one-click remediations and safe self-healing, and keep it administrator friendly with visibility without noise (grace periods, dedupe/grouping, auto-resolve, acknowledge/snooze).
   - Built a Health engine with 23 checks (platform, security, fleet, configuration) that dedupes and groups findings, waits out grace periods, auto-resolves after two clean runs, supports acknowledge/snooze, runs only safe remediations as capped self-healing, fires HealthIssueOpened/Resolved webhooks, and surfaces it all in a Health console, dashboard card and per-computer strip.
 - [ ] Very detailed admin manual with all components explained and a CLI list, man page, and ensure the agent has a good help menu. This project is partially a tool to help me learn the Apple MDM protocol and get ready for both of the Apple IT certifications.
+- [ ] Securely implemented MCP server for AI agents with support for Claude.
