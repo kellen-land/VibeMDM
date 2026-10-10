@@ -293,7 +293,13 @@ function EscrowProfileCard({
 
 function EnforceProfileCard({ view, readOnly, onSave }: { view: BuiltinProfileView; readOnly: boolean; onSave: (enabled: boolean, scope: Scope, options: FileVaultEnforceOptions) => Promise<unknown> }) {
   const f = useBuiltinForm(view)
-  const [opts, setOpts] = useState<FileVaultEnforceOptions>(defaultEnforceOptions)
+  const [opts, setOpts] = useState<FileVaultEnforceOptions>(() => view.options ?? defaultEnforceOptions())
+  // Re-seed from the deployed profile when it changes on the server (not on every poll).
+  const optsSeed = JSON.stringify(view.options ?? null)
+  useEffect(() => {
+    setOpts(view.options ?? defaultEnforceOptions())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optsSeed])
   const [saving, setSaving] = useState(false)
   const setOpt = (patch: Partial<FileVaultEnforceOptions>) => setOpts((o) => ({ ...o, ...patch }))
   const save = async () => {
@@ -321,7 +327,7 @@ function EnforceProfileCard({ view, readOnly, onSave }: { view: BuiltinProfileVi
             {!readOnly && (
               <div className="flex flex-col gap-4 rounded-lg border border-line p-4">
                 <p className="micro-label">Options</p>
-                <p className="-mt-2 text-xs text-ink-muted">Options are not read back from the deployed profile; saving sends the values shown here.</p>
+                <p className="-mt-2 text-xs text-ink-muted">{view.options ? 'Loaded from the deployed enforcement profile. Saving replaces it with the values shown here.' : 'No enforcement profile exists yet; these are the defaults it will be created with.'}</p>
                 <FormGrid cols={2}>
                   <Toggle checked={opts.DeferAtLogout} onChange={(v) => setOpt({ DeferAtLogout: v })} label="Prompt at logout" description="Ask the user to enable FileVault when they log out. When off, FileVault is enabled at the next login without a logout prompt." />
                   <Toggle checked={opts.DeferDontAskAtLogout} onChange={(v) => setOpt({ DeferDontAskAtLogout: v })} disabled={!opts.DeferAtLogout} label="Don't ask at logout" description="Skip the logout prompt and require FileVault at the next login instead." />

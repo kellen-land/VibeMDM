@@ -186,6 +186,8 @@ export function GeneralSettings() {
         </Card>
       )}
 
+      <LoggingCard settings={settings.data} readOnly={ro} />
+
       <Card>
         <CardHeader
           title="Profile signing"
@@ -238,5 +240,66 @@ export function GeneralSettings() {
         confirmLabel="Rotate secret"
       />
     </div>
+  )
+}
+
+/** Log retention and archiving. Keeps its own edit state and saves only its two fields. */
+function LoggingCard({ settings, readOnly }: { settings: SettingsView | undefined; readOnly: boolean }) {
+  const toast = useToast()
+  const invalidate = useInvalidate()
+  const [days, setDays] = useState(String(settings?.log_retention_days ?? 30))
+  const [archive, setArchive] = useState(!!settings?.log_archive_enabled)
+  const [saving, setSaving] = useState(false)
+  useEffect(() => {
+    if (!settings) return
+    setDays(String(settings.log_retention_days))
+    setArchive(settings.log_archive_enabled)
+  }, [settings?.log_retention_days, settings?.log_archive_enabled]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const n = Number(days)
+  const invalid = !Number.isInteger(n) || n < 1 || n > 3650
+  const dirty = !!settings && (n !== settings.log_retention_days || archive !== settings.log_archive_enabled)
+
+  const save = async () => {
+    if (invalid) return
+    setSaving(true)
+    try {
+      const body: SettingsUpdate = { log_retention_days: n, log_archive_enabled: archive }
+      await api.put('/api/v1/settings', body)
+      await invalidate(qk.settings)
+      toast.success('Logging settings saved')
+    } catch (e) {
+      toast.error('Save failed', errorMessage(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader title="Logging" description="How long server and agent logs are kept in the database, and whether they are archived before being pruned." />
+      <CardBody className="flex flex-col gap-5">
+        <Field label="Retention (days)" hint="1–3650. Entries older than this are pruned daily." error={invalid ? 'Enter a whole number between 1 and 3650.' : undefined} className="max-w-xs">
+          <Input type="number" min={1} max={3650} step={1} value={days} onChange={(e) => setDays(e.target.value)} disabled={readOnly} />
+        </Field>
+        <Toggle
+          checked={archive}
+          onChange={setArchive}
+          disabled={readOnly}
+          label="Archive before pruning"
+          description="Writes daily gzipped NDJSON files to the server's data volume (log-archive/) before old entries are pruned. Download them from Logs → Archives."
+        />
+        <p className="text-xs text-ink-muted">
+          The minimum level stored in the database is set with the <code className="font-mono text-ink">VIBEMDM_LOG_DB_LEVEL</code> environment variable on the server (default <code className="font-mono text-ink">info</code>).
+        </p>
+      </CardBody>
+      {!readOnly && (
+        <CardFooter>
+          <Button variant="primary" icon={<Save />} loading={saving} onClick={save} disabled={invalid || !dirty}>
+            Save logging
+          </Button>
+        </CardFooter>
+      )}
+    </Card>
   )
 }

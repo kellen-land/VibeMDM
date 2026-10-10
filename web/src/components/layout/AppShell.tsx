@@ -16,6 +16,7 @@ import {
   Moon,
   Package,
   Puzzle,
+  ScrollText,
   QrCode,
   Search,
   Settings,
@@ -68,6 +69,7 @@ const navGroups: { heading: string; items: NavItem[] }[] = [
     heading: 'Operations',
     items: [
       { to: '/activity', label: 'Activity', icon: Activity },
+      { to: '/logs', label: 'Logs', icon: ScrollText },
       { to: '/enrollment', label: 'Enrollment', icon: QrCode },
     ],
   },

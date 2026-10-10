@@ -11,7 +11,7 @@ import { LoadingBlock } from '../ui/Spinner'
 import { CommandInspectorModal } from './CommandInspector'
 
 /** Wrap case-insensitive matches of `q` in <mark>. */
-function Highlight({ text, q }: { text: string; q: string }) {
+export function Highlight({ text, q }: { text: string; q: string }) {
   const needle = q.trim()
   if (!needle) return <>{text}</>
   const parts = text.split(new RegExp(`(${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig'))

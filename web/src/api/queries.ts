@@ -12,6 +12,9 @@ import type {
   CommandEvent,
   CommandInspection,
   CommandSearchHit,
+  DiagnosticBundle,
+  LogArchive,
+  LogSource,
   FileVaultOverview,
   Building,
   ComputerDetail,
@@ -104,6 +107,9 @@ export const qk = {
   commandInspect: (uuid: string, reveal = false) => ['command', uuid, 'inspect', reveal] as const,
   computerTimeline: (id: string, p?: object) => ['computer', id, 'timeline', p ?? {}] as const,
   commandSearch: (p?: object) => ['commands', 'search', p ?? {}] as const,
+  logComponents: (source: LogSource) => ['logs', 'components', source] as const,
+  logArchives: ['logs', 'archives'] as const,
+  diagnostics: (computerId: string) => ['computer', computerId, 'diagnostics'] as const,
 }
 
 type Opts<T> = Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'>
@@ -345,6 +351,25 @@ export function useWebhooks(enabled = true) {
 
 export function useWebhookDeliveries(enabled = true) {
   return useQuery({ queryKey: qk.webhookDeliveries, queryFn: () => api.get<ListResponse<WebhookDelivery>>('/api/v1/webhooks/deliveries'), enabled, refetchInterval: 15_000 })
+}
+
+// ---- logs & diagnostics ----
+
+export function useLogComponents(source: LogSource) {
+  return useQuery({ queryKey: qk.logComponents(source), queryFn: () => api.get<string[]>('/api/v1/logs/components', { query: { source } }), staleTime: 60_000 })
+}
+
+export function useLogArchives(enabled = true) {
+  return useQuery({ queryKey: qk.logArchives, queryFn: () => api.get<LogArchive[]>('/api/v1/logs/archives'), enabled })
+}
+
+/** Diagnostic bundles for a computer; polls every 3s while any bundle is still being collected. */
+export function useDiagnostics(computerId: string) {
+  return useQuery({
+    queryKey: qk.diagnostics(computerId),
+    queryFn: () => api.get<ListResponse<DiagnosticBundle>>(`/api/v1/computers/${computerId}/diagnostics`),
+    refetchInterval: (query) => ((query.state.data?.items ?? []).some((b) => b.status === 'requested') ? 3_000 : false),
+  })
 }
 
 /** Convenience: a mutation that invalidates the given keys on success. */

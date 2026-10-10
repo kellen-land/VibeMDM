@@ -496,6 +496,10 @@ export interface SettingsView {
   filevault_auto_remediate: boolean
   /** True when VIBEMDM_ENCRYPTION_KEY is set and secrets are sealed at rest (read-only). */
   encryption_at_rest: boolean
+  /** Days log entries are kept in the database (1–3650). */
+  log_retention_days: number
+  /** Write daily gzipped NDJSON archives before old entries are pruned. */
+  log_archive_enabled: boolean
   version: string
 }
 
@@ -512,6 +516,8 @@ export interface SettingsUpdate {
   clear_signing?: boolean
   remote_shell_enabled?: boolean
   remote_shell_idle_timeout_secs?: number
+  log_retention_days?: number
+  log_archive_enabled?: boolean
 }
 
 export interface APNsCert {
@@ -909,6 +915,8 @@ export interface BuiltinProfileView {
   deployed: boolean
   profile?: ConfigProfile
   status: Record<string, number>
+  /** Enforcement profile only: the currently deployed options (absent when no enforcement profile exists). */
+  options?: FileVaultEnforceOptions
 }
 
 export interface FileVaultOverview {
@@ -976,4 +984,65 @@ export interface CommandSearchHit {
   matched_in: string
   snippet: string
   created_at: string
+}
+
+// ---- Logs & diagnostics (internal/api/logs.go, internal/store/logs.go) ----
+
+export type LogSource = 'server' | 'agent'
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
+export interface LogEntry {
+  id: number
+  source: LogSource
+  computer_id?: string
+  computer_name?: string
+  at: string
+  /** Upper-case as stored: DEBUG | INFO | WARN | ERROR. */
+  level: string
+  component: string
+  msg: string
+  attrs: Record<string, unknown> | null
+}
+
+/** Filters shared by GET /logs and GET /logs/export. */
+export interface LogQuery {
+  source: LogSource
+  /** Minimum level. */
+  level?: LogLevel
+  component?: string
+  computer_id?: string
+  q?: string
+  /** RFC3339 */
+  from?: string
+  /** RFC3339 (exclusive) */
+  to?: string
+}
+
+/** GET /logs. Newest first, or oldest first when `since_id` is set. */
+export interface LogPage {
+  items: LogEntry[]
+  last_id: number
+  next_before_id?: number
+}
+
+export interface LogArchive {
+  name: string
+  size_bytes: number
+  modified_at: string
+}
+
+export type DiagnosticStatus = 'requested' | 'uploaded' | 'failed'
+
+export interface DiagnosticBundle {
+  id: string
+  computer_id: string
+  computer_name: string
+  status: DiagnosticStatus | string
+  filename: string
+  size_bytes: number
+  sha256: string
+  error: string
+  requested_by: string
+  created_at: string
+  uploaded_at: string | null
 }

@@ -29,6 +29,7 @@ import { AppEditorPage } from './pages/AppEditorPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { CommandInspectorPage } from './pages/CommandInspectorPage'
 import { FileVaultPage } from './pages/FileVaultPage'
+import { LogsPage } from './pages/LogsPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -81,6 +82,8 @@ export function App() {
         <Route path="/apps/:id" element={<AppEditorPage />} />
         <Route path="/activity" element={<ActivityPage />} />
         <Route path="/activity/:tab" element={<ActivityPage />} />
+        <Route path="/logs" element={<LogsPage />} />
+        <Route path="/logs/:tab" element={<LogsPage />} />
         <Route path="/commands/:uuid" element={<CommandInspectorPage />} />
         <Route path="/filevault" element={<FileVaultPage />} />
         <Route path="/enrollment" element={<EnrollmentPage />} />
