@@ -77,6 +77,9 @@ import type {
   SuperView,
   SuperStatus,
   XCredsView,
+  OnboardingWorkflow,
+  OnboardingWorkflowList,
+  OnboardingRun,
 } from './types'
 
 export const qk = {
@@ -175,6 +178,12 @@ export const qk = {
   superConfig: ['super', 'config'] as const,
   superStatus: ['super', 'status'] as const,
   xcreds: ['identity', 'xcreds'] as const,
+  /** Prefix for every onboarding query: invalidate this after any workflow mutation or run. */
+  onboarding: ['onboarding'] as const,
+  onboardingWorkflows: ['onboarding', 'workflows'] as const,
+  onboardingWorkflow: (id: string) => ['onboarding', 'workflow', id] as const,
+  onboardingRuns: (id: string, p?: object) => ['onboarding', 'workflow', id, 'runs', p ?? {}] as const,
+  computerOnboarding: (id: string) => ['onboarding', 'computer', id] as const,
 }
 
 /** Path segment for a schema id; built-in ids contain a colon, so always encode. */
@@ -636,4 +645,35 @@ export function useSuperStatus() {
 
 export function useXCreds() {
   return useQuery({ queryKey: qk.xcreds, queryFn: () => api.get<XCredsView>('/api/v1/identity/xcreds'), refetchInterval: 30_000 })
+}
+
+// ---- White-glove onboarding ----
+
+export function useOnboardingWorkflows() {
+  return useQuery({ queryKey: qk.onboardingWorkflows, queryFn: () => api.get<OnboardingWorkflowList>('/api/v1/onboarding/workflows') })
+}
+
+export function useOnboardingWorkflow(id: string | undefined) {
+  return useQuery({ queryKey: qk.onboardingWorkflow(id ?? ''), queryFn: () => api.get<OnboardingWorkflow>(`/api/v1/onboarding/workflows/${id}`), enabled: !!id && id !== 'new' })
+}
+
+const runsActive = (runs: OnboardingRun[] | undefined) => (runs ?? []).some((r) => r.status === 'queued' || r.status === 'running')
+
+/** Polls quickly while any run is still queued or running. */
+export function useOnboardingRuns(id: string | undefined, p: { computer_id?: string; limit?: number } = {}) {
+  return useQuery({
+    queryKey: qk.onboardingRuns(id ?? '', p),
+    queryFn: () => api.get<OnboardingRun[]>(`/api/v1/onboarding/workflows/${id}/runs`, { query: p }),
+    enabled: !!id && id !== 'new',
+    refetchInterval: (query) => (runsActive(query.state.data) ? 5_000 : 30_000),
+  })
+}
+
+export function useComputerOnboarding(id: string) {
+  return useQuery({
+    queryKey: qk.computerOnboarding(id),
+    queryFn: () => api.get<OnboardingRun[]>(`/api/v1/computers/${id}/onboarding`),
+    enabled: !!id,
+    refetchInterval: (query) => (runsActive(query.state.data) ? 5_000 : 30_000),
+  })
 }

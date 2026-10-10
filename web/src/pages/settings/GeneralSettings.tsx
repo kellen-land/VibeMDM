@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Eye, EyeOff, RefreshCw, Save, X } from 'lucide-react'
+import { Bot, Eye, EyeOff, RefreshCw, Save, X } from 'lucide-react'
 import { qk, useInvalidate, useSettings } from '../../api/queries'
 import { api, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
@@ -13,7 +13,7 @@ import { Alert } from '../../components/ui/Alert'
 import { Badge } from '../../components/ui/Badge'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
-import { CopyButton } from '../../components/ui/CopyButton'
+import { CodeBlock, CopyButton } from '../../components/ui/CopyButton'
 import { useToast } from '../../components/ui/Toast'
 import { statusKey } from '../../auth/AuthContext'
 
@@ -49,6 +49,8 @@ export function GeneralSettings() {
         open_enrollment: form.open_enrollment,
         remote_shell_enabled: form.remote_shell_enabled,
         remote_shell_idle_timeout_secs: form.remote_shell_idle_timeout_secs,
+        mcp_enabled: form.mcp_enabled,
+        mcp_allow_writes: form.mcp_enabled && form.mcp_allow_writes,
       }
       if (clearSigning) body.clear_signing = true
       else if (certPem.trim() && keyPem.trim()) {
@@ -186,6 +188,8 @@ export function GeneralSettings() {
         </Card>
       )}
 
+      <MCPCard form={form} set={set} readOnly={ro} />
+
       <LoggingCard settings={settings.data} readOnly={ro} />
 
       <Card>
@@ -240,6 +244,67 @@ export function GeneralSettings() {
         confirmLabel="Rotate secret"
       />
     </div>
+  )
+}
+
+/** MCP server for AI agents. Saved with the main settings form. */
+function MCPCard({ form, set, readOnly }: { form: SettingsView; set: (patch: Partial<SettingsView>) => void; readOnly: boolean }) {
+  const base = (form.server_url || window.location.origin).replace(/\/+$/, '')
+  const endpoint = `${base}/mcp`
+  const https = base.startsWith('https://')
+  const snippet = `claude mcp add --transport http vibemdm ${endpoint} --header "Authorization: Bearer <token>"`
+  return (
+    <Card>
+      <CardHeader
+        title="MCP server for AI agents"
+        description="Lets AI agents such as Claude Code answer questions about the fleet, and optionally take a few safe actions, through the Model Context Protocol."
+        actions={
+          form.mcp_enabled ? (
+            <Badge tone={form.mcp_allow_writes ? 'accent' : 'good'} dot>
+              {form.mcp_allow_writes ? 'Enabled · writes allowed' : 'Enabled · read-only'}
+            </Badge>
+          ) : (
+            <Badge>Disabled</Badge>
+          )
+        }
+      />
+      <CardBody className="flex flex-col gap-5">
+        <Toggle
+          checked={form.mcp_enabled}
+          onChange={(v) => set({ mcp_enabled: v, ...(v ? {} : { mcp_allow_writes: false }) })}
+          disabled={readOnly}
+          label="Enable MCP server"
+          description={
+            <>
+              Serves the endpoint <code className="font-mono text-ink">{endpoint}</code>. It needs an API token (Settings → API Tokens); browser sessions are rejected. Viewer tokens get read-only tools.
+            </>
+          }
+        />
+        <Toggle
+          checked={form.mcp_enabled && form.mcp_allow_writes}
+          onChange={(v) => set({ mcp_allow_writes: v })}
+          disabled={readOnly || !form.mcp_enabled}
+          label="Allow write tools (admin tokens only)"
+          description="Admin tokens can send pushes, request inventory, run existing policies, acknowledge or fix health issues and start compliance scans. Nothing destructive is exposed, and every call is written to the audit log."
+        />
+        {form.mcp_enabled && !https && (
+          <Alert tone="warning" title="HTTPS is required">
+            The server URL is not HTTPS, so tokens would travel in clear text. Health flags MCP without HTTPS{form.mcp_allow_writes ? ', and raises it to critical while write tools are allowed' : ''}.
+          </Alert>
+        )}
+        <div className="flex flex-col gap-1.5">
+          <p className="text-sm font-medium text-ink">Connect Claude Code</p>
+          <CodeBlock text={snippet} filename="Replace <token> with an API token" />
+          <p className="text-xs text-ink-muted">
+            Other MCP clients use the same URL with the header <code className="font-mono text-ink">Authorization: Bearer &lt;token&gt;</code>.
+          </p>
+        </div>
+        <p className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+          <Bot className="size-3.5 text-ink-faint" aria-hidden="true" />
+          Read the MCP guide in <code className="font-mono text-ink">docs/mcp.md</code> for the full list of tools and the security model.
+        </p>
+      </CardBody>
+    </Card>
   )
 }
 

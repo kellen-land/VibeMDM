@@ -507,6 +507,10 @@ export interface SettingsView {
   log_retention_days: number
   /** Write daily gzipped NDJSON archives before old entries are pruned. */
   log_archive_enabled: boolean
+  /** Expose the MCP server for AI agents at /mcp. */
+  mcp_enabled: boolean
+  /** Let admin API tokens call the MCP write tools. */
+  mcp_allow_writes: boolean
   version: string
 }
 
@@ -525,6 +529,8 @@ export interface SettingsUpdate {
   remote_shell_idle_timeout_secs?: number
   log_retention_days?: number
   log_archive_enabled?: boolean
+  mcp_enabled?: boolean
+  mcp_allow_writes?: boolean
 }
 
 export interface APNsCert {
@@ -1711,4 +1717,104 @@ export interface XCredsSaveRequest {
   scope: Scope
   values: SchemaValues
   install_app: boolean
+}
+
+// ---- White-glove onboarding (swiftDialog) ----
+
+/** Inventory fields an onboarding form may collect; the server lists the allowed keys with labels. */
+export type OnboardingFieldKey = 'computer_name' | 'asset_tag' | 'building' | 'department' | 'room' | 'assigned_user' | 'assigned_real_name' | 'assigned_email' | 'assigned_position'
+
+export interface OnboardingField {
+  key: OnboardingFieldKey | string
+  label: string
+  required: boolean
+  placeholder: string
+  /** When set, the field is shown as a picker instead of a text box. */
+  options: string[] | null
+  regex: string
+  regex_error: string
+}
+
+export type OnboardingStepType = 'app' | 'policy' | 'script' | 'recon' | 'wait'
+
+export interface OnboardingStep {
+  type: OnboardingStepType
+  title: string
+  subtitle: string
+  icon: string
+  app_id?: string
+  policy_id?: string
+  script_id?: string
+  seconds?: number
+  continue_on_error: boolean
+}
+
+export type OnboardingFinalAction = 'none' | 'restart' | 'logout' | 'shutdown'
+
+export interface OnboardingConfig {
+  title: string
+  /** Markdown is allowed. */
+  message: string
+  /** Path, URL or SF Symbol ("SF=laptopcomputer"). */
+  icon: string
+  banner: string
+  blur_screen: boolean
+  fields: OnboardingField[] | null
+  /** e.g. "MAC-{serial}"; a collected computer_name field overrides it. */
+  computer_name_template: string
+  steps: OnboardingStep[] | null
+  final_action: OnboardingFinalAction | ''
+  final_message: string
+}
+
+/** model.OnboardingWorkflow */
+export interface OnboardingWorkflow {
+  id: string
+  name: string
+  enabled: boolean
+  /** Lower wins when several workflows are in scope (default 100). */
+  priority: number
+  scope: Scope
+  config: OnboardingConfig
+  created_at: string
+  updated_at: string
+}
+
+export interface OnboardingWorkflowList {
+  items: OnboardingWorkflow[] | null
+  /** key → label */
+  field_keys: Record<string, string>
+}
+
+export type OnboardingRunStatus = 'queued' | 'running' | 'completed' | 'failed'
+export type OnboardingStepStatus = 'success' | 'failed' | 'skipped'
+
+export interface OnboardingStepResult {
+  title: string
+  type: string
+  status: OnboardingStepStatus | string
+  detail: string
+  duration_ms: number
+}
+
+/** model.OnboardingRun */
+export interface OnboardingRun {
+  id: string
+  workflow_id: string
+  workflow_name?: string
+  computer_id: string
+  computer_name?: string
+  status: OnboardingRunStatus | string
+  user_entry: Record<string, string> | null
+  steps: OnboardingStepResult[] | null
+  log?: string
+  created_at: string
+  started_at: string | null
+  completed_at: string | null
+}
+
+export interface OnboardingRunResult {
+  queued: number
+  /** computer name → reason */
+  skipped: Record<string, string> | null
 }

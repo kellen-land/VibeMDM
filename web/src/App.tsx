@@ -43,6 +43,8 @@ import { CustomSettingsPage } from './pages/profiles/CustomSettingsPage'
 import { SchemaProfileEditorPage } from './pages/profiles/SchemaProfileEditorPage'
 import { XCredsPage } from './pages/identity/XCredsPage'
 import { ForcePasswordChangePage } from './pages/ForcePasswordChangePage'
+import { OnboardingPage } from './pages/onboarding/OnboardingPage'
+import { OnboardingWorkflowPage } from './pages/onboarding/OnboardingWorkflowPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -120,6 +122,10 @@ export function App() {
         <Route path="/compliance/:id/edit" element={<BaselineEditorPage />} />
         <Route path="/compliance/:id/computers/:computerId" element={<BaselineComputerPage />} />
         <Route path="/enrollment" element={<EnrollmentPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/onboarding/new" element={<OnboardingWorkflowPage />} />
+        <Route path="/onboarding/:id" element={<OnboardingWorkflowPage />} />
+        <Route path="/onboarding/:id/:tab" element={<OnboardingWorkflowPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/settings/:tab" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />
