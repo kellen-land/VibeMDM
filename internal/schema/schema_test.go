@@ -92,3 +92,21 @@ func TestBuiltins(t *testing.T) {
 		t.Error("non-numeric day count accepted")
 	}
 }
+
+func TestDataFormat(t *testing.T) {
+	x, _ := BuiltinByDomain("com.twocanoes.xcreds")
+	vals, errs := x.Schema.Validate(map[string]any{"LicenseFile": "aGVsbG8="})
+	if len(errs) > 0 {
+		t.Fatal(errs)
+	}
+	if b, ok := vals["LicenseFile"].([]byte); !ok || string(b) != "hello" {
+		t.Fatalf("LicenseFile = %#v", vals["LicenseFile"])
+	}
+	p, _ := BuildProfile(ProfileInput{Identifier: "com.vibemdm.xcreds", Domain: "com.twocanoes.xcreds", Values: vals})
+	if !strings.Contains(string(p), "<data>") {
+		t.Error("license not emitted as <data>")
+	}
+	if _, errs := x.Schema.Validate(map[string]any{"LicenseFile": "not base64!"}); len(errs) == 0 {
+		t.Error("invalid base64 accepted")
+	}
+}

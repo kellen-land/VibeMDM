@@ -7,10 +7,12 @@
 // minLength, maxLength, pattern, required, property_order/propertyOrder, links,
 // anyOf/oneOf (including the "Not Configured" null idiom), and options
 // (enum_titles, infoText, inputAttributes.placeholder, remove_empty_properties).
+// VibeMDM extension: "format": "data" marks a base64 string emitted as <data>.
 // Header fields __preferencedomain and __version are read when present.
 package schema
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,6 +38,8 @@ type Node struct {
 	MinItems      *int             `json:"minItems,omitempty"`
 	MaxItems      *int             `json:"maxItems,omitempty"`
 	Pattern       string           `json:"pattern,omitempty"`
+	// Format "data" (VibeMDM extension): a base64 string emitted as plist <data>.
+	Format string `json:"format,omitempty"`
 	Required      []string         `json:"required,omitempty"`
 	PropertyOrder *int             `json:"property_order,omitempty"`
 	PropertyOrd2  *int             `json:"propertyOrder,omitempty"`
@@ -359,6 +363,13 @@ func coerce(n *Node, t string, v any, path string, errs *[]FieldError) (any, str
 		}
 		if n.re != nil && !n.re.MatchString(s) {
 			return nil, "does not match the required format"
+		}
+		if n.Format == "data" {
+			b, err := base64.StdEncoding.DecodeString(strings.TrimSpace(s))
+			if err != nil {
+				return nil, "must be base64-encoded data"
+			}
+			return b, ""
 		}
 		return s, ""
 	case "integer", "number":

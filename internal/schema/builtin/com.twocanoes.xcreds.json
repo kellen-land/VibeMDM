@@ -300,6 +300,13 @@
       "description": "Path of a root-owned script that supplies secrets such as the local admin credentials (keeps them out of profiles).",
       "type": "string",
       "property_order": 95
+    },
+    "LicenseFile": {
+      "title": "XCreds license file",
+      "description": "Your XCreds license from Twocanoes (upload the license file). Without it XCreds runs as a 14-day trial.",
+      "type": "string",
+      "format": "data",
+      "property_order": 5
     }
   }
 }

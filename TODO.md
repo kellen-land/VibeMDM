@@ -2,17 +2,23 @@
     - Potentially utilize a system similar to Escrow Buddy (Netflix's implementaton) for un-escrowed PRKs and auto detection and remediation.
     - Built native PRK escrow via a built-in FDERecoveryKeyEscrow profile that decrypts and seals each Mac's key from SecurityInfo, with Escrow Buddy auto-remediation (installed through Installomator) for Macs missing a key and an audited, admin-only key reveal.
 - [ ] Fork XCreds and integrate it as a native feature in the platform
+    - In progress: XCreds is integrated natively (Installomator install + settings profile from a bundled schema, license upload) via /api/v1/identity/xcreds; the Identity UI is next. Forking/rebuilding the Swift app itself isn't possible here (no macOS/Xcode).
 - [x] Installomator policies built-in
     - Vendored Installomator v10.8 and wired it into the Mac Apps catalog, policy "Apps" steps, and Self Service, with per-app options and server-built, single-quoted arguments that block eval injection.
     - [x] Tool or editor in the webUI for building custom labels?
         - Added a Custom Labels editor that defines labels through Installomator's valuesfromarguments mechanism, with strict validation, a required Team ID, and a live command preview.
-- [ ] Seamlessly integrate the macOS Security Compliance project as a native feature with rich reporting and easy GUI configuration
+- [x] Seamlessly integrate the macOS Security Compliance project as a native feature with rich reporting and easy GUI configuration
+    - Embedded the mSCP release_27.0 catalog (CC BY 4.0) and built tailorable, scoped compliance baselines that the agent scans on a schedule with optional fix-script remediation, an auto-generated enforcement profile, fleet/rule/computer reports with drift tracking and CSV export, and Health checks for drift and failing scans.
 - [ ] Accept Jamf custom application JSON schemas for configuration profile building in the web GUI
+    - In progress: schema engine, upload/preview/profile API and schema-linked profiles are done; the web form editor is next.
 - [ ] Option for DDM with integrated S.U.P.E.R.M.A.N. for macOS updates/end user notification and scheduling. Make this native to the platform.
+    - In progress: native DDM plans plus super 5.1.2 deployment (checksum-pinned install, sealed auth, settings profile, status in inventory) are done on the server; the Software Updates → super UI is next.
 - [x] Rich server logging and endpoint agent logging. Rock solid and reliable with options to collect logs for archiving but dyanmic and deeply searchable in a slick, native way.
     - Added non-blocking database logging for the server, offline-tolerant log shipping from agents, a Logs console with live tail and full-text search, gzipped exports and daily archives, and on-demand diagnostic bundles that include the Mac's mdmclient log.
-- [ ] Check security/ensure hardening
+- [x] Check security/ensure hardening
+    - Ran a full security audit and fixed every high and medium finding (forced bootstrap password change, trusted-proxy rate limiting, one-time SCEP challenges, agent takeover protection, security headers, viewer redaction, shell limits, SSRF-safe webhooks, safer agent sockets and installer) and documented the model in docs/security.md.
 - [ ] A native white glove enrollment guide like Jamf Setup Manager utilizing Swift Dialog with native, easy to configure profiles in the GUI.
+    - In progress: onboarding workflow data model and storage are done; agent swiftDialog flow, API and UI are next.
 - [x] Enrollment via Apple Configurator being preferred due to not having access to an Apple Business account.
     - Added a Configurator enrollment URL that supervises and enrolls iPhone and iPad over USB without Apple Business Manager, and wrote docs/enrollment.md explaining that Macs can't be supervised this way and enroll as user-approved instead.
 - [x] Build an MDM command inspector that traces each command end to end—queueing, APNs wake-up, device check-in, delivered plist, response, and follow-up—with a per-device timeline, readable summaries, searchable raw payloads, and sensitive data redacted by default.

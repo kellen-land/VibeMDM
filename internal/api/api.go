@@ -213,6 +213,10 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("POST /api/v1/custom-schemas/{id}/preview", h.previewSchemaProfile)
 	r("POST /api/v1/custom-schemas/{id}/profiles", h.saveSchemaProfile)
 
+	// Identity (XCreds cloud login)
+	r("GET /api/v1/identity/xcreds", h.getXCreds)
+	r("PUT /api/v1/identity/xcreds", h.saveXCreds)
+
 	// Compliance (macOS Security Compliance Project)
 	r("GET /api/v1/compliance/catalog", h.complianceCatalog)
 	r("GET /api/v1/compliance/catalog/rules", h.complianceRules)

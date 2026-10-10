@@ -929,3 +929,117 @@ type SuperConfig struct {
 	Version     string    `json:"version"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
+
+// OnboardingField is a value collected from the user at enrollment.
+type OnboardingField struct {
+	Key         string   `json:"key"` // computer_name | asset_tag | building | department | room | assigned_user | assigned_real_name | assigned_email | assigned_position
+	Label       string   `json:"label"`
+	Required    bool     `json:"required"`
+	Placeholder string   `json:"placeholder"`
+	Options     []string `json:"options"` // shows a picker instead of a text field
+	Regex       string   `json:"regex"`
+	RegexError  string   `json:"regex_error"`
+}
+
+// OnboardingStep is one item in the onboarding progress list.
+type OnboardingStep struct {
+	Type            string `json:"type"` // app | policy | script | recon | wait
+	Title           string `json:"title"`
+	Subtitle        string `json:"subtitle"`
+	Icon            string `json:"icon"`
+	AppID           string `json:"app_id,omitempty"`
+	PolicyID        string `json:"policy_id,omitempty"`
+	ScriptID        string `json:"script_id,omitempty"`
+	Seconds         int    `json:"seconds,omitempty"`
+	ContinueOnError bool   `json:"continue_on_error"`
+}
+
+// OnboardingConfig is the content of a workflow.
+type OnboardingConfig struct {
+	Title                string            `json:"title"`
+	Message              string            `json:"message"`
+	Icon                 string            `json:"icon"`   // URL, file path or SF Symbol ("SF=laptopcomputer")
+	Banner               string            `json:"banner"` // optional banner image URL
+	BlurScreen           bool              `json:"blur_screen"`
+	Fields               []OnboardingField `json:"fields"`
+	ComputerNameTemplate string            `json:"computer_name_template"` // e.g. "MAC-{serial}" or "{asset_tag}-{user}"
+	Steps                []OnboardingStep  `json:"steps"`
+	FinalAction          string            `json:"final_action"` // none | restart | logout | shutdown
+	FinalMessage         string            `json:"final_message"`
+}
+
+// OnboardingWorkflow is a scoped white-glove onboarding experience.
+type OnboardingWorkflow struct {
+	ID        string           `json:"id"`
+	Name      string           `json:"name"`
+	Enabled   bool             `json:"enabled"`
+	Priority  int              `json:"priority"`
+	Scope     Scope            `json:"scope"`
+	Config    OnboardingConfig `json:"config"`
+	CreatedAt time.Time        `json:"created_at"`
+	UpdatedAt time.Time        `json:"updated_at"`
+}
+
+// OnboardingStepResult is the outcome of one step.
+type OnboardingStepResult struct {
+	Title      string `json:"title"`
+	Type       string `json:"type"`
+	Status     string `json:"status"` // success | failed | skipped
+	Detail     string `json:"detail"`
+	DurationMS int64  `json:"duration_ms"`
+}
+
+// OnboardingRun is one Mac's pass through a workflow.
+type OnboardingRun struct {
+	ID           string                 `json:"id"`
+	WorkflowID   string                 `json:"workflow_id"`
+	WorkflowName string                 `json:"workflow_name,omitempty"`
+	ComputerID   string                 `json:"computer_id"`
+	ComputerName string                 `json:"computer_name,omitempty"`
+	Status       string                 `json:"status"`
+	UserEntry    map[string]string      `json:"user_entry"`
+	Steps        []OnboardingStepResult `json:"steps"`
+	Log          string                 `json:"log,omitempty"`
+	CreatedAt    time.Time              `json:"created_at"`
+	StartedAt    *time.Time             `json:"started_at"`
+	CompletedAt  *time.Time             `json:"completed_at"`
+}
+
+// AgentOnboardingStep is a step resolved for execution.
+type AgentOnboardingStep struct {
+	Title           string        `json:"title"`
+	Subtitle        string        `json:"subtitle"`
+	Icon            string        `json:"icon"`
+	Type            string        `json:"type"`
+	App             *AgentAppStep `json:"app,omitempty"`
+	Policy          *AgentPolicy  `json:"policy,omitempty"`
+	ScriptName      string        `json:"script_name,omitempty"`
+	ScriptContents  string        `json:"script_contents,omitempty"`
+	Seconds         int           `json:"seconds,omitempty"`
+	ContinueOnError bool          `json:"continue_on_error"`
+}
+
+// AgentOnboarding is the payload of an onboarding agent task.
+type AgentOnboarding struct {
+	RunID                string                `json:"run_id"`
+	Title                string                `json:"title"`
+	Message              string                `json:"message"`
+	Icon                 string                `json:"icon"`
+	Banner               string                `json:"banner"`
+	BlurScreen           bool                  `json:"blur_screen"`
+	Fields               []OnboardingField     `json:"fields"`
+	ComputerNameTemplate string                `json:"computer_name_template"`
+	Steps                []AgentOnboardingStep `json:"steps"`
+	FinalAction          string                `json:"final_action"`
+	FinalMessage         string                `json:"final_message"`
+	DialogArgs           []string              `json:"dialog_args"` // Installomator args to install swiftDialog
+	OrgName              string                `json:"org_name"`
+}
+
+// AgentOnboardingSubmit reports a finished run.
+type AgentOnboardingSubmit struct {
+	Status    string                 `json:"status"` // completed | failed
+	UserEntry map[string]string      `json:"user_entry"`
+	Steps     []OnboardingStepResult `json:"steps"`
+	Log       string                 `json:"log"`
+}
