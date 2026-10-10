@@ -98,6 +98,7 @@ locally (pushes will fail, the simulated devices poll instead).
 - [docs/agent.md](docs/agent.md) – agent architecture, triggers, script parameters, uninstall
 - [docs/architecture.md](docs/architecture.md) – how the pieces fit together, data model, security notes
 - [docs/api.md](docs/api.md) – REST API overview and tokens
+- [docs/inspector.md](docs/inspector.md) – MDM command inspector: timelines, summaries, redaction
 - [docs/filevault.md](docs/filevault.md) – FileVault recovery key escrow and Escrow Buddy remediation
 - [docs/remote-shell.md](docs/remote-shell.md) – the interactive remote root shell and how it is secured
 

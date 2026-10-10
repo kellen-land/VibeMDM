@@ -13,6 +13,7 @@ import (
 	"howett.net/plist"
 
 	"github.com/vibemdm/vibemdm/internal/escrow"
+	"github.com/vibemdm/vibemdm/internal/inspector"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/store"
 	"github.com/vibemdm/vibemdm/internal/webhook"
@@ -162,6 +163,28 @@ func (s *Service) GetToken(r *mdm.Request, m *mdm.GetToken) (*mdm.GetTokenRespon
 // CommandAndReportResults records results into inventory.
 func (s *Service) CommandAndReportResults(r *mdm.Request, results *mdm.CommandResults) (*mdm.Command, error) {
 	cmd, err := s.next.CommandAndReportResults(r, results)
+	if enr := results.UDID; enr != "" && results.UserID == "" && results.EnrollmentUserID == "" {
+		ctx := r.Context()
+		if results.CommandUUID != "" {
+			ev := inspector.Acknowledged
+			details := map[string]any{"status": results.Status}
+			switch results.Status {
+			case "NotNow":
+				ev = inspector.NotNow
+			case "Error", "CommandFormatError":
+				ev = inspector.Error
+				if len(results.ErrorChain) > 0 {
+					e := results.ErrorChain[0]
+					details["error"] = firstNonEmptyStr(e.LocalizedDescription, e.USEnglishDescription, e.ErrorDomain)
+					details["code"] = e.ErrorCode
+				}
+			}
+			s.st.RecordCommandEvent(ctx, results.CommandUUID, enr, ev, details)
+		}
+		if err == nil && cmd != nil {
+			s.st.RecordCommandEvent(ctx, cmd.CommandUUID, enr, inspector.Delivered, map[string]any{"request_type": cmd.Command.RequestType, "after_status": results.Status})
+		}
+	}
 	if results.UDID != "" && results.UserID == "" && results.EnrollmentUserID == "" {
 		s.st.TouchMDMCheckin(r.Context(), results.UDID)
 		if results.CommandUUID != "" && results.Status != "Idle" && results.Status != "NotNow" {
@@ -337,4 +360,13 @@ func str(v any) string {
 func boolean(v any) bool {
 	b, _ := v.(bool)
 	return b
+}
+
+func firstNonEmptyStr(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }

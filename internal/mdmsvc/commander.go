@@ -12,6 +12,7 @@ import (
 	"github.com/micromdm/nanomdm/storage"
 
 	"github.com/vibemdm/vibemdm/internal/commands"
+	"github.com/vibemdm/vibemdm/internal/inspector"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/store"
 )
@@ -51,10 +52,33 @@ func (c *Commander) Enqueue(ctx context.Context, comp *model.Computer, cmd *mdm.
 	if res != nil && res.EnqueueError != nil {
 		return res, fmt.Errorf("enqueue: %w", res.EnqueueError)
 	}
-	if res != nil && res.PushError != nil {
-		c.log.Warn("push failed after enqueue", "err", res.PushError, "computer", comp.Name)
+	c.event(ctx, cmd.CommandUUID, comp.UDID, inspector.Queued, map[string]any{"request_type": cmd.Command.RequestType, "kind": kind, "by": createdBy})
+	pushErr := ""
+	pushID := ""
+	if res != nil {
+		if res.PushError != nil {
+			pushErr = res.PushError.Error()
+		}
+		if st, ok := res.Status[comp.UDID]; ok {
+			pushID = st.PushID
+			if st.PushError != nil {
+				pushErr = st.PushError.Error()
+			}
+		}
+	}
+	if pushErr != "" {
+		c.log.Warn("push failed after enqueue", "err", pushErr, "computer", comp.Name)
+		c.event(ctx, cmd.CommandUUID, comp.UDID, inspector.PushFailed, map[string]any{"error": pushErr})
+	} else {
+		c.event(ctx, cmd.CommandUUID, comp.UDID, inspector.PushSent, map[string]any{"apns_id": pushID})
 	}
 	return res, nil
+}
+
+func (c *Commander) event(ctx context.Context, uuid, enrollmentID, event string, details map[string]any) {
+	if err := c.st.RecordCommandEvent(ctx, uuid, enrollmentID, event, details); err != nil {
+		c.log.Debug("recording command event", "err", err)
+	}
 }
 
 // Push sends a blank push to a computer.

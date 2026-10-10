@@ -412,6 +412,9 @@ func (s *Server) housekeeping(ctx context.Context) {
 			if tick%10 == 1 {
 				s.filevaultKeySweep(ctx)
 			}
+			if tick%60 == 1 {
+				s.st.PruneCommandEvents(ctx, 90)
+			}
 			s.st.ExpireStalePolicyLogs(ctx)
 			s.st.ExpireStaleTasks(ctx)
 			s.st.ExpireStaleShellSessions(ctx)

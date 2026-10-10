@@ -282,7 +282,10 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("POST /api/v1/profiles/{id}/remove", h.removeProfileFrom)
 
 	r("GET /api/v1/commands", h.listCommands)
+	r("GET /api/v1/commands/search", h.searchCommands)
 	r("GET /api/v1/commands/{uuid}", h.getCommand)
+	r("GET /api/v1/commands/{uuid}/inspect", h.inspectCommand)
+	r("GET /api/v1/computers/{id}/timeline", h.computerTimeline)
 	r("DELETE /api/v1/commands/{uuid}", h.cancelCommand)
 	r("GET /api/v1/tasks", h.listTasks)
 	r("GET /api/v1/tasks/{id}", h.getTask)

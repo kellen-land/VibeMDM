@@ -628,6 +628,20 @@ type FileVaultSummary struct {
 	Unknown      int `json:"unknown"`       // not yet reported
 }
 
+// CommandEvent is one step in an MDM command's life (inspector timeline).
+type CommandEvent struct {
+	ID           int64          `json:"id"`
+	CommandUUID  string         `json:"command_uuid"`
+	EnrollmentID string         `json:"enrollment_id"`
+	Event        string         `json:"event"`
+	Description  string         `json:"description"`
+	Details      map[string]any `json:"details"`
+	RequestType  string         `json:"request_type"`
+	ComputerID   string         `json:"computer_id"`
+	ComputerName string         `json:"computer_name"`
+	At           time.Time      `json:"at"`
+}
+
 // Settings are the editable server settings.
 type Settings struct {
 	OrgName                     string `json:"org_name"`

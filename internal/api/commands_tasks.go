@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 
+	"github.com/vibemdm/vibemdm/internal/inspector"
+
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/store"
 )
@@ -17,11 +19,15 @@ func (h *Handler) listCommands(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, listResp[model.MDMCommand]{Items: items, Total: total})
 }
 
+// getCommand returns a command with its plists redacted unless an admin passes ?reveal=1.
 func (h *Handler) getCommand(w http.ResponseWriter, r *http.Request) {
 	c, err := h.st.GetCommand(r.Context(), r.PathValue("uuid"))
 	if err != nil {
 		h.fail(w, err, "command")
 		return
+	}
+	if !h.wantsReveal(r, c.CommandUUID) {
+		c.Command, c.Result = inspector.Redact(c.Command), inspector.Redact(c.Result)
 	}
 	writeJSON(w, 200, c)
 }
@@ -30,6 +36,9 @@ func (h *Handler) cancelCommand(w http.ResponseWriter, r *http.Request) {
 	if err := h.st.CancelCommand(r.Context(), r.PathValue("uuid")); err != nil {
 		h.fail(w, err, "command")
 		return
+	}
+	if c, err := h.st.GetCommand(r.Context(), r.PathValue("uuid")); err == nil {
+		h.st.RecordCommandEvent(r.Context(), c.CommandUUID, c.EnrollmentID, inspector.Cancelled, map[string]any{"by": actor(r)})
 	}
 	h.st.Audit(r.Context(), actor(r), "mdm.command_cancel", "command", r.PathValue("uuid"), nil)
 	writeJSON(w, 200, map[string]bool{"ok": true})
