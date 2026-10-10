@@ -1,0 +1,206 @@
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import {
+  Activity,
+  ChevronUp,
+  FileCode,
+  KeyRound,
+  Laptop,
+  LayoutDashboard,
+  ListChecks,
+  LogOut,
+  Menu,
+  Moon,
+  Package,
+  Puzzle,
+  QrCode,
+  Settings,
+  ShieldCheck,
+  Sun,
+  Terminal,
+  Users,
+  X,
+  type LucideIcon,
+} from 'lucide-react'
+import { useAuth } from '../../auth/AuthContext'
+import { useTheme } from '../../theme/ThemeContext'
+import { cn } from '../../lib/cn'
+import { Badge } from '../ui/Badge'
+import { Dropdown } from '../ui/Dropdown'
+import { ChangePasswordDialog } from './ChangePasswordDialog'
+import { useToast } from '../ui/Toast'
+import { errorMessage } from '../../api/client'
+
+interface NavItem {
+  to: string
+  label: string
+  icon: LucideIcon
+  end?: boolean
+}
+const navGroups: { heading: string; items: NavItem[] }[] = [
+  { heading: 'Overview', items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true }] },
+  {
+    heading: 'Inventory',
+    items: [
+      { to: '/computers', label: 'Computers', icon: Laptop },
+      { to: '/groups', label: 'Computer Groups', icon: Users },
+    ],
+  },
+  {
+    heading: 'Management',
+    items: [
+      { to: '/policies', label: 'Policies', icon: ListChecks },
+      { to: '/scripts', label: 'Scripts', icon: Terminal },
+      { to: '/profiles', label: 'Configuration Profiles', icon: ShieldCheck },
+      { to: '/packages', label: 'Packages', icon: Package },
+      { to: '/extension-attributes', label: 'Extension Attributes', icon: Puzzle },
+    ],
+  },
+  {
+    heading: 'Operations',
+    items: [
+      { to: '/activity', label: 'Activity', icon: Activity },
+      { to: '/enrollment', label: 'Enrollment', icon: QrCode },
+    ],
+  },
+  { heading: 'System', items: [{ to: '/settings', label: 'Settings', icon: Settings }] },
+]
+
+function ThemeToggle({ className }: { className?: string }) {
+  const { theme, toggle } = useTheme()
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      className={cn('inline-flex size-8 items-center justify-center rounded-md border border-line text-ink-muted hover:text-ink hover:bg-line/40 focus-ring', className)}
+    >
+      {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+    </button>
+  )
+}
+
+export function AppShell() {
+  const { user, status, logout } = useAuth()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [pwOpen, setPwOpen] = useState(false)
+  const loc = useLocation()
+  const navigate = useNavigate()
+  const toast = useToast()
+  useEffect(() => setMobileOpen(false), [loc.pathname])
+
+  const doLogout = async () => {
+    try {
+      await logout()
+      navigate('/login', { replace: true })
+    } catch (e) {
+      toast.error('Sign out failed', errorMessage(e))
+    }
+  }
+
+  const sidebar = (
+    <div className="flex h-full flex-col bg-surface">
+      <div className="flex items-center gap-2.5 px-4 h-14 border-b border-line">
+        <div className="flex size-8 items-center justify-center rounded-md bg-accent-500/15 text-accent-400 ring-1 ring-accent-500/30">
+          <FileCode className="size-[18px]" aria-hidden="true" />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-[13px] font-semibold text-ink leading-4 tracking-tight">{status?.org_name || 'VibeMDM'}</p>
+          <p className="truncate text-[10px] uppercase tracking-[0.12em] text-ink-faint leading-4">Device Management</p>
+        </div>
+        <button type="button" className="ml-auto lg:hidden text-ink-muted" onClick={() => setMobileOpen(false)} aria-label="Close menu">
+          <X className="size-5" />
+        </button>
+      </div>
+      <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
+        {navGroups.map((g) => (
+          <div key={g.heading}>
+            <p className="px-2 pb-1 micro-label text-ink-faint">{g.heading}</p>
+            <div className="space-y-0.5">
+              {g.items.map((n) => (
+                <NavLink
+                  key={n.to}
+                  to={n.to}
+                  end={n.end}
+                  className={({ isActive }) =>
+                    cn(
+                      'group relative flex items-center gap-2.5 rounded-md pl-3 pr-2.5 py-[7px] text-[13px] font-medium transition-colors',
+                      isActive ? 'bg-accent-500/12 text-ink' : 'text-ink-muted hover:bg-line/40 hover:text-ink',
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span className={cn('absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-accent-400 transition-opacity', isActive ? 'opacity-100' : 'opacity-0')} aria-hidden="true" />
+                      <n.icon className={cn('size-4 shrink-0', isActive ? 'text-accent-400' : 'text-ink-faint group-hover:text-ink-muted')} aria-hidden="true" />
+                      <span className="truncate">{n.label}</span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        ))}
+      </nav>
+      <div className="border-t border-line p-2.5">
+        <Dropdown
+          align="up"
+          className="w-full"
+          menuClassName="w-full"
+          trigger={
+            <button type="button" className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left hover:bg-line/40 focus-ring">
+              <div className="flex size-7 items-center justify-center rounded-md bg-line text-[11px] font-semibold uppercase text-ink">
+                {(user?.display_name || user?.username || '?').slice(0, 2)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-medium text-ink leading-4">{user?.display_name || user?.username}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="truncate text-[11px] text-ink-faint">{user?.username}</p>
+                  <Badge tone={user?.role === 'admin' ? 'accent' : 'neutral'} className="px-1 py-0 text-[10px]">
+                    {user?.role}
+                  </Badge>
+                </div>
+              </div>
+              <ChevronUp className="size-4 text-ink-faint" />
+            </button>
+          }
+          items={[
+            { label: 'Change password', icon: <KeyRound />, onSelect: () => setPwOpen(true) },
+            { separator: true, label: '' },
+            { label: 'Sign out', icon: <LogOut />, onSelect: doLogout },
+          ]}
+        />
+        <div className="mt-2 flex items-center justify-between px-1">
+          <span className="text-[10px] text-ink-faint tabular-nums">{status?.version ? `v${status.version}` : ''}</span>
+          <ThemeToggle />
+        </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="flex min-h-full">
+      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-60 flex-col border-r border-line z-30">{sidebar}</aside>
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 w-64 border-r border-line shadow-2xl">{sidebar}</aside>
+        </div>
+      )}
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-60">
+        <header className="sticky top-0 z-20 flex h-13 items-center gap-3 border-b border-line bg-surface/90 backdrop-blur px-4 py-2.5 lg:hidden">
+          <button type="button" onClick={() => setMobileOpen(true)} className="text-ink-muted" aria-label="Open menu">
+            <Menu className="size-5" />
+          </button>
+          <span className="text-[13px] font-semibold">{status?.org_name || 'VibeMDM'}</span>
+          <ThemeToggle className="ml-auto" />
+        </header>
+        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-7 max-w-[1440px] w-full mx-auto">
+          <Outlet />
+        </main>
+      </div>
+      <ChangePasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} />
+    </div>
+  )
+}

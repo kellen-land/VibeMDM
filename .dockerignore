@@ -1,0 +1,10 @@
+.git
+bin/
+data/
+deploy/data/
+deploy/.env
+web/node_modules/
+web/dist/
+internal/webui/dist/assets/
+internal/webui/dist/index.html
+*.log

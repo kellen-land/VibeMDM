@@ -1,0 +1,18 @@
+{
+	email {$CADDY_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+	# Package uploads can be large.
+	request_body {
+		max_size 8GB
+	}
+	reverse_proxy vibemdm:8080 {
+		# Long-polling agents hold connections for up to 55s.
+		transport http {
+			read_timeout 10m
+			write_timeout 10m
+		}
+	}
+}

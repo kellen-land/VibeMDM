@@ -1,0 +1,14 @@
+- [ ] Escrow of PRK FileVault Keys
+    - Potentially utilize a system similar to Escrow Buddy (Netflix's implementaton) for un-escrowed PRKs and auto detection and remediation.
+- [ ] Fork XCreds and integrate it as a native feature in the platform
+- [ ] Installomator policies built-in
+    - [ ] Tool or editor in the webUI for building custom labels?
+- [ ] Seamlessly integrate the macOS Security Compliance project as a native feature with rich reporting and easy GUI configuration
+- [ ] Accept Jamf custom application JSON schemas for configuration profile building in the web GUI
+- [ ] Option for DDM with integrated S.U.P.E.R.M.A.N. for macOS updates/end user notification and scheduling. Make this native to the platform.
+- [ ] Rich server logging and endpoint agent logging. Rock solid and reliable with options to collect logs for archiving but dyanmic and deeply searchable in a slick, native way.
+- [ ] Linux endpoints
+    - [ ] Fedora management
+    - [ ] Debian management
+    - [ ] Ubuntu management
+- [ ] Windows endpoints (low priority)

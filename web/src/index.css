@@ -1,0 +1,175 @@
+@import "tailwindcss";
+
+/* Drive the dark variant from the explicit theme attribute (dark is the default),
+   not from prefers-color-scheme, so the in-app toggle fully controls appearance. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Accent = dark tech teal. Swap these to re-brand. */
+  --color-accent-50: #e7fbf8;
+  --color-accent-100: #c3f4ee;
+  --color-accent-200: #8fe9df;
+  --color-accent-300: #53d8cd;
+  --color-accent-400: #22c3b8;
+  --color-accent-500: #0fb5ae;
+  --color-accent-600: #0c8f8a;
+  --color-accent-700: #0b726f;
+  --color-accent-800: #0c5a58;
+  --color-accent-900: #0d4a49;
+  --color-accent-950: #042b2a;
+
+  /* Semantic surfaces/ink resolve to theme vars (see :root below). */
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+
+  /* Status (fixed, semantic — never teal). */
+  --color-good: #22c55e;
+  --color-warning: #f0a92a;
+  --color-serious: #f97b4f;
+  --color-critical: #ef4444;
+
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.875rem;
+}
+
+/* ---- Dark (default / primary look): near-black, slightly teal-tinted slate ---- */
+:root {
+  color-scheme: dark;
+  --surface: #11171a;       /* panel */
+  --surface-raised: #161d21; /* elevated */
+  --surface-sunken: #0d1215;
+  --page: #0a0e10;           /* base plane */
+  --line: #222b30;           /* hairline */
+  --line-strong: #2d383e;
+  --ink: #e6edf0;            /* bright ink */
+  --ink-muted: #8a97a0;      /* muted ink */
+  --ink-faint: #5d6a72;
+  /* chart tokens (teal single-hue on dark) */
+  --chart-series: #19c3b8;
+  --chart-grid: #222b30;
+  --chart-axis: #2d383e;
+  --chart-muted: #8a97a0;
+  --chart-tooltip-bg: #161d21;
+}
+
+/* ---- Light: clean neutral slate ---- */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f3f5f6;
+  --page: #f6f8f9;
+  --line: #e2e8ea;
+  --line-strong: #cdd6d9;
+  --ink: #0d1518;
+  --ink-muted: #596067;
+  --ink-faint: #8a959b;
+  --chart-series: #0c8f8a;
+  --chart-grid: #e2e8ea;
+  --chart-axis: #cdd6d9;
+  --chart-muted: #8a959b;
+  --chart-tooltip-bg: #ffffff;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  border-color: var(--line);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-accent-500) 35%, transparent);
+  color: var(--ink);
+}
+
+/* Subtle slate scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Teal focus ring with a soft glow */
+@utility focus-ring {
+  @apply outline-none focus-visible:ring-2 focus-visible:ring-accent-500/55 focus-visible:border-accent-500/70;
+}
+
+/* Uppercase micro-label used for section/column headers */
+@utility micro-label {
+  @apply text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-muted;
+}
+
+/* CodeMirror sizing */
+.cm-editor {
+  font-size: 13px;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+.cm-editor.cm-focused {
+  outline: none;
+  border-color: var(--color-accent-500);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent-500) 22%, transparent);
+}
+.cm-editor .cm-scroller {
+  font-family: var(--font-mono);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-toast-in {
+  animation: toast-in 150ms ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade-in {
+  animation: fade-in 110ms ease-out;
+}

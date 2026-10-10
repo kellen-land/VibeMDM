@@ -1,0 +1,107 @@
+// Package policy evaluates which policies should run on a computer for a trigger
+// and prepares them for the agent.
+package policy
+
+import (
+	"context"
+	"log/slog"
+	"sort"
+
+	"github.com/vibemdm/vibemdm/internal/model"
+	"github.com/vibemdm/vibemdm/internal/store"
+)
+
+// Engine evaluates policies.
+type Engine struct {
+	st  *store.Store
+	log *slog.Logger
+}
+
+// New creates an Engine.
+func New(st *store.Store, logger *slog.Logger) *Engine { return &Engine{st: st, log: logger} }
+
+// ForTrigger returns policies that should run now for a computer and trigger,
+// creating pending log rows for each.
+func (e *Engine) ForTrigger(ctx context.Context, comp *model.Computer, trigger string) ([]model.AgentPolicy, error) {
+	policies, err := e.st.ListPolicies(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := []model.AgentPolicy{}
+	cache := store.NewMembershipCache()
+	for i := range policies {
+		p := &policies[i]
+		if !p.Enabled || !p.Triggers.Matches(trigger) {
+			continue
+		}
+		in, err := e.st.InScopeComputer(ctx, comp, p.Scope, cache)
+		if err != nil {
+			return nil, err
+		}
+		if !in {
+			continue
+		}
+		ok, err := e.st.FrequencySatisfied(ctx, p.ID, comp.ID, p.Frequency)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			continue
+		}
+		ap, err := e.Prepare(ctx, p, trigger)
+		if err != nil {
+			e.log.Warn("preparing policy", "policy", p.Name, "err", err)
+			continue
+		}
+		logID, err := e.st.CreatePendingPolicyLog(ctx, p.ID, comp.ID, trigger)
+		if err != nil {
+			return nil, err
+		}
+		ap.LogID = logID
+		out = append(out, *ap)
+	}
+	return out, nil
+}
+
+// Prepare inlines scripts and packages so the agent can execute the policy.
+func (e *Engine) Prepare(ctx context.Context, p *model.Policy, trigger string) (*model.AgentPolicy, error) {
+	ap := &model.AgentPolicy{
+		PolicyID: p.ID, Name: p.Name, Trigger: trigger, RunCommand: p.RunCommand, UpdateInventory: p.UpdateInventory,
+		Reboot: p.Reboot, UserInteraction: p.UserInteraction, Scripts: []model.AgentScriptStep{}, Packages: []model.AgentPackageStep{},
+	}
+	for _, ps := range p.Scripts {
+		sc, err := e.st.GetScript(ctx, ps.ScriptID)
+		if err != nil {
+			e.log.Warn("policy references missing script", "policy", p.Name, "script_id", ps.ScriptID)
+			continue
+		}
+		params := make([]string, 8)
+		copy(params, ps.Parameters)
+		prio := ps.Priority
+		if prio == "" {
+			prio = sc.Priority
+		}
+		ap.Scripts = append(ap.Scripts, model.AgentScriptStep{ScriptID: sc.ID, Name: sc.Name, Priority: prio, Contents: sc.Contents, Parameters: params})
+	}
+	// "before" scripts first, preserving configured order within each group.
+	sort.SliceStable(ap.Scripts, func(i, j int) bool {
+		return ap.Scripts[i].Priority == "before" && ap.Scripts[j].Priority != "before"
+	})
+	pkgs := []model.Package{}
+	for _, pp := range p.Packages {
+		pkg, err := e.st.GetPackage(ctx, pp.PackageID)
+		if err != nil {
+			e.log.Warn("policy references missing package", "policy", p.Name, "package_id", pp.PackageID)
+			continue
+		}
+		pkgs = append(pkgs, *pkg)
+	}
+	sort.SliceStable(pkgs, func(i, j int) bool { return pkgs[i].Priority < pkgs[j].Priority })
+	for _, pkg := range pkgs {
+		ap.Packages = append(ap.Packages, model.AgentPackageStep{
+			PackageID: pkg.ID, Name: pkg.Name, Filename: pkg.Filename, SHA256: pkg.SHA256, SizeBytes: pkg.SizeBytes,
+			URL: "/agent/v1/packages/" + pkg.ID,
+		})
+	}
+	return ap, nil
+}
