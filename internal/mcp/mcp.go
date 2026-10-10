@@ -312,7 +312,9 @@ func str(desc string) map[string]any { return map[string]any{"type": "string", "
 func num(desc string, min, max int) map[string]any {
 	return map[string]any{"type": "integer", "description": desc, "minimum": min, "maximum": max}
 }
-func boolean(desc string) map[string]any { return map[string]any{"type": "boolean", "description": desc} }
+func boolean(desc string) map[string]any {
+	return map[string]any{"type": "boolean", "description": desc}
+}
 func enum(desc string, vals ...string) map[string]any {
 	return map[string]any{"type": "string", "description": desc, "enum": vals}
 }
