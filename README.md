@@ -99,6 +99,7 @@ locally (pushes will fail, the simulated devices poll instead).
 - [docs/architecture.md](docs/architecture.md) – how the pieces fit together, data model, security notes
 - [docs/api.md](docs/api.md) – REST API overview and tokens
 - [docs/enrollment.md](docs/enrollment.md) – enrollment options without Apple Business Manager (Mac, iPhone, iPad)
+- [docs/man/](docs/man/) – man pages for `vibemdm` and `vibemdm-agent` (`man ./docs/man/vibemdm-agent.8`)
 - [docs/mcp.md](docs/mcp.md) – MCP server for AI agents (Claude Code, Claude Desktop, Claude API)
 - [docs/security.md](docs/security.md) – security model, production hardening checklist, known limitations
 - [docs/health.md](docs/health.md) – misconfiguration detection, remediations and self-healing

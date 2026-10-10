@@ -1,0 +1,81 @@
+.TH VIBEMDM 8 "October 2026" "VibeMDM" "System Manager's Manual"
+.SH NAME
+vibemdm \- self-hosted Apple MDM server
+.SH SYNOPSIS
+.B vibemdm
+.br
+.B vibemdm version
+.br
+.B vibemdm rotate\-encryption\-key
+.br
+.B vibemdm help
+.SH DESCRIPTION
+.B vibemdm
+is the VibeMDM server: an Apple MDM (built on NanoMDM) with a SCEP CA,
+APNs push, Declarative Device Management, an agent API, a web console and REST
+API, compliance (mSCP), health checks and an MCP server for AI agents. It is
+configured entirely through environment variables and stores its state in
+PostgreSQL. Database migrations run automatically at start-up.
+.SH COMMANDS
+.TP
+.B vibemdm
+Run the server.
+.TP
+.B version
+Print the version.
+.TP
+.B rotate\-encryption\-key
+Re-encrypt stored secrets from
+.B VIBEMDM_ENCRYPTION_KEY_OLD
+to
+.B VIBEMDM_ENCRYPTION_KEY
+in one transaction. Stop the server first. Nothing changes if the old key is wrong.
+.SH ENVIRONMENT
+.TP
+.B VIBEMDM_DATABASE_URL
+PostgreSQL connection URL (required).
+.TP
+.B VIBEMDM_SERVER_URL
+Public https URL devices use (e.g. https://mdm.example.com).
+.TP
+.B VIBEMDM_LISTEN
+Listen address (default :8080).
+.TP
+.B VIBEMDM_DATA_DIR
+Data directory for packages, archives and diagnostics (default /data).
+.TP
+.B VIBEMDM_AGENT_DIR
+Directory with prebuilt agent binaries (default /app/agents).
+.TP
+.B VIBEMDM_ADMIN_PASSWORD
+First-boot admin password (12+ characters; empty generates one, saved to
+DATA_DIR/initial-admin-password). Must be changed at first login.
+.TP
+.B VIBEMDM_ENCRYPTION_KEY
+Passphrase for at-rest encryption of private keys and FileVault keys. Back it up.
+.TP
+.B VIBEMDM_TRUSTED_PROXIES
+Comma-separated CIDRs/IPs allowed to set X-Forwarded-For.
+.TP
+.B VIBEMDM_ALLOW_HTTP
+Set to 1 to allow a plain http server URL (isolated labs only).
+.TP
+.B VIBEMDM_SESSION_TTL_HOURS
+Console session lifetime (default 168).
+.TP
+.B VIBEMDM_LOG_DB_LEVEL
+Minimum level stored in the searchable log table (debug, info, warn, error).
+.TP
+.B VIBEMDM_DEBUG\fR, \fBVIBEMDM_DUMP_MDM
+Verbose logging; dump raw MDM traffic to stdout (debugging only: includes secrets).
+.TP
+.B VIBEMDM_APNS_URL
+Alternate APNs endpoint (testing).
+.SH FILES
+.TP
+.I DATA_DIR/initial\-admin\-password
+Generated bootstrap password (mode 0600); delete after the first login.
+.SH SEE ALSO
+.BR vibemdm\-agent (8)
+.PP
+docs/manual/ and docs/security.md in the source tree.

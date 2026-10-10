@@ -31,6 +31,12 @@ rotate-encryption-key reads:
   VIBEMDM_ENCRYPTION_KEY_OLD       current key ("" if secrets are stored unencrypted)
   VIBEMDM_ENCRYPTION_KEY           new key ("" to decrypt everything back to plaintext)
 Stop the server first, run the command, then start the server with the new key.
+
+Configuration (environment): VIBEMDM_DATABASE_URL (required), VIBEMDM_SERVER_URL,
+VIBEMDM_LISTEN, VIBEMDM_DATA_DIR, VIBEMDM_AGENT_DIR, VIBEMDM_ADMIN_PASSWORD,
+VIBEMDM_ENCRYPTION_KEY, VIBEMDM_TRUSTED_PROXIES, VIBEMDM_ALLOW_HTTP,
+VIBEMDM_SESSION_TTL_HOURS, VIBEMDM_LOG_DB_LEVEL, VIBEMDM_DEBUG.
+See man vibemdm (docs/man/vibemdm.8) and docs/manual/ for details.
 `
 
 func rotateKey() int {

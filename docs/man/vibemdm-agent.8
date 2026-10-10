@@ -1,0 +1,107 @@
+.TH VIBEMDM-AGENT 8 "October 2026" "VibeMDM" "System Manager's Manual"
+.SH NAME
+vibemdm-agent \- VibeMDM management agent for macOS
+.SH SYNOPSIS
+.B vibemdm-agent
+.I command
+.RI [ options ]
+.br
+.B vibemdm-agent help
+.I command
+.SH DESCRIPTION
+.B vibemdm-agent
+connects a Mac to a VibeMDM server. It runs scripts and policies, installs
+packages and apps (through Installomator), collects inventory, enforces
+restricted software, ships logs, hosts the local Self Service portal, runs
+compliance scans and onboarding workflows, and provides the audited remote
+shell. It complements, and does not replace, the MDM enrollment profile.
+.PP
+The daemon runs as root under launchd (label
+.BR com.vibemdm.agent )
+and keeps a long-poll connection to the server so console actions take effect
+within about a second.
+.SH COMMANDS
+.TP
+.B enroll \-\-server \fIURL\fP [\-\-token \fITOKEN\fP] [\-\-mdm] [\-\-allow\-insecure\-http]
+Enroll this Mac and install the launchd services. The token may instead be
+given in the
+.B VIBEMDM_ENROLL_TOKEN
+environment variable (recommended: arguments are visible in
+.BR ps (1)).
+.B \-\-mdm
+also saves the MDM enrollment profile to /Users/Shared and opens it.
+The server URL must use https unless
+.B \-\-allow\-insecure\-http
+is given. Requires root.
+.TP
+.B status
+Show enrollment, server reachability and local component status.
+.TP
+.B policy \fR[\fB\-\-event\fP \fINAME\fP]
+Check in and run policies for a trigger (default
+.BR checkin ).
+Requires root.
+.TP
+.B trigger \fIevent\fP
+Ask the running daemon to fire a trigger. Unprivileged users may fire only
+.BR login ,
+.B checkin
+and
+.BR network_change .
+.TP
+.B recon
+Collect and submit inventory. Requires root.
+.TP
+.B checkin
+Run one check-in cycle. Requires root.
+.TP
+.B check\-connection
+Verify the server is reachable with this Mac's credentials.
+.TP
+.B selfservice
+Open the Self Service portal (http://127.0.0.1:8571).
+.TP
+.B manage
+Reinstall the launchd daemon and login agent. Requires root.
+.TP
+.B remove\-framework
+Unenroll and remove the agent. Requires root.
+.TP
+.B daemon
+Run the agent daemon (started by launchd).
+.TP
+.B version
+Print the version.
+.SH FILES
+.TP
+.I /usr/local/bin/vibemdm\-agent
+The agent binary.
+.TP
+.I /Library/Application Support/VibeMDM/agent.json
+Server URL and device credentials (mode 0600).
+.TP
+.I /Library/Application Support/VibeMDM/disable\-remote\-shell
+If present and owned by root, the Mac refuses remote shell sessions.
+.TP
+.I /var/run/vibemdm\-agent.sock
+Trigger socket for built-in triggers (any user).
+.TP
+.I /var/run/vibemdm\-agent.sock.root
+Trigger socket for any trigger (root only).
+.TP
+.I /Library/LaunchDaemons/com.vibemdm.agent.plist
+launchd job for the daemon.
+.SH EXIT STATUS
+0 on success, 1 on error, 2 on a usage error.
+.SH EXAMPLES
+.nf
+sudo VIBEMDM_ENROLL_TOKEN=xxxx vibemdm\-agent enroll \-\-server https://mdm.example.com \-\-mdm
+sudo vibemdm\-agent policy \-\-event install_zoom
+vibemdm\-agent status
+.fi
+.SH SEE ALSO
+.BR vibemdm (8),
+.BR launchctl (1),
+.BR profiles (1)
+.PP
+The VibeMDM administrator manual, docs/manual/ in the source tree.
