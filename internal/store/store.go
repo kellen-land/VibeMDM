@@ -65,6 +65,7 @@ func DefaultSettings() model.Settings {
 		EnrollmentProfileIdentifier: "com.vibemdm.enrollment",
 		InventoryIntervalHours:      24,
 		RemoteShellIdleTimeoutSecs:  600,
+		LogRetentionDays:            30,
 	}
 }
 
@@ -97,6 +98,9 @@ func (s *Store) GetSettings(ctx context.Context) (model.Settings, error) {
 	}
 	if v.RemoteShellIdleTimeoutSecs == 0 {
 		v.RemoteShellIdleTimeoutSecs = st.RemoteShellIdleTimeoutSecs
+	}
+	if v.LogRetentionDays == 0 {
+		v.LogRetentionDays = st.LogRetentionDays
 	}
 	if v.SigningKeyPEM != "" {
 		k, err := s.Box.Open(v.SigningKeyPEM)

@@ -22,6 +22,9 @@ import { LoadingBlock } from '../components/ui/Spinner'
 import { useToast } from '../components/ui/Toast'
 import { absoluteTime } from '../lib/format'
 
+const CONFIGURATOR_HELP =
+  "For iPhone and iPad: Apple Configurator → Prepare → Manual Configuration → Supervise → Enroll in MDM Server → New server, paste this URL. Macs can't be supervised by Configurator without Apple Business Manager; enroll them with the profile link or the agent installer."
+
 function Check({ ok, label, detail }: { ok: boolean; label: string; detail?: string }) {
   return (
     <div className="flex items-start gap-2.5">
@@ -142,6 +145,16 @@ export function EnrollmentPage() {
                     </Alert>
                   )}
                 </div>
+                {isAdmin && s.configurator_url && (
+                  <div className="border-t border-line pt-5">
+                    <p className="text-sm font-medium text-ink">Apple Configurator URL</p>
+                    <p className="mt-0.5 text-xs text-ink-muted">{CONFIGURATOR_HELP}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Input readOnly mono value={s.configurator_url} className="flex-1" />
+                      <CopyButton text={s.configurator_url} />
+                    </div>
+                  </div>
+                )}
               </CardBody>
             </Card>
           </div>
@@ -235,6 +248,14 @@ export function EnrollmentPage() {
             <Field label="Agent install command">
               <CodeBlock text={created.install_command} filename="Terminal" />
             </Field>
+            {created.configurator_url && (
+              <Field label="Apple Configurator URL" hint={CONFIGURATOR_HELP}>
+                <div className="flex items-center gap-2">
+                  <Input readOnly mono value={created.configurator_url} className="flex-1" />
+                  <CopyButton text={created.configurator_url} />
+                </div>
+              </Field>
+            )}
           </div>
         )}
       </Modal>

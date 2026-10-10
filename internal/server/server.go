@@ -33,6 +33,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/db"
 	"github.com/vibemdm/vibemdm/internal/enroll"
 	"github.com/vibemdm/vibemdm/internal/escrow"
+	"github.com/vibemdm/vibemdm/internal/logsink"
 	"github.com/vibemdm/vibemdm/internal/mdmsvc"
 	"github.com/vibemdm/vibemdm/internal/policy"
 	"github.com/vibemdm/vibemdm/internal/scepsrv"
@@ -45,16 +46,18 @@ import (
 
 // Server is the assembled application.
 type Server struct {
-	cfg    *config.Config
-	log    *slog.Logger
-	sqlDB  *sql.DB
-	st     *store.Store
-	scep   *scepsrv.Server
-	hooks  *webhook.Dispatcher
-	escrow *escrow.Identity
-	cmdr   *mdmsvc.Commander
-	mux    *http.ServeMux
-	http   *http.Server
+	cfg     *config.Config
+	log     *slog.Logger
+	sqlDB   *sql.DB
+	st      *store.Store
+	scep    *scepsrv.Server
+	hooks   *webhook.Dispatcher
+	escrow  *escrow.Identity
+	cmdr    *mdmsvc.Commander
+	sink    *logsink.Sink
+	baseLog *slog.Logger
+	mux     *http.ServeMux
+	http    *http.Server
 }
 
 // New builds the server (connects DB, migrates, wires services).
@@ -70,6 +73,12 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	if len(ran) > 0 {
 		logger.Info("applied database migrations", "versions", ran)
 	}
+	// Tee every log record at/above VIBEMDM_LOG_DB_LEVEL into PostgreSQL.
+	baseLogger := logger
+	sink := logsink.New(sqlDB, cfg.LogDBLevel)
+	logger = slog.New(logsink.Wrap(logger.Handler(), sink))
+	slog.SetDefault(logger)
+
 	st := store.New(sqlDB)
 	box, err := secrets.New(cfg.EncryptionKey)
 	if err != nil {
@@ -91,7 +100,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	} else {
 		logger.Warn("VIBEMDM_ENCRYPTION_KEY is not set; private keys and FileVault recovery keys are stored unencrypted. Set a long random value to enable at-rest encryption.")
 	}
-	s := &Server{cfg: cfg, log: logger, sqlDB: sqlDB, st: st, mux: http.NewServeMux()}
+	s := &Server{cfg: cfg, log: logger, baseLog: baseLogger, sink: sink, sqlDB: sqlDB, st: st, mux: http.NewServeMux()}
 
 	if err := s.bootstrap(ctx); err != nil {
 		return nil, err
@@ -267,6 +276,30 @@ func (s *Server) bootstrap(ctx context.Context) error {
 	return nil
 }
 
+// logMaintenance archives yesterday's logs (when enabled) and prunes old ones.
+func (s *Server) logMaintenance(ctx context.Context) {
+	settings, err := s.st.GetSettings(ctx)
+	if err != nil {
+		return
+	}
+	if settings.LogArchiveEnabled {
+		dir := filepath.Join(s.cfg.DataDir, "log-archive")
+		yesterday := time.Now().UTC().Add(-24 * time.Hour)
+		for _, src := range []string{"server", "agent"} {
+			path, n, err := s.st.ArchiveLogDay(ctx, src, yesterday, dir)
+			if err != nil {
+				s.log.Warn("archiving logs", "source", src, "err", err)
+			} else if n > 0 {
+				s.log.Info("archived logs", "source", src, "entries", n, "file", filepath.Base(path))
+			}
+		}
+	}
+	s.st.PruneLogs(ctx, settings.LogRetentionDays)
+	if d := s.sink.Dropped(); d > 0 {
+		s.log.Warn("log records dropped because the database could not keep up", "total_dropped", d)
+	}
+}
+
 // filevaultKeySweep asks Macs with FileVault on but no escrowed key for
 // SecurityInfo (at most every 4 hours each) so newly generated keys — e.g. after
 // Escrow Buddy runs at login — are collected promptly.
@@ -378,6 +411,14 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 // Run starts background jobs and serves until ctx is cancelled.
 func (s *Server) Run(ctx context.Context) error {
 	s.hooks.Start(ctx)
+	var lastSinkErr time.Time
+	s.sink.Start(ctx, func(err error) {
+		// Report sink failures through the plain logger (never back into the sink), at most once a minute.
+		if time.Since(lastSinkErr) > time.Minute {
+			lastSinkErr = time.Now()
+			s.baseLog.Warn("writing logs to the database failed", "err", err)
+		}
+	})
 	go s.housekeeping(ctx)
 	errCh := make(chan error, 1)
 	go func() {
@@ -415,6 +456,7 @@ func (s *Server) housekeeping(ctx context.Context) {
 			}
 			if tick%60 == 1 {
 				s.st.PruneCommandEvents(ctx, 90)
+				s.logMaintenance(ctx)
 			}
 			s.st.ExpireStalePolicyLogs(ctx)
 			s.st.ExpireStaleTasks(ctx)

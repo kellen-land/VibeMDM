@@ -493,6 +493,9 @@ export interface SettingsView {
   signing_cert_subject?: string
   remote_shell_enabled: boolean
   remote_shell_idle_timeout_secs: number
+  filevault_auto_remediate: boolean
+  /** True when VIBEMDM_ENCRYPTION_KEY is set and secrets are sealed at rest (read-only). */
+  encryption_at_rest: boolean
   version: string
 }
 
@@ -552,6 +555,8 @@ export interface EnrollmentStatus {
   issues: string[]
   enroll_url: string
   install_command?: string
+  /** Apple Configurator "Enroll in MDM Server" URL (admin only). */
+  configurator_url?: string
 }
 
 export interface InvitationCreated {
@@ -559,6 +564,7 @@ export interface InvitationCreated {
   token: string
   enroll_url: string
   install_command: string
+  configurator_url: string
 }
 
 export interface Count {
@@ -599,6 +605,7 @@ export interface ComputerDetail extends Computer {
   groups: ComputerGroup[]
   profile_deployments: ProfileDeployment[] | null
   agent_online: boolean
+  filevault: FileVaultStatus | null
 }
 
 export interface ComputerEdit {
@@ -861,4 +868,112 @@ export interface WebhookDelivery {
   error: string
   attempts: number
   at: string
+}
+
+// ---- FileVault escrow (internal/model FileVault*, internal/api/filevault.go) ----
+
+/** A computer's escrow state. Never contains the key. */
+export interface FileVaultStatus {
+  escrowed: boolean
+  fingerprint: string
+  escrowed_at: string | null
+  rotated_count: number
+  source: string
+  /** Deployment status of the escrow profile on this Mac (pending | installed | failed | removing | removed | ""). */
+  escrow_profile_status: string
+}
+
+export interface FileVaultRow {
+  computer_id: string
+  computer_name: string
+  serial_number: string
+  filevault_enabled: boolean | null
+  mdm_enrolled: boolean
+  agent_enrolled: boolean
+  escrowed: boolean
+  fingerprint: string
+  escrowed_at: string | null
+  rotated_count: number
+  escrow_profile_status: string
+}
+
+export interface FileVaultSummary {
+  total: number
+  escrowed: number
+  missing_key: number
+  not_encrypted: number
+  unknown: number
+}
+
+export interface BuiltinProfileView {
+  deployed: boolean
+  profile?: ConfigProfile
+  status: Record<string, number>
+}
+
+export interface FileVaultOverview {
+  summary: FileVaultSummary
+  computers: FileVaultRow[] | null
+  auto_remediate: boolean
+  escrow_profile: BuiltinProfileView
+  enforce_profile: BuiltinProfileView
+  escrow_certificate?: { subject: string; not_after: string }
+}
+
+/** escrow.EnforceOptions has no json tags, so Go serializes the field names verbatim. */
+export interface FileVaultEnforceOptions {
+  DeferAtLogout: boolean
+  DeferDontAskAtLogout: boolean
+  /** -1 = unlimited deferrals, 0..9999 */
+  MaxBypassAttempts: number
+  ShowRecoveryKey: boolean
+}
+
+export interface FileVaultUpdate {
+  escrow?: { enabled: boolean; scope: Scope }
+  enforce?: { enabled: boolean; scope: Scope; options: FileVaultEnforceOptions }
+  auto_remediate?: boolean
+}
+
+export interface FileVaultReveal {
+  key: string
+  status: FileVaultStatus
+}
+
+// ---- MDM command inspector (internal/api/inspector.go) ----
+
+export type CommandEventName = 'queued' | 'push_sent' | 'push_failed' | 'connected' | 'delivered' | 'not_now' | 'acknowledged' | 'error' | 'cancelled' | string
+
+export interface CommandEvent {
+  id: number
+  command_uuid: string
+  enrollment_id: string
+  event: CommandEventName
+  description: string
+  details: Record<string, unknown> | null
+  request_type: string
+  computer_id: string
+  computer_name: string
+  at: string
+}
+
+export interface CommandInspection {
+  command: MDMCommand
+  summary: string
+  result_summary: string
+  events: CommandEvent[] | null
+  redacted: boolean
+  can_reveal: boolean
+}
+
+export interface CommandSearchHit {
+  command_uuid: string
+  request_type: string
+  computer_id: string
+  computer_name: string
+  status: string
+  /** command | result */
+  matched_in: string
+  snippet: string
+  created_at: string
 }

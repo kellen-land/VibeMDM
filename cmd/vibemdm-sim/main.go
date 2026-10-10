@@ -440,6 +440,8 @@ func (d *device) agentLoop(ctx context.Context, interval time.Duration) {
 	c := agent.NewClient(d.server, d.agentTok, version)
 	user := []string{"alice", "bob", "carol", "dave"}[d.idx%4]
 	runCheckin := func(trigger string) {
+		defer c.ShipLogs(ctx, []model.AgentLogEntry{{At: time.Now().UTC(), Level: "INFO", Component: "daemon", Msg: "check-in complete",
+			Attrs: map[string]any{"trigger": trigger, "simulated": true, "user": user}}})
 		resp, err := c.Checkin(ctx, model.AgentCheckinRequest{Trigger: trigger, ConsoleUser: user, Hostname: strings.ToLower(d.name) + ".local", ComputerName: d.name,
 			OSVersion: d.osVer, OSBuild: d.build, IPAddress: fmt.Sprintf("10.0.%d.%d", d.idx/250, d.idx%250+10), AgentVersion: version, UptimeSecs: int64(3600 * d.idx)})
 		if err != nil {
@@ -571,6 +573,20 @@ func (d *device) runTask(ctx context.Context, c *agent.Client, t model.AgentTask
 		res.Stdout = "inventory submitted"
 	case "custom_trigger":
 		res.Stdout = "[simulator] trigger " + str(t.Payload["trigger"])
+	case "collect_diagnostics":
+		id := str(t.Payload["bundle_id"])
+		path := fmt.Sprintf("/tmp/vibemdm-sim-diag-%s.tar.gz", id)
+		if err := writeFakeBundle(path, d.name); err != nil {
+			res.Status, res.Error = "failed", err.Error()
+			c.DiagnosticsFailed(ctx, id, err.Error())
+			break
+		}
+		if err := c.UploadDiagnostics(ctx, id, path); err != nil {
+			res.Status, res.Error = "failed", err.Error()
+		} else {
+			res.Stdout = "[simulator] diagnostics uploaded"
+		}
+		os.Remove(path)
 	case "filevault_regenerate":
 		if d.idx%2 != 0 {
 			res.Status, res.ExitCode, res.Stdout = "failed", 1, "FileVault is not enabled on this Mac; nothing to escrow."

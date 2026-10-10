@@ -17,6 +17,8 @@ type builtinProfileView struct {
 	Deployed bool                 `json:"deployed"`
 	Profile  *model.ConfigProfile `json:"profile,omitempty"`
 	Status   map[string]int       `json:"status"`
+	// Options are the enforcement profile's currently deployed settings.
+	Options *escrow.EnforceOptions `json:"options,omitempty"`
 }
 
 func (h *Handler) builtinProfile(ctx context.Context, identifier string) builtinProfileView {
@@ -24,6 +26,11 @@ func (h *Handler) builtinProfile(ctx context.Context, identifier string) builtin
 	p, err := h.st.GetProfileByIdentifier(ctx, identifier)
 	if err != nil {
 		return v
+	}
+	if identifier == escrow.EnforceProfileIdentifier {
+		if o, err := escrow.ParseEnforceOptions([]byte(p.Payload)); err == nil {
+			v.Options = o
+		}
 	}
 	p.Payload = ""
 	v.Profile = p

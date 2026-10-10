@@ -41,9 +41,13 @@ func TestEscrowRoundTrip(t *testing.T) {
 	if doc["PayloadIdentifier"] != EscrowProfileIdentifier {
 		t.Error("identifier")
 	}
-	enf, err := EnforceProfile("Acme", EnforceOptions{MaxBypassAttempts: 3})
+	enf, err := EnforceProfile("Acme", EnforceOptions{MaxBypassAttempts: 3, DeferAtLogout: true, ShowRecoveryKey: true})
 	if err != nil {
 		t.Fatal(err)
+	}
+	o, err := ParseEnforceOptions(enf)
+	if err != nil || o.MaxBypassAttempts != 3 || !o.DeferAtLogout || !o.ShowRecoveryKey {
+		t.Fatalf("round trip: %+v %v", o, err)
 	}
 	if _, err := plist.Unmarshal(enf, &doc); err != nil {
 		t.Fatal(err)

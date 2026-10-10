@@ -4,7 +4,7 @@ import { cn } from '../../lib/cn'
 export type BadgeTone = 'neutral' | 'accent' | 'good' | 'warning' | 'serious' | 'critical' | 'info'
 
 /* Low-chrome tinted chips: subtle background, hairline border, legible ink. */
-const tones: Record<BadgeTone, string> = {
+export const badgeToneClass: Record<BadgeTone, string> = {
   neutral: 'bg-line/40 text-ink-muted border-line',
   accent: 'bg-accent-500/12 text-accent-700 border-accent-500/25 dark:text-accent-300',
   info: 'bg-accent-500/10 text-accent-700 border-accent-500/20 dark:text-accent-300',
@@ -27,7 +27,7 @@ export function Badge({ tone = 'neutral', dot, icon, size = 'sm', className, chi
       className={cn(
         'inline-flex items-center gap-1.5 rounded-md border font-medium whitespace-nowrap tabular-nums',
         size === 'sm' ? 'px-1.5 py-0.5 text-[11px] leading-4' : 'px-2 py-0.5 text-xs',
-        tones[tone],
+        badgeToneClass[tone],
         className,
       )}
       {...rest}

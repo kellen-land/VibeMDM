@@ -28,6 +28,9 @@ type Daemon struct {
 	mu      sync.Mutex // serializes policy/task execution
 
 	checkinNow chan string // trigger names requested out of band
+
+	// Ship (optional) uploads agent logs to the server.
+	Ship *LogShipper
 }
 
 // NewDaemon creates a daemon.
@@ -108,6 +111,9 @@ func (d *Daemon) Run(ctx context.Context) error {
 				d.log.Info("server connection restored")
 				backoff = time.Second
 				d.spool.Flush(ctx)
+				if d.Ship != nil {
+					go d.Ship.Flush(ctx)
+				}
 			}
 			if len(resp.Tasks) > 0 {
 				d.runLocked(ctx, func(ctx context.Context) {
@@ -156,6 +162,15 @@ func (d *Daemon) Run(ctx context.Context) error {
 			}
 		}
 	}()
+
+	// Log shipping.
+	if d.Ship != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			d.Ship.Run(ctx)
+		}()
+	}
 
 	// Spool retry.
 	wg.Add(1)

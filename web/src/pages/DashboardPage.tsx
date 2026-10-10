@@ -17,7 +17,7 @@ import type { AgentTask, Computer, PolicyLog } from '../api/types'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '../lib/cn'
 
-function StatTile({ label, value, icon: Icon, to, tone }: { label: string; value: number; icon: LucideIcon; to?: string; tone?: 'warn' | 'bad' }) {
+export function StatTile({ label, value, icon: Icon, to, tone }: { label: string; value: number; icon: LucideIcon; to?: string; tone?: 'warn' | 'bad' }) {
   const alert = (tone === 'bad' || tone === 'warn') && value > 0
   const body = (
     <Card className={cn('group relative h-full overflow-hidden px-4 pt-3.5 pb-4 transition-colors', to && 'hover:border-line-strong')}>

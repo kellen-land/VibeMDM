@@ -642,6 +642,34 @@ type CommandEvent struct {
 	At           time.Time      `json:"at"`
 }
 
+// LogEntry is a stored server or agent log line.
+type LogEntry struct {
+	ID           int64          `json:"id"`
+	Source       string         `json:"source"` // server | agent
+	ComputerID   string         `json:"computer_id,omitempty"`
+	ComputerName string         `json:"computer_name,omitempty"`
+	At           time.Time      `json:"at"`
+	Level        string         `json:"level"`
+	Component    string         `json:"component"`
+	Msg          string         `json:"msg"`
+	Attrs        map[string]any `json:"attrs"`
+}
+
+// DiagnosticBundle is an on-demand log/diagnostics archive collected from a Mac.
+type DiagnosticBundle struct {
+	ID           string     `json:"id"`
+	ComputerID   string     `json:"computer_id"`
+	ComputerName string     `json:"computer_name"`
+	Status       string     `json:"status"` // requested | uploaded | failed
+	Filename     string     `json:"filename"`
+	SizeBytes    int64      `json:"size_bytes"`
+	SHA256       string     `json:"sha256"`
+	Error        string     `json:"error"`
+	RequestedBy  string     `json:"requested_by"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UploadedAt   *time.Time `json:"uploaded_at"`
+}
+
 // Settings are the editable server settings.
 type Settings struct {
 	OrgName                     string `json:"org_name"`
@@ -659,4 +687,6 @@ type Settings struct {
 	RemoteShellEnabled          bool   `json:"remote_shell_enabled"`
 	RemoteShellIdleTimeoutSecs  int    `json:"remote_shell_idle_timeout_secs"`
 	FileVaultAutoRemediate      bool   `json:"filevault_auto_remediate"`
+	LogRetentionDays            int    `json:"log_retention_days"`
+	LogArchiveEnabled           bool   `json:"log_archive_enabled"`
 }

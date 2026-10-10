@@ -201,3 +201,12 @@ type AgentInventory struct {
 	CollectedAt         time.Time         `json:"collected_at"`
 	CollectDurationMS   int64             `json:"collect_duration_ms"`
 }
+
+// AgentLogEntry is one log record shipped by the agent.
+type AgentLogEntry struct {
+	At        time.Time      `json:"at"`
+	Level     string         `json:"level"`
+	Component string         `json:"component"`
+	Msg       string         `json:"msg"`
+	Attrs     map[string]any `json:"attrs"`
+}

@@ -3,6 +3,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -19,8 +20,9 @@ type Config struct {
 	AdminPassword string // initial admin password (first boot only)
 	Debug         bool
 	DumpMDM       bool
-	APNsURL       string // override APNs server URL (testing)
-	EncryptionKey string // passphrase for at-rest encryption of secrets
+	APNsURL       string     // override APNs server URL (testing)
+	EncryptionKey string     // passphrase for at-rest encryption of secrets
+	LogDBLevel    slog.Level // minimum level stored in the searchable log table
 	SessionTTL    time.Duration
 	Version       string
 }
@@ -63,6 +65,9 @@ func FromEnv(version string) (*Config, error) {
 		return nil, fmt.Errorf("invalid VIBEMDM_SESSION_TTL_HOURS")
 	}
 	c.SessionTTL = time.Duration(ttlHours) * time.Hour
+	if err := c.LogDBLevel.UnmarshalText([]byte(env("VIBEMDM_LOG_DB_LEVEL", "info"))); err != nil {
+		return nil, fmt.Errorf("invalid VIBEMDM_LOG_DB_LEVEL (use debug, info, warn or error)")
+	}
 	if c.DatabaseURL == "" {
 		return nil, fmt.Errorf("VIBEMDM_DATABASE_URL is required (e.g. postgres://vibemdm:secret@db:5432/vibemdm?sslmode=disable)")
 	}

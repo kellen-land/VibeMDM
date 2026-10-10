@@ -268,3 +268,42 @@ func authHeader(token, version string) http.Header {
 	h.Set("User-Agent", "vibemdm-agent/"+version)
 	return h
 }
+
+// ShipLogs uploads a batch of agent log records.
+func (c *Client) ShipLogs(ctx context.Context, entries []model.AgentLogEntry) error {
+	return c.do(ctx, http.MethodPost, "/agent/v1/logs", map[string]any{"entries": entries}, nil, 30*time.Second)
+}
+
+// UploadDiagnostics PUTs a gzipped tarball for a requested bundle.
+func (c *Client) UploadDiagnostics(ctx context.Context, bundleID, path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	fi, _ := f.Stat()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.BaseURL+"/agent/v1/diagnostics/"+bundleID, f)
+	if err != nil {
+		return err
+	}
+	req.ContentLength = fi.Size()
+	req.Header.Set("Content-Type", "application/gzip")
+	req.Header.Set("Authorization", "Bearer "+c.Token)
+	cl := *c.HTTP
+	cl.Timeout = 30 * time.Minute
+	resp, err := cl.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return &apiError{Status: resp.StatusCode, Msg: strings.TrimSpace(string(b))}
+	}
+	return nil
+}
+
+// DiagnosticsFailed reports that a bundle could not be collected.
+func (c *Client) DiagnosticsFailed(ctx context.Context, bundleID, msg string) error {
+	return c.do(ctx, http.MethodPost, "/agent/v1/diagnostics/"+bundleID+"/failed", map[string]string{"error": msg}, nil, 0)
+}

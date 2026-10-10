@@ -1,8 +1,11 @@
 package main
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"crypto"
 	"fmt"
+	"os"
 
 	"crypto/rand"
 	"crypto/rsa"
@@ -136,4 +139,20 @@ func (d *device) escrowedKeyCMS() []byte {
 		}
 	}
 	return nil
+}
+
+// writeFakeBundle writes a tiny diagnostics tarball for the simulator.
+func writeFakeBundle(path, name string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	gz := gzip.NewWriter(f)
+	tw := tar.NewWriter(gz)
+	body := []byte("simulated diagnostics for " + name + "\n")
+	tw.WriteHeader(&tar.Header{Name: "vibemdm-diagnostics/README.txt", Mode: 0o600, Size: int64(len(body))})
+	tw.Write(body)
+	tw.Close()
+	return gz.Close()
 }

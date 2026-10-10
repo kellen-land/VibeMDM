@@ -66,7 +66,12 @@ func main() {
 			if err != nil {
 				return err
 			}
-			return agent.NewDaemon(cfg, version, logger).Run(ctx)
+			// Logs go to the local file (via launchd stdout) and are shipped to the server.
+			ship := agent.NewLogShipper(agent.NewClient(cfg.ServerURL, cfg.DeviceToken, version), slog.LevelInfo)
+			dlog := slog.New(ship.Wrap(logger.Handler()))
+			d := agent.NewDaemon(cfg, version, dlog)
+			d.Ship = ship
+			return d.Run(ctx)
 		})
 	case "policy":
 		fs := flag.NewFlagSet("policy", flag.ExitOnError)

@@ -2,12 +2,19 @@ package agentapi
 
 import (
 	"bufio"
+	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/store"
@@ -67,6 +74,9 @@ func (h *Handler) registerParity(mux *http.ServeMux) {
 	})
 	mux.Handle("POST /agent/v1/app-installs/{id}/result", a(h.appInstallResult))
 	mux.Handle("POST /agent/v1/restricted-events", a(h.restrictedEvent))
+	mux.Handle("POST /agent/v1/logs", a(h.ingestLogs))
+	mux.Handle("PUT /agent/v1/diagnostics/{id}", a(h.uploadDiagnostics))
+	mux.Handle("POST /agent/v1/diagnostics/{id}/failed", a(h.diagnosticsFailed))
 	mux.Handle("GET /agent/v1/selfservice", a(h.selfServiceList))
 	mux.Handle("POST /agent/v1/selfservice/run", a(h.selfServiceRun))
 }
@@ -205,4 +215,81 @@ func (h *Handler) selfServiceRun(w http.ResponseWriter, r *http.Request) {
 	default:
 		writeErr(w, 400, "unknown kind")
 	}
+}
+
+func (h *Handler) ingestLogs(w http.ResponseWriter, r *http.Request) {
+	comp := computerFrom(r.Context())
+	var req struct {
+		Entries []model.AgentLogEntry `json:"entries"`
+	}
+	if err := decode(r, &req); err != nil {
+		writeErr(w, 400, "invalid JSON")
+		return
+	}
+	n, err := h.st.InsertAgentLogs(r.Context(), comp.ID, req.Entries)
+	if err != nil {
+		h.log.Error("storing agent logs", "err", err, "computer", comp.Name)
+		writeErr(w, 500, "storing logs failed")
+		return
+	}
+	writeJSON(w, 200, map[string]int{"stored": n})
+}
+
+// uploadDiagnostics receives a gzipped tarball for a requested bundle (max 512 MiB).
+func (h *Handler) uploadDiagnostics(w http.ResponseWriter, r *http.Request) {
+	comp := computerFrom(r.Context())
+	b, err := h.st.GetDiagnosticBundle(r.Context(), r.PathValue("id"))
+	if err != nil || b.ComputerID != comp.ID || b.Status != "requested" {
+		writeErr(w, 404, "diagnostic bundle not found")
+		return
+	}
+	dir := filepath.Join(h.dataDir, "diagnostics")
+	os.MkdirAll(dir, 0o750)
+	dst := filepath.Join(dir, b.ID+".tar.gz")
+	f, err := os.OpenFile(dst+".part", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o640)
+	if err != nil {
+		writeErr(w, 500, "cannot store bundle")
+		return
+	}
+	hsh := sha256.New()
+	n, err := io.Copy(io.MultiWriter(f, hsh), http.MaxBytesReader(w, r.Body, 512<<20))
+	f.Close()
+	if err != nil {
+		os.Remove(dst + ".part")
+		writeErr(w, 400, "upload failed: "+err.Error())
+		return
+	}
+	os.Rename(dst+".part", dst)
+	name := fmt.Sprintf("vibemdm-diagnostics-%s-%s.tar.gz", sanitizeName(comp.Name), time.Now().UTC().Format("20060102-150405"))
+	if err := h.st.CompleteDiagnosticBundle(r.Context(), b.ID, comp.ID, "uploaded", name, hex.EncodeToString(hsh.Sum(nil)), n, ""); err != nil {
+		writeErr(w, 409, "bundle no longer pending")
+		return
+	}
+	h.log.Info("diagnostic bundle uploaded", "computer", comp.Name, "bytes", n)
+	writeJSON(w, 200, map[string]any{"ok": true, "bytes": n})
+}
+
+func (h *Handler) diagnosticsFailed(w http.ResponseWriter, r *http.Request) {
+	comp := computerFrom(r.Context())
+	var req struct {
+		Error string `json:"error"`
+	}
+	decode(r, &req)
+	if err := h.st.CompleteDiagnosticBundle(r.Context(), r.PathValue("id"), comp.ID, "failed", "", "", 0, req.Error); err != nil {
+		writeErr(w, 404, "diagnostic bundle not found")
+		return
+	}
+	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+func sanitizeName(s string) string {
+	out := make([]rune, 0, len(s))
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
+			out = append(out, r)
+		} else {
+			out = append(out, '-')
+		}
+	}
+	return string(out)
 }

@@ -189,6 +189,16 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("DELETE /api/v1/network-segments/{id}", h.deleteSegment)
 	r("POST /api/v1/scope/preview", h.scopePreview)
 
+	// Logs & diagnostics
+	r("GET /api/v1/logs", h.listLogs)
+	r("GET /api/v1/logs/components", h.logComponents)
+	adm("GET /api/v1/logs/export", h.exportLogs)
+	adm("GET /api/v1/logs/archives", h.listLogArchives)
+	adm("GET /api/v1/logs/archives/{name}", h.downloadLogArchive)
+	adm("POST /api/v1/computers/{id}/diagnostics", h.requestDiagnostics)
+	r("GET /api/v1/computers/{id}/diagnostics", h.listDiagnostics)
+	adm("GET /api/v1/diagnostics/{id}/download", h.downloadDiagnostics)
+
 	// FileVault recovery key escrow
 	r("GET /api/v1/filevault", h.filevaultOverview)
 	adm("PUT /api/v1/filevault", h.filevaultProfiles)

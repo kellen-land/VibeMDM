@@ -110,6 +110,29 @@ export function GeneralSettings() {
       </Card>
 
       <Card>
+        <CardHeader
+          title="Encryption at rest"
+          description={
+            form.encryption_at_rest
+              ? 'Secrets (signing keys, escrowed FileVault keys, APNs/SCEP/escrow private keys) are sealed in the database.'
+              : <>Secrets are stored unencrypted in the database. Set <code className="font-mono">VIBEMDM_ENCRYPTION_KEY</code> on the server and restart to seal them.</>
+          }
+          actions={
+            form.encryption_at_rest ? (
+              <Badge tone="good" dot>
+                Enabled
+              </Badge>
+            ) : (
+              <Badge tone="warning" dot>
+                Disabled — set VIBEMDM_ENCRYPTION_KEY
+              </Badge>
+            )
+          }
+          className="border-b-0"
+        />
+      </Card>
+
+      <Card>
         <CardHeader title="Enrollment" />
         <CardBody className="flex flex-col gap-5">
           <FormGrid cols={2}>

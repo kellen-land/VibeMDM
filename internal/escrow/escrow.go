@@ -189,3 +189,30 @@ func Fingerprint(prk string) string {
 	}
 	return "…-" + last
 }
+
+// ParseEnforceOptions reads the options back from an enforcement profile.
+func ParseEnforceOptions(profile []byte) (*EnforceOptions, error) {
+	var doc struct {
+		PayloadContent []map[string]any
+	}
+	if _, err := plist.Unmarshal(profile, &doc); err != nil {
+		return nil, err
+	}
+	for _, p := range doc.PayloadContent {
+		if p["PayloadType"] != "com.apple.MCX.FileVault2" {
+			continue
+		}
+		o := &EnforceOptions{}
+		dontAsk, _ := p["DeferDontAskAtUserLogout"].(bool)
+		o.DeferDontAskAtLogout, o.DeferAtLogout = dontAsk, !dontAsk
+		o.ShowRecoveryKey, _ = p["ShowRecoveryKey"].(bool)
+		switch n := p["DeferForceAtUserLoginMaxBypassAttempts"].(type) {
+		case int64:
+			o.MaxBypassAttempts = int(n)
+		case uint64:
+			o.MaxBypassAttempts = int(n)
+		}
+		return o, nil
+	}
+	return nil, errors.New("no FileVault2 payload")
+}

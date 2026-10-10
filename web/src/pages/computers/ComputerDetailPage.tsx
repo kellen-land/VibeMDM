@@ -17,14 +17,14 @@ import { RelativeTime } from '../../components/ui/RelativeTime'
 import { ComputerStatusBadges } from './ComputersPage'
 import { latest } from '../DashboardPage'
 import { GeneralTab, HardwareTab, OSTab, SecurityTab, AppsTab, ProfilesTab, EATab, LocalUsersTab, GroupsTab } from './InventoryTabs'
-import { ComputerPolicyLogsTab, ComputerTasksTab, ComputerCommandsTab } from './ActivityTabs'
+import { ComputerPolicyLogsTab, ComputerTasksTab, ComputerCommandsTab, ComputerTimelineTab } from './ActivityTabs'
 import { AppInstallsTab, RestrictedEventsTab } from '../ActivityPage'
 import { ManagementTab } from './ManagementTab'
 import { ShellTerminal } from '../../components/shell/ShellTerminal'
 import { TerminalSquare } from 'lucide-react'
 import type { UpdateInventoryResponse } from '../../api/types'
 
-const tabKeys = ['general', 'hardware', 'os', 'security', 'applications', 'profiles', 'extension-attributes', 'local-users', 'groups', 'policy-logs', 'app-installs', 'restricted-events', 'tasks', 'commands', 'management', 'shell'] as const
+const tabKeys = ['general', 'hardware', 'os', 'security', 'applications', 'profiles', 'extension-attributes', 'local-users', 'groups', 'policy-logs', 'app-installs', 'restricted-events', 'tasks', 'commands', 'timeline', 'management', 'shell'] as const
 type TabKey = (typeof tabKeys)[number]
 
 export function ComputerDetailPage() {
@@ -59,6 +59,7 @@ export function ComputerDetailPage() {
       { key: 'restricted-events' as TabKey, label: 'Restricted Events' },
       { key: 'tasks' as TabKey, label: 'Tasks' },
       { key: 'commands' as TabKey, label: 'MDM Commands' },
+      { key: 'timeline' as TabKey, label: 'Timeline' },
       { key: 'management' as TabKey, label: 'Management' },
       ...(shellEnabled && isAdmin && c?.agent_enrolled ? [{ key: 'shell' as TabKey, label: 'Shell', icon: <TerminalSquare /> }] : []),
     ],
@@ -150,6 +151,7 @@ export function ComputerDetailPage() {
         {active === 'restricted-events' && <RestrictedEventsTab computerId={c.id} />}
         {active === 'tasks' && <ComputerTasksTab id={c.id} />}
         {active === 'commands' && <ComputerCommandsTab id={c.id} />}
+        {active === 'timeline' && <ComputerTimelineTab id={c.id} />}
         {active === 'management' && <ManagementTab c={c} />}
         {active === 'shell' && (
           <div className="p-4">

@@ -33,6 +33,13 @@ export function absoluteTime(v: string | Date | null | undefined): string {
   return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' })
 }
 
+/** Time of day with milliseconds, e.g. "14:03:22.417" (inspector timelines). */
+export function timeWithMs(v: string | Date | null | undefined): string {
+  const d = parseDate(v)
+  if (!d) return ''
+  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, fractionalSecondDigits: 3 })
+}
+
 export function shortDate(v: string | Date | null | undefined): string {
   const d = parseDate(v)
   if (!d) return '—'

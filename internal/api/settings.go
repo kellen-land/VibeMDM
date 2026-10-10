@@ -31,6 +31,8 @@ type settingsView struct {
 	RemoteShellIdleTimeoutSecs  int    `json:"remote_shell_idle_timeout_secs"`
 	FileVaultAutoRemediate      bool   `json:"filevault_auto_remediate"`
 	EncryptionAtRest            bool   `json:"encryption_at_rest"`
+	LogRetentionDays            int    `json:"log_retention_days"`
+	LogArchiveEnabled           bool   `json:"log_archive_enabled"`
 	Version                     string `json:"version"`
 }
 
@@ -42,6 +44,7 @@ func (h *Handler) view(s model.Settings, admin bool) settingsView {
 		SigningConfigured: s.SigningCertPEM != "" && s.SigningKeyPEM != "", Version: h.cfg.Version,
 		RemoteShellEnabled: s.RemoteShellEnabled, RemoteShellIdleTimeoutSecs: s.RemoteShellIdleTimeoutSecs,
 		FileVaultAutoRemediate: s.FileVaultAutoRemediate, EncryptionAtRest: h.st.Box.Enabled(),
+		LogRetentionDays: s.LogRetentionDays, LogArchiveEnabled: s.LogArchiveEnabled,
 	}
 	if admin {
 		v.AgentEnrollmentSecret = s.AgentEnrollmentSecret
@@ -79,6 +82,8 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request) {
 		ClearSigning                bool    `json:"clear_signing"`
 		RemoteShellEnabled          *bool   `json:"remote_shell_enabled"`
 		RemoteShellIdleTimeoutSecs  *int    `json:"remote_shell_idle_timeout_secs"`
+		LogRetentionDays            *int    `json:"log_retention_days"`
+		LogArchiveEnabled           *bool   `json:"log_archive_enabled"`
 	}
 	if err := decode(r, &req); err != nil {
 		writeErr(w, 400, err.Error())
@@ -125,6 +130,16 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.RemoteShellIdleTimeoutSecs != nil && *req.RemoteShellIdleTimeoutSecs >= 30 {
 		s.RemoteShellIdleTimeoutSecs = *req.RemoteShellIdleTimeoutSecs
+	}
+	if req.LogRetentionDays != nil {
+		if *req.LogRetentionDays < 1 || *req.LogRetentionDays > 3650 {
+			writeErr(w, 400, "log retention must be between 1 and 3650 days")
+			return
+		}
+		s.LogRetentionDays = *req.LogRetentionDays
+	}
+	if req.LogArchiveEnabled != nil {
+		s.LogArchiveEnabled = *req.LogArchiveEnabled
 	}
 	if req.ClearSigning {
 		s.SigningCertPEM, s.SigningKeyPEM = "", ""

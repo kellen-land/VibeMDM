@@ -17,6 +17,8 @@ export interface ConfirmDialogProps {
   /** When set, the user must type this text exactly to enable the confirm button. */
   typeToConfirm?: string
   loading?: boolean
+  /** Extra condition that keeps the confirm button disabled (e.g. a required field in children). */
+  confirmDisabled?: boolean
   children?: ReactNode
 }
 
@@ -31,6 +33,7 @@ export function ConfirmDialog({
   destructive,
   typeToConfirm,
   loading,
+  confirmDisabled,
   children,
 }: ConfirmDialogProps) {
   const [typed, setTyped] = useState('')
@@ -38,7 +41,7 @@ export function ConfirmDialog({
   useEffect(() => {
     if (!open) setTyped('')
   }, [open])
-  const ok = !typeToConfirm || typed === typeToConfirm
+  const ok = (!typeToConfirm || typed === typeToConfirm) && !confirmDisabled
   const handle = async () => {
     setBusy(true)
     try {

@@ -22,6 +22,8 @@ import { useToast } from '../components/ui/Toast'
 import { PolicyLogTable } from '../components/activity/PolicyLogTable'
 import { TaskTable } from '../components/activity/TaskTable'
 import { CommandTable } from '../components/activity/CommandTable'
+import { CommandSearchResults } from '../components/activity/CommandSearch'
+import { SearchInput } from '../components/ui/SearchInput'
 import { AppInstallLogTable } from '../components/activity/AppInstallLogTable'
 import { RestrictedEventTable } from '../components/activity/RestrictedEventTable'
 
@@ -193,7 +195,9 @@ function CommandsTab() {
   const invalidate = useInvalidate()
   const [status, setStatus] = useState('')
   const [page, setPage] = useState({ limit: 50, offset: 0 })
+  const [search, setSearch] = useState('')
   const q = useCommands({ status: status || undefined, ...page })
+  const searching = search.trim().length > 0
   const cancel = async (c: MDMCommand) => {
     try {
       await api.del(`/api/v1/commands/${c.command_uuid}`)
@@ -207,28 +211,38 @@ function CommandsTab() {
     <>
       <CardHeader
         title="MDM commands"
-        description="Click a row to view the raw command and result. Pending commands can be cancelled before the device fetches them."
+        description="Click a row to open the inspector: timeline, summaries and (redacted) plists. Pending commands can be cancelled before the device fetches them."
         actions={
-          <Select
-            className="w-44"
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value)
-              setPage({ ...page, offset: 0 })
-            }}
-            options={[
-              { value: '', label: 'All statuses' },
-              { value: 'Pending', label: 'Pending' },
-              { value: 'Acknowledged', label: 'Acknowledged' },
-              { value: 'Error', label: 'Error' },
-              { value: 'NotNow', label: 'Not now' },
-              { value: 'CommandFormatError', label: 'Format error' },
-            ]}
-          />
+          <>
+            <SearchInput value={search} onChange={setSearch} placeholder="Search plists…" className="w-56" aria-label="Search commands" />
+            <Select
+              disabled={searching}
+              className="w-44"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value)
+                setPage({ ...page, offset: 0 })
+              }}
+              options={[
+                { value: '', label: 'All statuses' },
+                { value: 'Pending', label: 'Pending' },
+                { value: 'Acknowledged', label: 'Acknowledged' },
+                { value: 'Error', label: 'Error' },
+                { value: 'NotNow', label: 'Not now' },
+                { value: 'CommandFormatError', label: 'Format error' },
+              ]}
+            />
+          </>
         }
       />
-      {q.error && <p className="px-5 py-4 text-sm text-critical">{errorMessage(q.error)}</p>}
-      <CommandTable commands={q.data?.items} loading={q.isPending} onCancel={cancel} canCancel={isAdmin} footer={<Pagination total={q.data?.total ?? 0} limit={page.limit} offset={page.offset} onChange={setPage} />} />
+      {searching ? (
+        <CommandSearchResults query={search} />
+      ) : (
+        <>
+          {q.error && <p className="px-5 py-4 text-sm text-critical">{errorMessage(q.error)}</p>}
+          <CommandTable commands={q.data?.items} loading={q.isPending} onCancel={cancel} canCancel={isAdmin} footer={<Pagination total={q.data?.total ?? 0} limit={page.limit} offset={page.offset} onChange={setPage} />} />
+        </>
+      )}
     </>
   )
 }

@@ -9,6 +9,10 @@ import type {
   AppInstallLog,
   AppLabels,
   AuditEntry,
+  CommandEvent,
+  CommandInspection,
+  CommandSearchHit,
+  FileVaultOverview,
   Building,
   ComputerDetail,
   Computer,
@@ -96,6 +100,10 @@ export const qk = {
   allAppLogs: (p?: object) => ['app-logs', p ?? {}] as const,
   webhooks: ['webhooks'] as const,
   webhookDeliveries: ['webhooks', 'deliveries'] as const,
+  filevault: ['filevault'] as const,
+  commandInspect: (uuid: string, reveal = false) => ['command', uuid, 'inspect', reveal] as const,
+  computerTimeline: (id: string, p?: object) => ['computer', id, 'timeline', p ?? {}] as const,
+  commandSearch: (p?: object) => ['commands', 'search', p ?? {}] as const,
 }
 
 type Opts<T> = Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'>
@@ -187,6 +195,34 @@ export function useCommands(p: { computer_id?: string; status?: string; limit?: 
 
 export function useCommand(uuid: string | undefined) {
   return useQuery({ queryKey: qk.command(uuid ?? ''), queryFn: () => api.get<MDMCommand>(`/api/v1/commands/${uuid}`), enabled: !!uuid })
+}
+
+/** Full command story. Revealed (raw) payloads are never cached: gcTime 0 drops them as soon as the inspector closes. */
+export function useCommandInspection(uuid: string | undefined, reveal = false) {
+  return useQuery({
+    queryKey: qk.commandInspect(uuid ?? '', reveal),
+    queryFn: () => api.get<CommandInspection>(`/api/v1/commands/${uuid}/inspect`, { query: { reveal: reveal ? 1 : undefined } }),
+    enabled: !!uuid,
+    refetchInterval: reveal ? false : 15_000,
+    ...(reveal ? { gcTime: 0, staleTime: Infinity } : {}),
+  })
+}
+
+export function useComputerTimeline(id: string, p: { limit?: number; offset?: number }) {
+  return useQuery({ queryKey: qk.computerTimeline(id, p), queryFn: () => api.get<ListResponse<CommandEvent>>(`/api/v1/computers/${id}/timeline`, { query: p }), placeholderData: (prev) => prev, refetchInterval: 15_000 })
+}
+
+export function useCommandSearch(p: { q: string; computer_id?: string }) {
+  return useQuery({
+    queryKey: qk.commandSearch(p),
+    queryFn: () => api.get<ListResponse<CommandSearchHit>>('/api/v1/commands/search', { query: p }),
+    enabled: p.q.trim().length >= 2,
+    placeholderData: (prev) => prev,
+  })
+}
+
+export function useFileVault() {
+  return useQuery({ queryKey: qk.filevault, queryFn: () => api.get<FileVaultOverview>('/api/v1/filevault'), refetchInterval: 30_000 })
 }
 
 export function useTasks(p: { computer_id?: string; status?: string; type?: string; limit?: number; offset?: number }) {
