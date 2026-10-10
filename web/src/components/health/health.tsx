@@ -122,6 +122,7 @@ const nouns: Record<string, [string, string]> = {
   app: ['app', 'apps'],
   webhook: ['webhook', 'webhooks'],
   plan: ['update plan', 'update plans'],
+  baseline: ['compliance baseline', 'compliance baselines'],
 }
 
 export function objectNoun(type: string, n: number): string {
@@ -152,6 +153,8 @@ export function objectLink(type: string, id: string): string | null {
       return `/apps/${id}`
     case 'plan':
       return `/updates/plans/${id}`
+    case 'baseline':
+      return `/compliance/${id}`
     case 'webhook':
       return '/settings/webhooks'
     default:

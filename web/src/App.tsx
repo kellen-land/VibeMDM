@@ -35,6 +35,10 @@ import { CustomLabelEditorPage } from './pages/CustomLabelEditorPage'
 import { SoftwareUpdatesPage } from './pages/updates/SoftwareUpdatesPage'
 import { UpdatePlanEditorPage } from './pages/updates/UpdatePlanEditorPage'
 import { HealthPage } from './pages/health/HealthPage'
+import { CompliancePage } from './pages/compliance/CompliancePage'
+import { BaselineEditorPage } from './pages/compliance/BaselineEditorPage'
+import { BaselineReportPage } from './pages/compliance/BaselineReportPage'
+import { BaselineComputerPage } from './pages/compliance/BaselineComputerPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -99,6 +103,11 @@ export function App() {
         <Route path="/updates/plans/new" element={<UpdatePlanEditorPage />} />
         <Route path="/updates/plans/:id" element={<UpdatePlanEditorPage />} />
         <Route path="/updates/:tab" element={<SoftwareUpdatesPage />} />
+        <Route path="/compliance" element={<CompliancePage />} />
+        <Route path="/compliance/new" element={<BaselineEditorPage />} />
+        <Route path="/compliance/:id" element={<BaselineReportPage />} />
+        <Route path="/compliance/:id/edit" element={<BaselineEditorPage />} />
+        <Route path="/compliance/:id/computers/:computerId" element={<BaselineComputerPage />} />
         <Route path="/enrollment" element={<EnrollmentPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/settings/:tab" element={<SettingsPage />} />

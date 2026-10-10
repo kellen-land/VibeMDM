@@ -61,6 +61,15 @@ import type {
   HealthFindingQuery,
   HealthCheckInfo,
   HealthEvent,
+  ComplianceCatalog,
+  ComplianceRule,
+  ComplianceBaseline,
+  ComplianceBaselineRow,
+  ComplianceReport,
+  ComplianceComputerDetail,
+  ComplianceScan,
+  ComplianceProfilePreview,
+  ComputerComplianceRow,
 } from './types'
 
 export const qk = {
@@ -138,6 +147,18 @@ export const qk = {
   healthFinding: (id: string) => ['health', 'finding', id] as const,
   healthChecks: ['health', 'checks'] as const,
   healthEvents: (p?: object) => ['health', 'events', p ?? {}] as const,
+  /** Prefix for every compliance query: invalidate this after any baseline mutation or scan. */
+  compliance: ['compliance'] as const,
+  complianceCatalog: ['compliance', 'catalog'] as const,
+  complianceRules: (benchmark: string, all = false) => ['compliance', 'rules', benchmark, all] as const,
+  complianceRule: (rule: string, benchmark: string) => ['compliance', 'rule', rule, benchmark] as const,
+  complianceBaselines: ['compliance', 'baselines'] as const,
+  complianceBaseline: (id: string) => ['compliance', 'baseline', id] as const,
+  complianceReport: (id: string) => ['compliance', 'baseline', id, 'report'] as const,
+  complianceComputer: (id: string, computerId: string) => ['compliance', 'baseline', id, 'computer', computerId] as const,
+  complianceScans: (id: string, p?: object) => ['compliance', 'baseline', id, 'scans', p ?? {}] as const,
+  complianceProfile: (id: string) => ['compliance', 'baseline', id, 'profile'] as const,
+  computerCompliance: (id: string) => ['computer', id, 'compliance'] as const,
 }
 
 type Opts<T> = Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'>
@@ -486,4 +507,75 @@ export function useHealthChecks() {
 
 export function useHealthEvents(p: { limit?: number } = {}) {
   return useQuery({ queryKey: qk.healthEvents(p), queryFn: () => api.get<HealthEvent[]>('/api/v1/health/events', { query: p }), refetchInterval: 60_000 })
+}
+
+// ---- Compliance (mSCP) ----
+
+/** The embedded catalog never changes while the server runs. */
+export function useComplianceCatalog() {
+  return useQuery({ queryKey: qk.complianceCatalog, queryFn: () => api.get<ComplianceCatalog>('/api/v1/compliance/catalog'), staleTime: Infinity })
+}
+
+export function useComplianceRules(benchmark: string | undefined, all = false) {
+  return useQuery({
+    queryKey: qk.complianceRules(benchmark ?? '', all),
+    queryFn: () => api.get<ComplianceRule[]>('/api/v1/compliance/catalog/rules', { query: { benchmark, all: all ? 1 : undefined } }),
+    enabled: !!benchmark,
+    staleTime: Infinity,
+  })
+}
+
+/** One rule with its check/fix scripts; only fetched when someone opens them. */
+export function useComplianceRule(rule: string | undefined, benchmark = '', enabled = true) {
+  return useQuery({
+    queryKey: qk.complianceRule(rule ?? '', benchmark),
+    queryFn: () => api.get<ComplianceRule>(`/api/v1/compliance/catalog/rules/${encodeURIComponent(rule ?? '')}`, { query: { benchmark } }),
+    enabled: enabled && !!rule,
+    staleTime: Infinity,
+  })
+}
+
+export function useComplianceBaselines() {
+  return useQuery({ queryKey: qk.complianceBaselines, queryFn: () => api.get<ComplianceBaselineRow[]>('/api/v1/compliance/baselines'), refetchInterval: 60_000 })
+}
+
+export function useComplianceBaseline(id: string | undefined) {
+  return useQuery({ queryKey: qk.complianceBaseline(id ?? ''), queryFn: () => api.get<ComplianceBaseline>(`/api/v1/compliance/baselines/${id}`), enabled: !!id })
+}
+
+export function useComplianceReport(id: string | undefined) {
+  return useQuery({ queryKey: qk.complianceReport(id ?? ''), queryFn: () => api.get<ComplianceReport>(`/api/v1/compliance/baselines/${id}/report`), enabled: !!id, refetchInterval: 30_000 })
+}
+
+export function useComplianceComputer(id: string | undefined, computerId: string | undefined) {
+  return useQuery({
+    queryKey: qk.complianceComputer(id ?? '', computerId ?? ''),
+    queryFn: () => api.get<ComplianceComputerDetail>(`/api/v1/compliance/baselines/${id}/computers/${computerId}`),
+    enabled: !!id && !!computerId,
+    refetchInterval: (query) => ((query.state.data?.scans ?? []).some((s) => s.status === 'pending') ? 5_000 : 30_000),
+  })
+}
+
+/** Polls quickly while any scan is still pending. */
+export function useComplianceScans(id: string | undefined, p: { computer_id?: string; limit?: number } = {}) {
+  return useQuery({
+    queryKey: qk.complianceScans(id ?? '', p),
+    queryFn: () => api.get<ComplianceScan[]>(`/api/v1/compliance/baselines/${id}/scans`, { query: p }),
+    enabled: !!id,
+    refetchInterval: (query) => ((query.state.data ?? []).some((s) => s.status === 'pending') ? 5_000 : 30_000),
+  })
+}
+
+/** 422 means "no rule in this baseline has profile settings"; don't retry it. */
+export function useComplianceProfile(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: qk.complianceProfile(id ?? ''),
+    queryFn: () => api.get<ComplianceProfilePreview>(`/api/v1/compliance/baselines/${id}/profile`),
+    enabled: enabled && !!id,
+    retry: false,
+  })
+}
+
+export function useComputerCompliance(id: string) {
+  return useQuery({ queryKey: qk.computerCompliance(id), queryFn: () => api.get<ComputerComplianceRow[]>(`/api/v1/computers/${id}/compliance`), enabled: !!id, refetchInterval: 30_000 })
 }

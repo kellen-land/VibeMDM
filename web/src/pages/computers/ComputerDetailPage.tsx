@@ -22,12 +22,13 @@ import { AppInstallsTab, RestrictedEventsTab } from '../ActivityPage'
 import { ManagementTab } from './ManagementTab'
 import { ComputerLogsTab } from './LogsTab'
 import { ComputerUpdatesTab } from './UpdatesTab'
+import { ComputerComplianceTab } from './ComplianceTab'
 import { ShellTerminal } from '../../components/shell/ShellTerminal'
 import { TerminalSquare } from 'lucide-react'
 import { ComputerHealthStrip } from '../../components/health/ComputerHealthStrip'
 import type { UpdateInventoryResponse } from '../../api/types'
 
-const tabKeys = ['general', 'hardware', 'os', 'security', 'applications', 'profiles', 'extension-attributes', 'local-users', 'groups', 'policy-logs', 'app-installs', 'restricted-events', 'tasks', 'commands', 'timeline', 'logs', 'updates', 'management', 'shell'] as const
+const tabKeys = ['general', 'hardware', 'os', 'security', 'applications', 'profiles', 'extension-attributes', 'local-users', 'groups', 'policy-logs', 'app-installs', 'restricted-events', 'tasks', 'commands', 'timeline', 'logs', 'updates', 'compliance', 'management', 'shell'] as const
 type TabKey = (typeof tabKeys)[number]
 
 export function ComputerDetailPage() {
@@ -65,6 +66,7 @@ export function ComputerDetailPage() {
       { key: 'timeline' as TabKey, label: 'Timeline' },
       { key: 'logs' as TabKey, label: 'Logs' },
       { key: 'updates' as TabKey, label: 'Updates' },
+      { key: 'compliance' as TabKey, label: 'Compliance' },
       { key: 'management' as TabKey, label: 'Management' },
       ...(shellEnabled && isAdmin && c?.agent_enrolled ? [{ key: 'shell' as TabKey, label: 'Shell', icon: <TerminalSquare /> }] : []),
     ],
@@ -160,6 +162,7 @@ export function ComputerDetailPage() {
         {active === 'timeline' && <ComputerTimelineTab id={c.id} />}
         {active === 'logs' && <ComputerLogsTab c={c} />}
         {active === 'updates' && <ComputerUpdatesTab id={c.id} />}
+        {active === 'compliance' && <ComputerComplianceTab id={c.id} />}
         {active === 'management' && <ManagementTab c={c} />}
         {active === 'shell' && (
           <div className="p-4">

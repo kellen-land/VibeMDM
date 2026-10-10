@@ -1365,3 +1365,179 @@ export interface HealthRemediateResult {
   resolved: boolean
   message: string
 }
+
+// ---- Compliance (mSCP) ----
+
+export interface ComplianceCatalogBaseline {
+  key: string
+  title: string
+  description: string
+  rules: number
+  scannable: number
+  with_profile: number
+}
+
+export interface ComplianceCatalog {
+  source: string
+  release: string
+  platform: string
+  license: string
+  baselines: ComplianceCatalogBaseline[]
+}
+
+export type ComplianceSeverity = '' | 'low' | 'medium' | 'high'
+
+export interface ComplianceODVHint {
+  datatype: string
+  description: string
+  min?: number
+  max?: number
+}
+
+/** api.ruleView */
+export interface ComplianceRule {
+  id: string
+  title: string
+  section: string
+  discussion: string
+  tags: string[] | null
+  severity: ComplianceSeverity | string
+  /** Empty when the rule can be scanned automatically. */
+  manual_reason: string
+  has_fix: boolean
+  has_profile: boolean
+  platforms: string[] | null
+  arch?: string
+  in_benchmark: boolean
+  odv?: { hint: ComplianceODVHint; default: unknown }
+  references?: Record<string, unknown>
+  check?: string
+  fix?: string
+  expected?: string
+}
+
+/** model.ComplianceBaseline */
+export interface ComplianceBaseline {
+  id: string
+  name: string
+  description: string
+  benchmark: string
+  enabled: boolean
+  scope: Scope
+  extra_rules: string[] | null
+  /** rule id → reason */
+  exclusions: Record<string, string> | null
+  odv_overrides: Record<string, unknown> | null
+  scan_interval_hours: number
+  auto_remediate: boolean
+  deploy_profile: boolean
+  profile_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ComplianceBaselineRow extends ComplianceBaseline {
+  /** Computers with at least one result. */
+  computers: number
+  compliant: number
+  /** Average percent passing, 0–100. */
+  score: number
+}
+
+export interface ComplianceComputerSummary {
+  computer_id: string
+  computer_name: string
+  serial_number: string
+  os_version: string
+  passed: number
+  failed: number
+  errors: number
+  remediated: number
+  total: number
+  /** Percent passing (remediated counts as passing), 0–100. */
+  score: number
+  last_scan_at: string | null
+  last_scan_status: string
+}
+
+export interface ComplianceReportRule extends ComplianceRule {
+  rule_id: string
+  passed: number
+  failed: number
+  errors: number
+  remediated: number
+  drifted: number
+  /** Exemption reason, or "" when enforced. */
+  excluded: string
+}
+
+export interface ComplianceReport {
+  baseline: ComplianceBaseline
+  release: string
+  benchmark_title: string
+  summary: { targeted: number; scanned: number; compliant: number; score: number; failing_rules: number; drifted: number; remediated: number }
+  computers: ComplianceComputerSummary[] | null
+  rules: ComplianceReportRule[] | null
+}
+
+export type ComplianceRuleStatus = 'pass' | 'fail' | 'error' | 'remediated' | 'not_scanned' | 'excluded' | 'manual' | 'not_applicable'
+
+export interface ComplianceComputerRule {
+  id: string
+  title: string
+  section: string
+  severity: string
+  status: ComplianceRuleStatus | string
+  previous_status?: string
+  actual?: string
+  expected?: string
+  detail?: string
+  checked_at?: string
+  has_fix: boolean
+}
+
+/** model.ComplianceScan */
+export interface ComplianceScan {
+  id: string
+  baseline_id: string
+  computer_id: string
+  computer_name?: string
+  trigger: string
+  remediate: boolean
+  status: 'pending' | 'completed' | 'failed' | 'expired' | string
+  os_version: string
+  passed: number
+  failed: number
+  remediated: number
+  errors: number
+  total: number
+  duration_ms: number
+  error: string
+  requested_at: string
+  completed_at: string | null
+}
+
+export interface ComplianceComputerDetail {
+  baseline: ComplianceBaseline
+  computer: { id: string; name: string; os_version: string; agent_enrolled: boolean }
+  rules: ComplianceComputerRule[] | null
+  scans: ComplianceScan[] | null
+}
+
+export interface ComplianceScanResult {
+  queued: number
+  skipped: Record<string, string> | null
+}
+
+export interface ComplianceProfilePreview {
+  payload: string
+  rules: string[] | null
+  profile_id: string | null
+  deployed: boolean
+}
+
+export interface ComputerComplianceRow {
+  baseline: ComplianceBaseline
+  in_scope: boolean
+  summary: Omit<ComplianceComputerSummary, 'computer_id' | 'computer_name' | 'serial_number' | 'os_version'> | null
+}
