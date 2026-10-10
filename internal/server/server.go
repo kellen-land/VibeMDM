@@ -198,7 +198,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 
 	// Health: misconfiguration detection, remediation and self-healing.
 	s.health = health.NewEngine(health.Builtin(health.Deps{
-		St: st, Cmdr: commander, EncryptionEnabled: box.Enabled(), Wake: notifier.Notify,
+		St: st, Cmdr: commander, EncryptionEnabled: box.Enabled(), Wake: notifier.Notify, AgentDir: cfg.AgentDir,
 	}), st, hooks, logger.With("component", "health"))
 
 	// Admin API
@@ -429,6 +429,14 @@ func (s *Server) Run(ctx context.Context) error {
 		}
 	})
 	go s.housekeeping(ctx)
+	go func() {
+		// First health evaluation shortly after start-up, so the console never says "not checked yet" for long.
+		select {
+		case <-ctx.Done():
+		case <-time.After(20 * time.Second):
+			s.health.RunAll(ctx)
+		}
+	}()
 	errCh := make(chan error, 1)
 	go func() {
 		s.log.Info("VibeMDM listening", "addr", s.cfg.Listen, "version", s.cfg.Version)

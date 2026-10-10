@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -31,8 +33,8 @@ type Deps struct {
 	EncryptionEnabled bool
 	// Wake nudges a long-polling agent to fetch new tasks now (optional).
 	Wake func(computerID string)
-	// DroppedLogs reports log records the DB sink had to drop (optional).
-	DroppedLogs func() int64
+	// AgentDir holds the prebuilt agent binaries served to the installer.
+	AgentDir string
 }
 
 const actor = "health"
@@ -47,6 +49,7 @@ const (
 	CheckPushFailures      = "platform.push_failures"
 	CheckWebhooks          = "platform.webhook_failures"
 	CheckRemoteShellHTTP   = "security.remote_shell_transport"
+	CheckAgentBinaries     = "platform.agent_binaries"
 	CheckMDMUnresponsive   = "fleet.mdm_unresponsive"
 	CheckAgentSilent       = "fleet.agent_silent"
 	CheckAgentMissing      = "fleet.agent_missing"
@@ -91,6 +94,9 @@ func Builtin(d Deps) *Registry {
 	r.Add(Check{ID: CheckWebhooks, Category: "platform", Title: "Failing webhooks",
 		Description: "An enabled webhook's last five deliveries all failed.",
 		Run:         c.webhooks})
+	r.Add(Check{ID: CheckAgentBinaries, Category: "platform", Title: "Agent binaries",
+		Description: "No prebuilt agent binaries are on the server, so the curl installer and Apple Configurator enrollment cannot install the agent.",
+		Run:         c.agentBinaries})
 	r.Add(Check{ID: CheckRemoteShellHTTP, Category: "security", Title: "Remote shell over plain HTTP",
 		Description: "Remote shell is enabled while the server URL is not HTTPS, so sessions could be intercepted.",
 		Run:         c.remoteShell})
@@ -332,6 +338,22 @@ func (c *checks) webhooks(ctx context.Context) ([]Finding, error) {
 			}})
 	}
 	return out, rows.Err()
+}
+
+func (c *checks) agentBinaries(ctx context.Context) ([]Finding, error) {
+	if c.d.AgentDir == "" {
+		return nil, nil
+	}
+	for _, p := range []string{"darwin-arm64", "darwin-amd64"} {
+		if _, err := os.Stat(filepath.Join(c.d.AgentDir, "vibemdm-agent-"+p)); err == nil {
+			return nil, nil
+		}
+	}
+	return []Finding{{ObjectType: "server", ObjectID: "agent_binaries", ObjectName: "Agent binaries", Severity: Warning,
+		Summary:      "No agent binaries on the server",
+		Detail:       "Build them with `make agent` (or use the release image) so " + c.d.AgentDir + " contains vibemdm-agent-darwin-arm64 / -amd64.",
+		Facts:        map[string]any{"agent_dir": c.d.AgentDir},
+		Remediations: []Remediation{link("enroll", "Enrollment setup", "", "/enrollment")}}}, nil
 }
 
 func (c *checks) remoteShell(ctx context.Context) ([]Finding, error) {

@@ -55,6 +55,12 @@ import type {
   UpdatePlan,
   UpdatesCatalog,
   ComputerDDM,
+  HealthSummary,
+  HealthFinding,
+  HealthFindingDetail,
+  HealthFindingQuery,
+  HealthCheckInfo,
+  HealthEvent,
 } from './types'
 
 export const qk = {
@@ -125,6 +131,13 @@ export const qk = {
   updatePlan: (id: string) => ['updates', 'plan', id] as const,
   updatesCatalog: ['updates', 'catalog'] as const,
   computerDDM: (id: string) => ['computer', id, 'ddm'] as const,
+  /** Prefix for every health query: invalidate this after any health mutation. */
+  health: ['health'] as const,
+  healthSummary: ['health', 'summary'] as const,
+  healthFindings: (p?: HealthFindingQuery) => ['health', 'findings', p ?? {}] as const,
+  healthFinding: (id: string) => ['health', 'finding', id] as const,
+  healthChecks: ['health', 'checks'] as const,
+  healthEvents: (p?: object) => ['health', 'events', p ?? {}] as const,
 }
 
 type Opts<T> = Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'>
@@ -444,4 +457,33 @@ export function useUpdatesCatalog() {
 
 export function useComputerDDM(id: string) {
   return useQuery({ queryKey: qk.computerDDM(id), queryFn: () => api.get<ComputerDDM>(`/api/v1/computers/${id}/ddm`), enabled: !!id, refetchInterval: 15_000 })
+}
+
+// ---- Health ----
+
+/** Headline counts and grouped issues. Also drives the sidebar badge, so it refreshes every minute. */
+export function useHealthSummary() {
+  return useQuery({ queryKey: qk.healthSummary, queryFn: () => api.get<HealthSummary>('/api/v1/health/summary'), refetchInterval: 60_000 })
+}
+
+export function useHealthFindings(p: HealthFindingQuery, enabled = true) {
+  return useQuery({
+    queryKey: qk.healthFindings(p),
+    queryFn: () => api.get<ListResponse<HealthFinding>>('/api/v1/health/findings', { query: { ...p } }),
+    enabled,
+    placeholderData: (prev) => prev,
+    refetchInterval: 60_000,
+  })
+}
+
+export function useHealthFinding(id: string | undefined) {
+  return useQuery({ queryKey: qk.healthFinding(id ?? ''), queryFn: () => api.get<HealthFindingDetail>(`/api/v1/health/findings/${id}`), enabled: !!id })
+}
+
+export function useHealthChecks() {
+  return useQuery({ queryKey: qk.healthChecks, queryFn: () => api.get<HealthCheckInfo[]>('/api/v1/health/checks'), staleTime: 30_000 })
+}
+
+export function useHealthEvents(p: { limit?: number } = {}) {
+  return useQuery({ queryKey: qk.healthEvents(p), queryFn: () => api.get<HealthEvent[]>('/api/v1/health/events', { query: p }), refetchInterval: 60_000 })
 }

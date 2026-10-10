@@ -1227,3 +1227,141 @@ export interface ComputerDDM {
   state: DDMState | null
   recent_reports: DDMReport[] | null
 }
+
+// ---- Health: misconfiguration detection & self-healing (internal/api/health.go, internal/health) ----
+
+export type HealthSeverity = 'critical' | 'warning' | 'info'
+/** "pending" is internal (grace period) and never listed by default. */
+export type HealthFindingState = 'pending' | 'open' | 'acknowledged' | 'snoozed' | 'resolved'
+export type HealthObjectType = 'server' | 'computer' | 'policy' | 'profile' | 'app' | 'webhook' | 'plan'
+export type HealthCategory = 'platform' | 'fleet' | 'configuration' | 'security'
+
+/** model.HealthRemediation */
+export interface HealthRemediation {
+  id: string
+  label: string
+  description: string
+  /** May run automatically when auto-heal is on for the check. */
+  safe: boolean
+  /** The server can perform it (POST remediate); otherwise it is guidance, optionally with an in-app `url`. */
+  runnable: boolean
+  url?: string
+}
+
+/** model.HealthFinding */
+export interface HealthFinding {
+  id: string
+  check_id: string
+  check_title?: string
+  category?: HealthCategory | string
+  object_type: HealthObjectType | string
+  object_id: string
+  object_name: string
+  severity: HealthSeverity
+  summary: string
+  detail: string
+  facts: Record<string, unknown> | null
+  remediations: HealthRemediation[] | null
+  state: HealthFindingState
+  snoozed_until: string | null
+  acknowledged_by: string
+  first_seen: string
+  last_seen: string
+  resolved_at: string | null
+  occurrences: number
+  heal_attempts: number
+  last_heal_at: string | null
+  last_heal_error: string
+}
+
+export type HealthEventName =
+  | 'opened'
+  | 'reopened'
+  | 'resolved'
+  | 'escalated'
+  | 'auto_heal'
+  | 'heal_failed'
+  | 'acknowledged'
+  | 'snoozed'
+  | 'unsnoozed'
+  | 'open'
+  | 'remediated'
+  | 'remediation_failed'
+
+/** model.HealthEvent */
+export interface HealthEvent {
+  id: number
+  finding_id: string
+  check_id: string
+  event: HealthEventName | string
+  actor: string
+  message: string
+  at: string
+}
+
+/** health.CheckInfo */
+export interface HealthCheckInfo {
+  id: string
+  title: string
+  category: HealthCategory | string
+  description: string
+  grace_seconds: number
+  auto_heal_default: boolean
+  enabled: boolean
+  /** Effective setting (override or default). */
+  auto_heal: boolean
+  supports_heal: boolean
+  last_run_error?: string
+}
+
+/** api.healthGroup. `severity` is the worst open severity, or "acknowledged" when nothing in the group is open. */
+export interface HealthGroup {
+  check_id: string
+  title: string
+  category: HealthCategory | string
+  severity: HealthSeverity | 'acknowledged'
+  count: number
+  open: number
+  /** Up to three findings. */
+  samples: HealthFinding[]
+  first_seen: string
+}
+
+/** GET /health/summary (also returned by POST /health/run). Snoozed findings are excluded from groups. */
+export interface HealthSummary {
+  /** critical/warning/info count state=open only. */
+  counts: { critical: number; warning: number; info: number; acknowledged: number; snoozed: number }
+  groups: HealthGroup[]
+  last_run: string | null
+  checks_enabled: number
+  checks_total: number
+  check_errors: { check_id: string; title: string; error: string }[]
+}
+
+export interface HealthFindingDetail {
+  finding: HealthFinding
+  events: HealthEvent[] | null
+  check_description: string
+}
+
+export interface HealthFindingQuery {
+  /** Comma-separated; default open,acknowledged,snoozed. */
+  state?: string
+  severity?: string
+  check?: string
+  object_type?: string
+  object_id?: string
+  limit?: number
+}
+
+export type HealthBulkAction = 'acknowledge' | 'snooze' | 'reopen' | 'remediate'
+
+export interface HealthBulkResult {
+  succeeded: number
+  failed: Record<string, string>
+}
+
+export interface HealthRemediateResult {
+  resolved: boolean
+  message: string
+}

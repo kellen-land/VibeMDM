@@ -34,6 +34,7 @@ import { CustomLabelsPage } from './pages/CustomLabelsPage'
 import { CustomLabelEditorPage } from './pages/CustomLabelEditorPage'
 import { SoftwareUpdatesPage } from './pages/updates/SoftwareUpdatesPage'
 import { UpdatePlanEditorPage } from './pages/updates/UpdatePlanEditorPage'
+import { HealthPage } from './pages/health/HealthPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -55,6 +56,8 @@ export function App() {
         }
       >
         <Route path="/" element={<DashboardPage />} />
+        <Route path="/health" element={<HealthPage />} />
+        <Route path="/health/:tab" element={<HealthPage />} />
         <Route path="/computers" element={<ComputersPage />} />
         <Route path="/computers/:id" element={<ComputerDetailPage />} />
         <Route path="/computers/:id/:tab" element={<ComputerDetailPage />} />

@@ -6,6 +6,7 @@ import {
   Ban,
   ChevronUp,
   FileCode,
+  HeartPulse,
   KeyRound,
   LockKeyhole,
   Laptop,
@@ -36,15 +37,23 @@ import { Dropdown } from '../ui/Dropdown'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
 import { useToast } from '../ui/Toast'
 import { errorMessage } from '../../api/client'
+import { useHealthSummary } from '../../api/queries'
 
 interface NavItem {
   to: string
   label: string
   icon: LucideIcon
   end?: boolean
+  badge?: 'health'
 }
 const navGroups: { heading: string; items: NavItem[] }[] = [
-  { heading: 'Overview', items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true }] },
+  {
+    heading: 'Overview',
+    items: [
+      { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+      { to: '/health', label: 'Health', icon: HeartPulse, badge: 'health' },
+    ],
+  },
   {
     heading: 'Inventory',
     items: [
@@ -77,6 +86,27 @@ const navGroups: { heading: string; items: NavItem[] }[] = [
   },
   { heading: 'System', items: [{ to: '/settings', label: 'Settings', icon: Settings }] },
 ]
+
+/** Open critical + warning findings; hidden when zero so a healthy system stays quiet. */
+function HealthNavBadge() {
+  const q = useHealthSummary()
+  const c = q.data?.counts
+  const n = c ? c.critical + c.warning : 0
+  if (!c || n === 0) return null
+  const label = [c.critical && `${c.critical} critical`, c.warning && `${c.warning} ${c.warning === 1 ? 'warning' : 'warnings'}`].filter(Boolean).join(', ')
+  return (
+    <span
+      className={cn(
+        'ml-auto rounded px-1.5 text-[11px] font-semibold leading-4 tabular-nums',
+        c.critical ? 'bg-critical/15 text-[#b22424] dark:text-[#f28b8b]' : 'bg-warning/15 text-[#8a5a0a] dark:text-[#f0c070]',
+      )}
+      title={label}
+      aria-label={`${label} open`}
+    >
+      {n}
+    </span>
+  )
+}
 
 function ThemeToggle({ className }: { className?: string }) {
   const { theme, toggle } = useTheme()
@@ -147,6 +177,7 @@ export function AppShell() {
                       <span className={cn('absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-accent-400 transition-opacity', isActive ? 'opacity-100' : 'opacity-0')} aria-hidden="true" />
                       <n.icon className={cn('size-4 shrink-0', isActive ? 'text-accent-400' : 'text-ink-faint group-hover:text-ink-muted')} aria-hidden="true" />
                       <span className="truncate">{n.label}</span>
+                      {n.badge === 'health' && <HealthNavBadge />}
                     </>
                   )}
                 </NavLink>

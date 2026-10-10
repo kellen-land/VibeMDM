@@ -12,7 +12,7 @@ Open **Health** in the console sidebar. The badge counts open critical and warni
 ## How it works
 
 ```
-every 5 min ─► run each enabled check ─► findings (check × object)
+every 5 min (and 20 s after start) ─► run each enabled check ─► findings (check × object)
                                            │
                        ┌───────────────────┼─────────────────────────┐
                        ▼                   ▼                         ▼
@@ -27,7 +27,7 @@ every 5 min ─► run each enabled check ─► findings (check × object)
 ```
 
 - **Checks** are detectors that look at server settings, certificates, the database and device state.
-  There are 22 built-in checks in four categories: *platform*, *security*, *fleet* and *configuration*.
+  There are 23 built-in checks in four categories: *platform*, *security*, *fleet* and *configuration*.
 - A **finding** is one problem with one object, such as a computer, policy, profile, app, webhook,
   update plan, or the server itself. Findings are deduplicated by (check, object). The console groups
   them by check, so 40 Macs with low disk space show up as one row reading "40 computers".
@@ -82,6 +82,7 @@ Remediations that change configuration are never safe. Examples are *Turn remote
 | platform | SCEP CA certificate | warning / critical | expires in < 90 days (critical < 14) |
 | platform | Profile signing certificate | warning / critical | unparseable; expires in < 30 days |
 | platform | APNs push failures | warning / critical | ≥ 3 and ≥ 50 % of pushes failed in the last hour (critical if none succeeded) |
+| platform | Agent binaries | warning | no prebuilt agent binaries in the agent directory (installer would fail) |
 | platform | Failing webhooks | warning | last 5 deliveries failed, the latest within 24 h |
 | security | Encryption at rest | warning | `VIBEMDM_ENCRYPTION_KEY` not set |
 | security | Remote shell over plain HTTP | warning | remote shell on while the server URL is not HTTPS |

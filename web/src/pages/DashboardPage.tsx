@@ -1,10 +1,9 @@
 import { Link } from 'react-router-dom'
 import { AlertTriangle, Clock, Cpu, Laptop, ListChecks, Radio, ShieldCheck, Timer, Wifi, type LucideIcon } from 'lucide-react'
-import { useDashboard, useEnrollmentStatus } from '../api/queries'
+import { useDashboard } from '../api/queries'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { Alert } from '../components/ui/Alert'
-import { Button } from '../components/ui/Button'
 import { LoadingBlock } from '../components/ui/Spinner'
 import { BarList } from '../components/charts/BarList'
 import { OutcomeBar } from '../components/charts/OutcomeBar'
@@ -16,6 +15,7 @@ import { errorMessage } from '../api/client'
 import type { AgentTask, Computer, PolicyLog } from '../api/types'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '../lib/cn'
+import { HealthCard } from './health/HealthPage'
 
 export function StatTile({ label, value, icon: Icon, to, tone }: { label: string; value: number; icon: LucideIcon; to?: string; tone?: 'warn' | 'bad' }) {
   const alert = (tone === 'bad' || tone === 'warn') && value > 0
@@ -49,37 +49,17 @@ export function StatTile({ label, value, icon: Icon, to, tone }: { label: string
 
 export function DashboardPage() {
   const dash = useDashboard()
-  const enroll = useEnrollmentStatus()
   const navigate = useNavigate()
   const d = dash.data
 
   return (
     <>
       <PageHeader title="Dashboard" description="Fleet overview and recent activity." />
-      {enroll.data && enroll.data.issues.length > 0 && (
-        <Alert
-          tone="warning"
-          title="Setup is not complete"
-          className="mb-6"
-          actions={
-            <Link to="/settings">
-              <Button size="sm" variant="secondary">
-                Open Settings
-              </Button>
-            </Link>
-          }
-        >
-          <ul className="list-disc pl-4 space-y-0.5">
-            {enroll.data.issues.map((i) => (
-              <li key={i}>{i}</li>
-            ))}
-          </ul>
-        </Alert>
-      )}
       {dash.isPending && <LoadingBlock />}
       {dash.error && <Alert tone="critical">{errorMessage(dash.error)}</Alert>}
       {d && (
         <div className="flex flex-col gap-6">
+          <HealthCard />
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
             <StatTile label="Computers" value={d.computers} icon={Laptop} to="/computers" />
             <StatTile label="MDM enrolled" value={d.mdm_enrolled} icon={ShieldCheck} />

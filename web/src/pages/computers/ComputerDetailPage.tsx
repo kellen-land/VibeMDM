@@ -24,6 +24,7 @@ import { ComputerLogsTab } from './LogsTab'
 import { ComputerUpdatesTab } from './UpdatesTab'
 import { ShellTerminal } from '../../components/shell/ShellTerminal'
 import { TerminalSquare } from 'lucide-react'
+import { ComputerHealthStrip } from '../../components/health/ComputerHealthStrip'
 import type { UpdateInventoryResponse } from '../../api/types'
 
 const tabKeys = ['general', 'hardware', 'os', 'security', 'applications', 'profiles', 'extension-attributes', 'local-users', 'groups', 'policy-logs', 'app-installs', 'restricted-events', 'tasks', 'commands', 'timeline', 'logs', 'updates', 'management', 'shell'] as const
@@ -139,6 +140,7 @@ export function ComputerDetailPage() {
           )
         }
       />
+      <ComputerHealthStrip computerId={c.id} className="mb-5" />
       <Tabs items={tabs} value={active} onChange={setTab} className="mb-5" />
       <Card>
         {active === 'general' && <GeneralTab c={c} />}
