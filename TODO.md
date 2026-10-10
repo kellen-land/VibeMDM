@@ -8,4 +8,5 @@
 - [ ] Option for DDM with integrated S.U.P.E.R.M.A.N. for macOS updates/end user notification and scheduling. Make this native to the platform.
 - [ ] Rich server logging and endpoint agent logging. Rock solid and reliable with options to collect logs for archiving but dyanmic and deeply searchable in a slick, native way.
 - [ ] Check security/ensure hardening
-- [ ] A native enrollment like Jamf Setup Manager utilizing Swift Dialog with native, easy to configure profiles in the GUI.
+- [ ] A native white glove enrollment guide like Jamf Setup Manager utilizing Swift Dialog with native, easy to configure profiles in the GUI.
+- Enrollment via Apple Configurator being preferred due to not having access to an Apple Business account.
