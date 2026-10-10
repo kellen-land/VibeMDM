@@ -1,14 +1,20 @@
-- [ ] Escrow of PRK FileVault Keys
+- [x] Escrow of PRK FileVault Keys
     - Potentially utilize a system similar to Escrow Buddy (Netflix's implementaton) for un-escrowed PRKs and auto detection and remediation.
+    - Built native PRK escrow via a built-in FDERecoveryKeyEscrow profile that decrypts and seals each Mac's key from SecurityInfo, with Escrow Buddy auto-remediation (installed through Installomator) for Macs missing a key and an audited, admin-only key reveal.
 - [ ] Fork XCreds and integrate it as a native feature in the platform
-- [ ] Installomator policies built-in
-    - [ ] Tool or editor in the webUI for building custom labels?
+- [x] Installomator policies built-in
+    - Vendored Installomator v10.8 and wired it into the Mac Apps catalog, policy "Apps" steps, and Self Service, with per-app options and server-built, single-quoted arguments that block eval injection.
+    - [x] Tool or editor in the webUI for building custom labels?
+        - Added a Custom Labels editor that defines labels through Installomator's valuesfromarguments mechanism, with strict validation, a required Team ID, and a live command preview.
 - [ ] Seamlessly integrate the macOS Security Compliance project as a native feature with rich reporting and easy GUI configuration
 - [ ] Accept Jamf custom application JSON schemas for configuration profile building in the web GUI
 - [ ] Option for DDM with integrated S.U.P.E.R.M.A.N. for macOS updates/end user notification and scheduling. Make this native to the platform.
-- [ ] Rich server logging and endpoint agent logging. Rock solid and reliable with options to collect logs for archiving but dyanmic and deeply searchable in a slick, native way.
+- [x] Rich server logging and endpoint agent logging. Rock solid and reliable with options to collect logs for archiving but dyanmic and deeply searchable in a slick, native way.
+    - Added non-blocking database logging for the server, offline-tolerant log shipping from agents, a Logs console with live tail and full-text search, gzipped exports and daily archives, and on-demand diagnostic bundles that include the Mac's mdmclient log.
 - [ ] Check security/ensure hardening
 - [ ] A native white glove enrollment guide like Jamf Setup Manager utilizing Swift Dialog with native, easy to configure profiles in the GUI.
-- [ ] Enrollment via Apple Configurator being preferred due to not having access to an Apple Business account.
-- [ ] Build an MDM command inspector that traces each command end to end—queueing, APNs wake-up, device check-in, delivered plist, response, and follow-up—with a per-device timeline, readable summaries, searchable raw payloads, and sensitive data redacted by default.
+- [x] Enrollment via Apple Configurator being preferred due to not having access to an Apple Business account.
+    - Added a Configurator enrollment URL that supervises and enrolls iPhone and iPad over USB without Apple Business Manager, and wrote docs/enrollment.md explaining that Macs can't be supervised this way and enroll as user-approved instead.
+- [x] Build an MDM command inspector that traces each command end to end—queueing, APNs wake-up, device check-in, delivered plist, response, and follow-up—with a per-device timeline, readable summaries, searchable raw payloads, and sensitive data redacted by default.
+    - Built a command inspector that records each command's queue, APNs push, delivery, and response as a per-device timeline with plain-language summaries, search, and redaction by default (raw payloads are admin-only and audited).
 - [ ] Very detailed admin manual with all components explained and a CLI list, man page, and ensure the agent has a good help menu. This project is partially a tool to help me learn the Apple MDM protocol and get ready for both of the Apple IT certifications.
