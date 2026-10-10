@@ -15,6 +15,23 @@ import { SearchInput } from '../components/ui/SearchInput'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { useToast } from '../components/ui/Toast'
 import { ScopeSummary } from '../components/pickers/ScopeEditor'
+import { Tabs } from '../components/ui/Tabs'
+
+/** Catalog / Custom Labels switch shared by the Mac Apps pages. */
+export function AppsTabs({ active }: { active: 'catalog' | 'custom-labels' }) {
+  const navigate = useNavigate()
+  return (
+    <Tabs
+      className="mb-5"
+      value={active}
+      onChange={(t) => navigate(t === 'catalog' ? '/apps' : '/apps/custom-labels')}
+      items={[
+        { key: 'catalog', label: 'Catalog' },
+        { key: 'custom-labels', label: 'Custom Labels' },
+      ]}
+    />
+  )
+}
 
 export const updateBehaviorLabels: Record<string, string> = { install_once: 'Install once', keep_updated: 'Keep updated' }
 
@@ -82,6 +99,7 @@ export function AppsPage() {
           )
         }
       />
+      <AppsTabs active="catalog" />
       <Card>
         <div className="flex items-center gap-3 border-b border-line px-5 py-3">
           <SearchInput value={q} onChange={setQ} placeholder="Filter apps…" className="w-full sm:w-72" />

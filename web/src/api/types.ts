@@ -365,6 +365,8 @@ export interface Policy {
   scope: Scope
   scripts: PolicyScript[] | null
   packages: PolicyPackage[] | null
+  /** Installomator steps; run after packages and before the run command. */
+  apps: PolicyApp[] | null
   run_command: string
   update_inventory: boolean
   reboot: PolicyReboot
@@ -807,6 +809,7 @@ export interface MacApp {
   category: string
   description: string
   update_behavior: AppUpdateBehavior
+  options: InstallomatorOptions
   enabled: boolean
   scope: Scope
   self_service: PolicySelfService
@@ -820,8 +823,67 @@ export interface MacAppWithStatus extends MacApp {
 
 export interface AppLabels {
   labels: string[]
+  /** Custom labels as "custom:<key>". */
+  custom_labels: string[] | null
+  choices: InstallomatorChoices
   source: string
   license_url: string
+}
+
+export interface InstallomatorChoices {
+  notify: string[]
+  blocking_process_action: string[]
+  reopen: string[]
+  ignore_app_store_apps: string[]
+  type: string[]
+}
+
+/** Runtime options for an Installomator run (model.InstallomatorOptions). Empty string = Installomator default. */
+export interface InstallomatorOptions {
+  notify: string
+  blocking_process_action: string
+  reopen: string
+  ignore_app_store_apps: string
+  force_install: boolean
+}
+
+export const emptyInstallomatorOptions = (): InstallomatorOptions => ({ notify: '', blocking_process_action: '', reopen: '', ignore_app_store_apps: '', force_install: false })
+
+/** An Installomator step in a policy. `label` is a shipped label or "custom:<key>". */
+export interface PolicyApp {
+  label: string
+  options: InstallomatorOptions
+}
+
+/** Admin-defined Installomator label (model.CustomLabel). */
+export interface CustomLabel {
+  id: string
+  key: string
+  name: string
+  type: string
+  download_url: string
+  expected_team_id: string
+  package_id: string
+  app_name: string
+  archive_name: string
+  version_key: string
+  app_new_version: string
+  blocking_processes: string[] | null
+  description: string
+  created_at: string
+  updated_at: string
+}
+
+/** POST /apps/installomator-preview: either `label` or `custom`, plus options. */
+export interface InstallomatorPreviewRequest {
+  label?: string
+  custom?: Partial<CustomLabel>
+  options: InstallomatorOptions
+}
+
+export interface InstallomatorPreview {
+  args: string[]
+  command: string
 }
 
 export type AppInstallStatus = 'pending' | 'running' | 'completed' | 'failed' | string

@@ -12,6 +12,9 @@ import type {
   CommandEvent,
   CommandInspection,
   CommandSearchHit,
+  CustomLabel,
+  InstallomatorPreview,
+  InstallomatorPreviewRequest,
   DiagnosticBundle,
   LogArchive,
   LogSource,
@@ -109,6 +112,9 @@ export const qk = {
   commandSearch: (p?: object) => ['commands', 'search', p ?? {}] as const,
   logComponents: (source: LogSource) => ['logs', 'components', source] as const,
   logArchives: ['logs', 'archives'] as const,
+  customLabels: ['custom-labels'] as const,
+  customLabel: (id: string) => ['custom-label', id] as const,
+  installomatorPreview: (body: object) => ['installomator-preview', body] as const,
   diagnostics: (computerId: string) => ['computer', computerId, 'diagnostics'] as const,
 }
 
@@ -341,6 +347,25 @@ export function useAppLogs(id: string, p: { computer_id?: string; limit?: number
 
 export function useAllAppLogs(p: { computer_id?: string; limit?: number; offset?: number }) {
   return useQuery({ queryKey: qk.allAppLogs(p), queryFn: () => api.get<ListResponse<AppInstallLog>>('/api/v1/apps/logs', { query: p }), placeholderData: (prev) => prev, refetchInterval: 15_000 })
+}
+
+export function useCustomLabels() {
+  return useQuery({ queryKey: qk.customLabels, queryFn: () => api.get<ListResponse<CustomLabel>>('/api/v1/custom-labels') })
+}
+
+export function useCustomLabel(id: string | undefined) {
+  return useQuery({ queryKey: qk.customLabel(id ?? ''), queryFn: () => api.get<CustomLabel>(`/api/v1/custom-labels/${id}`), enabled: !!id && id !== 'new' })
+}
+
+/** Exact Installomator command for a label (or custom definition) and options. Pass a debounced body; null disables. */
+export function useInstallomatorPreview(body: InstallomatorPreviewRequest | null) {
+  return useQuery({
+    queryKey: qk.installomatorPreview(body ?? {}),
+    queryFn: () => api.post<InstallomatorPreview>('/api/v1/apps/installomator-preview', body),
+    enabled: !!body,
+    retry: false,
+    staleTime: 60_000,
+  })
 }
 
 // ---- webhooks ----

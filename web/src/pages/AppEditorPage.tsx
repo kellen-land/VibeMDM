@@ -4,7 +4,7 @@ import { Save, Trash2 } from 'lucide-react'
 import { qk, useApp, useAppLabels, useAppLogs, useInvalidate } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
-import { emptyScope, normalizeScope, type AppUpdateBehavior, type MacApp } from '../api/types'
+import { emptyInstallomatorOptions, emptyScope, normalizeScope, type AppUpdateBehavior, type MacApp } from '../api/types'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -19,7 +19,8 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Pagination } from '../components/ui/Pagination'
 import { useToast } from '../components/ui/Toast'
 import { ScopeEditor } from '../components/pickers/ScopeEditor'
-import { LabelCombobox } from '../components/pickers/LabelCombobox'
+import { LabelCombobox, allLabels } from '../components/pickers/LabelCombobox'
+import { InstallomatorCommandPreview, InstallomatorOptionsEditor } from '../components/installomator/Installomator'
 import { AppInstallLogTable } from '../components/activity/AppInstallLogTable'
 import { InstallomatorFooter, updateBehaviorLabels } from './AppsPage'
 
@@ -32,6 +33,7 @@ const blank = (): MacApp => ({
   category: '',
   description: '',
   update_behavior: 'install_once',
+  options: emptyInstallomatorOptions(),
   enabled: true,
   scope: emptyScope(),
   self_service: { enabled: false, display_name: '', description: '', button_text: 'Install' },
@@ -56,7 +58,7 @@ export function AppEditorPage() {
   const setTab = (t: Tab) => setSp(t === 'general' ? {} : { tab: t }, { replace: true })
 
   useEffect(() => {
-    if (app.data) setA({ ...blank(), ...app.data, scope: normalizeScope(app.data.scope), self_service: { ...blank().self_service, ...app.data.self_service } })
+    if (app.data) setA({ ...blank(), ...app.data, scope: normalizeScope(app.data.scope), options: { ...emptyInstallomatorOptions(), ...app.data.options }, self_service: { ...blank().self_service, ...app.data.self_service } })
   }, [app.data])
 
   const set = (patch: Partial<MacApp>) => setA((cur) => ({ ...cur, ...patch }))
@@ -66,7 +68,7 @@ export function AppEditorPage() {
       toast.error('Name is required')
       return
     }
-    if (!a.label.trim() || (labels.data && !labels.data.labels.includes(a.label.trim()))) {
+    if (!a.label.trim() || (labels.data && !allLabels(labels.data).includes(a.label.trim()))) {
       toast.error('A valid Installomator label is required')
       return
     }
@@ -142,7 +144,7 @@ export function AppEditorPage() {
           <CardHeader title="General" />
           <CardBody className="flex flex-col gap-8">
             <FormGrid cols={2}>
-              <Field label="Installomator label" required hint={labels.data ? `${labels.data.labels.length.toLocaleString()} labels from ${labels.data.source}.` : 'The label determines what gets downloaded and how it is verified.'}>
+              <Field label="Installomator label" required hint={labels.data ? `${labels.data.labels.length.toLocaleString()} labels from ${labels.data.source}${labels.data.custom_labels?.length ? ` plus ${labels.data.custom_labels.length} custom` : ''}.` : 'The label determines what gets downloaded and how it is verified.'}>
                 <LabelCombobox
                   value={a.label}
                   onChange={(label) => set({ label, name: a.name || label })}
@@ -163,6 +165,12 @@ export function AppEditorPage() {
               </Field>
             </FormGrid>
             <Toggle checked={a.enabled} onChange={(v) => set({ enabled: v })} disabled={ro} label="Enabled" description="Disabled apps are not installed, updated or shown in Self Service." />
+            <FormSection title="Installomator options" description="Applied to every install and update of this app. Leave a field on Default to use Installomator's own default.">
+              <div className="flex flex-col gap-4">
+                <InstallomatorOptionsEditor value={a.options} onChange={(options) => set({ options })} disabled={ro} />
+                <InstallomatorCommandPreview body={a.label.trim() ? { label: a.label.trim(), options: a.options } : null} emptyHint="Pick a label to see the command." />
+              </div>
+            </FormSection>
             <InstallomatorFooter />
           </CardBody>
         </Card>

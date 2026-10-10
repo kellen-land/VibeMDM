@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Eraser, Play, Plus, Save, Trash2 } from 'lucide-react'
-import { qk, useInvalidate, usePackages, usePolicy, usePolicyLogs, useScripts } from '../api/queries'
+import { ArrowDown, ArrowUp, Eraser, Play, Plus, Save, Terminal, Trash2 } from 'lucide-react'
+import { qk, useAppLabels, useInvalidate, usePackages, usePolicy, usePolicyLogs, useScripts } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
-import { emptyScope, normalizeScope, type Policy, type PolicyFrequency, type PolicyPackage, type PolicyScript, type RunResult, type ScriptPriority } from '../api/types'
+import { emptyInstallomatorOptions, emptyScope, normalizeScope, type Policy, type PolicyApp, type PolicyFrequency, type PolicyPackage, type PolicyScript, type RunResult, type ScriptPriority } from '../api/types'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { Button, IconButton } from '../components/ui/Button'
@@ -26,8 +26,11 @@ import { ComputerPicker } from '../components/pickers/ComputerPicker'
 import { PolicyLogTable } from '../components/activity/PolicyLogTable'
 import { frequencyLabels } from './PoliciesPage'
 import { formatBytes } from '../lib/format'
+import { LabelCombobox, allLabels } from '../components/pickers/LabelCombobox'
+import { InstallomatorCommandPreview, InstallomatorOptionsEditor } from '../components/installomator/Installomator'
+import { InstallomatorFooter } from './AppsPage'
 
-type Tab = 'general' | 'scope' | 'scripts' | 'packages' | 'files' | 'maintenance' | 'restart' | 'interaction' | 'selfservice' | 'logs'
+type Tab = 'general' | 'scope' | 'scripts' | 'packages' | 'apps' | 'files' | 'maintenance' | 'restart' | 'interaction' | 'selfservice' | 'logs'
 
 const blank = (): Policy => ({
   id: '',
@@ -39,6 +42,7 @@ const blank = (): Policy => ({
   scope: emptyScope(),
   scripts: [],
   packages: [],
+  apps: [],
   run_command: '',
   update_inventory: false,
   reboot: { enabled: false, message: '', delay_minutes: 0 },
@@ -68,7 +72,7 @@ export function PolicyEditorPage() {
     if (policy.data) {
       const { status: _s, ...rest } = policy.data
       void _s
-      setP({ ...blank(), ...rest, scripts: rest.scripts ?? [], packages: rest.packages ?? [], scope: normalizeScope(rest.scope) })
+      setP({ ...blank(), ...rest, scripts: rest.scripts ?? [], packages: rest.packages ?? [], apps: (rest.apps ?? []).map((a) => ({ ...a, options: { ...emptyInstallomatorOptions(), ...a.options } })), scope: normalizeScope(rest.scope) })
     }
   }, [policy.data])
 
@@ -114,6 +118,7 @@ export function PolicyEditorPage() {
     { key: 'scope', label: 'Scope' },
     { key: 'scripts', label: 'Scripts', count: p.scripts?.length },
     { key: 'packages', label: 'Packages', count: p.packages?.length },
+    { key: 'apps', label: 'Apps (Installomator)', count: p.apps?.length },
     { key: 'files', label: 'Files & Processes' },
     { key: 'maintenance', label: 'Maintenance' },
     { key: 'restart', label: 'Restart' },
@@ -204,10 +209,11 @@ export function PolicyEditorPage() {
 
       {tab === 'scripts' && <ScriptsSection value={p.scripts ?? []} onChange={(scripts) => set({ scripts })} disabled={ro} />}
       {tab === 'packages' && <PackagesSection value={p.packages ?? []} onChange={(packages) => set({ packages })} disabled={ro} />}
+      {tab === 'apps' && <AppsSection value={p.apps ?? []} onChange={(apps) => set({ apps })} disabled={ro} />}
 
       {tab === 'files' && (
         <Card>
-          <CardHeader title="Files and processes" description="Run an arbitrary command after scripts and packages." />
+          <CardHeader title="Files and processes" description="Run an arbitrary command after scripts, packages and Installomator apps." />
           <CardBody>
             <Field label="Execute command" hint="Runs as root via /bin/sh after all other payloads.">
               <Textarea mono rows={6} value={p.run_command} onChange={(e) => set({ run_command: e.target.value })} disabled={ro} placeholder="e.g. /usr/bin/defaults write ..." />
@@ -398,6 +404,91 @@ function PackagesSection({ value, onChange, disabled }: { value: PolicyPackage[]
             </Button>
           </div>
         )}
+      </CardBody>
+    </Card>
+  )
+}
+
+function AppsSection({ value, onChange, disabled }: { value: PolicyApp[]; onChange: (v: PolicyApp[]) => void; disabled?: boolean }) {
+  const labels = useAppLabels()
+  const known = useMemo(() => new Set(allLabels(labels.data)), [labels.data])
+  const [adding, setAdding] = useState('')
+  const [previews, setPreviews] = useState<Set<number>>(() => new Set())
+  const add = () => {
+    if (!adding) return
+    onChange([...value, { label: adding, options: emptyInstallomatorOptions() }])
+    setAdding('')
+  }
+  const update = (i: number, patch: Partial<PolicyApp>) => onChange(value.map((a, j) => (j === i ? { ...a, ...patch } : a)))
+  const move = (i: number, d: -1 | 1) => {
+    const j = i + d
+    if (j < 0 || j >= value.length) return
+    const next = [...value]
+    ;[next[i], next[j]] = [next[j], next[i]]
+    onChange(next)
+    setPreviews(new Set())
+  }
+  const remove = (i: number) => {
+    onChange(value.filter((_, j) => j !== i))
+    setPreviews(new Set())
+  }
+  const togglePreview = (i: number) =>
+    setPreviews((s) => {
+      const n = new Set(s)
+      if (n.has(i)) n.delete(i)
+      else n.add(i)
+      return n
+    })
+  return (
+    <Card>
+      <CardHeader title="Apps (Installomator)" description="Installomator labels run in this order, after packages and before Files & Processes. Each download's signature is checked against the label's Team ID." />
+      <CardBody className="flex flex-col gap-4">
+        {value.length === 0 && <p className="text-sm text-ink-muted">No apps added.</p>}
+        {value.map((pa, i) => {
+          const custom = pa.label.startsWith('custom:')
+          const unknown = !!labels.data && !known.has(pa.label)
+          return (
+            <div key={`${i}-${pa.label}`} className="rounded-xl border border-line">
+              <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
+                <span className="w-6 text-center text-xs tabular-nums text-ink-faint">{i + 1}</span>
+                <span className="min-w-0 flex-1 truncate font-mono text-sm text-ink">{pa.label}</span>
+                {custom && <Badge tone="accent">Custom</Badge>}
+                {unknown && <Badge tone="critical">Unknown label</Badge>}
+                <Button size="xs" variant="ghost" icon={<Terminal />} onClick={() => togglePreview(i)}>
+                  {previews.has(i) ? 'Hide command' : 'Preview command'}
+                </Button>
+                {!disabled && (
+                  <>
+                    <IconButton label="Move up" variant="ghost" onClick={() => move(i, -1)} disabled={i === 0}>
+                      <ArrowUp />
+                    </IconButton>
+                    <IconButton label="Move down" variant="ghost" onClick={() => move(i, 1)} disabled={i === value.length - 1}>
+                      <ArrowDown />
+                    </IconButton>
+                    <IconButton label="Remove app" variant="ghost" onClick={() => remove(i)}>
+                      <Trash2 />
+                    </IconButton>
+                  </>
+                )}
+              </div>
+              <div className="flex flex-col gap-4 px-4 py-3">
+                <InstallomatorOptionsEditor compact value={pa.options} onChange={(options) => update(i, { options })} disabled={disabled} />
+                {previews.has(i) && <InstallomatorCommandPreview body={{ label: pa.label, options: pa.options }} />}
+              </div>
+            </div>
+          )
+        })}
+        {!disabled && (
+          <div className="flex items-end gap-2">
+            <Field label="Add app" className="max-w-md flex-1">
+              <LabelCombobox value={adding} onChange={setAdding} placeholder="Search Installomator and custom labels…" />
+            </Field>
+            <Button icon={<Plus />} onClick={add} disabled={!adding || (!!labels.data && !known.has(adding))}>
+              Add
+            </Button>
+          </div>
+        )}
+        <InstallomatorFooter />
       </CardBody>
     </Card>
   )

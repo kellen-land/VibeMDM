@@ -1,8 +1,8 @@
 import { Fragment, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { AppWindow, ChevronDown, ChevronRight, ClipboardList, FileCode, Package, RotateCcw, Terminal, type LucideIcon } from 'lucide-react'
 import type { PolicyLog, PolicyStep } from '../../api/types'
-import { Badge, StatusBadge } from '../ui/Badge'
+import { Badge, StatusBadge, type BadgeTone } from '../ui/Badge'
 import { RelativeTime } from '../ui/RelativeTime'
 import { EmptyState } from '../ui/EmptyState'
 import { Spinner } from '../ui/Spinner'
@@ -136,13 +136,32 @@ export function PolicyLogDetail({ log }: { log: PolicyLog }) {
   )
 }
 
+const stepMeta: Record<string, { label: string; icon: LucideIcon; tone?: BadgeTone }> = {
+  script: { label: 'Script', icon: FileCode },
+  package: { label: 'Package', icon: Package },
+  app: { label: 'Installomator', icon: AppWindow, tone: 'accent' },
+  command: { label: 'Command', icon: Terminal },
+  inventory: { label: 'Inventory', icon: ClipboardList },
+  reboot: { label: 'Restart', icon: RotateCcw },
+}
+
+function StepTypeBadge({ type }: { type: string }) {
+  const m = stepMeta[type]
+  if (!m) return <Badge className="uppercase">{type}</Badge>
+  return (
+    <Badge tone={m.tone ?? 'neutral'} icon={<m.icon />}>
+      {m.label}
+    </Badge>
+  )
+}
+
 function StepRow({ step }: { step: PolicyStep }) {
   const [open, setOpen] = useState(step.status === 'failed')
   return (
     <div className="rounded-lg border border-line bg-surface-raised">
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 px-3 py-2 text-left">
         <span className="text-ink-faint">{open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}</span>
-        <Badge className="uppercase">{step.type}</Badge>
+        <StepTypeBadge type={step.type} />
         <span className="min-w-0 flex-1 truncate text-sm text-ink">{step.name || titleCase(step.type)}</span>
         <StatusBadge status={step.status} />
         <span className="text-xs text-ink-muted tabular-nums w-20 text-right">exit {step.exit_code}</span>

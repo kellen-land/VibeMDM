@@ -12,6 +12,7 @@ export function ChipInput({
   icon,
   className,
   mono,
+  split = /[,\s]+/,
 }: {
   value: string[]
   onChange: (v: string[]) => void
@@ -20,11 +21,13 @@ export function ChipInput({
   icon?: ReactNode
   className?: string
   mono?: boolean
+  /** How a typed draft is split into values (default: commas and whitespace). */
+  split?: RegExp
 }) {
   const [draft, setDraft] = useState('')
   const commit = () => {
     const parts = draft
-      .split(/[,\s]+/)
+      .split(split)
       .map((s) => s.trim())
       .filter(Boolean)
     if (parts.length === 0) return

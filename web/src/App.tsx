@@ -30,6 +30,8 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { CommandInspectorPage } from './pages/CommandInspectorPage'
 import { FileVaultPage } from './pages/FileVaultPage'
 import { LogsPage } from './pages/LogsPage'
+import { CustomLabelsPage } from './pages/CustomLabelsPage'
+import { CustomLabelEditorPage } from './pages/CustomLabelEditorPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -78,6 +80,8 @@ export function App() {
         <Route path="/restricted-software/new" element={<RestrictedSoftwareEditorPage />} />
         <Route path="/restricted-software/:id" element={<RestrictedSoftwareEditorPage />} />
         <Route path="/apps" element={<AppsPage />} />
+        <Route path="/apps/custom-labels" element={<CustomLabelsPage />} />
+        <Route path="/apps/custom-labels/:id" element={<CustomLabelEditorPage />} />
         <Route path="/apps/new" element={<AppEditorPage />} />
         <Route path="/apps/:id" element={<AppEditorPage />} />
         <Route path="/activity" element={<ActivityPage />} />
