@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"syscall"
 	"time"
 
 	"github.com/coder/websocket"
@@ -16,7 +17,26 @@ import (
 // bridges a PTY-backed root shell to it. The server enforces authorization,
 // auditing and the remote_shell_enabled gate; here we just honour an invite we
 // received on our authenticated poll connection.
+// ShellOptOutFile, when present and owned by root, makes this Mac refuse remote shells
+// regardless of server settings (a local, device-side veto).
+const ShellOptOutFile = "/Library/Application Support/VibeMDM/disable-remote-shell"
+
+func shellOptedOut() bool {
+	fi, err := os.Stat(ShellOptOutFile)
+	if err != nil {
+		return false
+	}
+	if st, ok := fi.Sys().(*syscall.Stat_t); ok && st.Uid != 0 {
+		return false // only root may create the veto
+	}
+	return true
+}
+
 func (d *Daemon) runShell(ctx context.Context, invite shellInvite) {
+	if shellOptedOut() {
+		d.log.Warn("refusing remote shell: disabled on this Mac", "session", invite.SessionID, "file", ShellOptOutFile)
+		return
+	}
 	d.log.Info("opening remote shell session", "session", invite.SessionID)
 	wsURL := toWS(d.cfg.ServerURL) + "/agent/v1/shell?session=" + invite.SessionID + "&nonce=" + invite.Nonce
 	dialCtx, cancel := context.WithTimeout(ctx, 20*time.Second)

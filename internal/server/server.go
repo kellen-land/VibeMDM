@@ -4,6 +4,7 @@ package server
 import (
 	"bufio"
 	"context"
+	"crypto/subtle"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -116,12 +117,14 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	}
 
 	// SCEP CA
-	scepServer, err := scepsrv.New(ctx, st, func(ctx context.Context) string {
-		se, err := st.GetSettings(ctx)
-		if err != nil {
-			return ""
+	// SCEP accepts the static challenge (admin-only, shown in Settings → SCEP) or a
+	// minted one embedded in a downloaded enrollment profile.
+	scepServer, err := scepsrv.New(ctx, st, func(ctx context.Context, challenge string) bool {
+		if se, err := st.GetSettings(ctx); err == nil && se.SCEPChallenge != "" &&
+			subtle.ConstantTimeCompare([]byte(se.SCEPChallenge), []byte(challenge)) == 1 {
+			return true
 		}
-		return se.SCEPChallenge
+		return st.ConsumeSCEPChallenge(ctx, challenge)
 	}, settings.OrgName, logger.With("component", "scep"))
 	if err != nil {
 		return nil, fmt.Errorf("scep: %w", err)
@@ -206,6 +209,12 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	}), st, hooks, logger.With("component", "health"))
 
 	// Admin API
+	if err := auth.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		return nil, err
+	}
+	if len(cfg.TrustedProxies) == 0 {
+		logger.Info("no VIBEMDM_TRUSTED_PROXIES configured; X-Forwarded-For is ignored and client IPs are the direct peer")
+	}
 	secure := strings.HasPrefix(settings.ServerURL, "https://") || strings.HasPrefix(cfg.ServerURL, "https://")
 	authn := auth.New(st, secure, cfg.SessionTTL)
 	adminAPI := api.New(api.Deps{
@@ -216,7 +225,8 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 
 	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		if err := sqlDB.PingContext(r.Context()); err != nil {
-			http.Error(w, "db: "+err.Error(), 503)
+			s.log.Warn("health check: database unreachable", "err", err)
+			http.Error(w, "database unavailable", 503)
 			return
 		}
 		w.Write([]byte("ok"))
@@ -229,7 +239,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 
 	s.http = &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           s.requestLogger(s.mux),
+		Handler:           s.requestLogger(securityHeaders(s.mux, secure)),
 		ReadHeaderTimeout: 15 * time.Second,
 		ReadTimeout:       10 * time.Minute, // large package uploads
 		WriteTimeout:      10 * time.Minute,
@@ -270,21 +280,47 @@ func (s *Server) bootstrap(ctx context.Context) error {
 		pw := s.cfg.AdminPassword
 		generated := false
 		if pw == "" {
-			pw = auth.RandomToken(12)
+			pw = auth.RandomToken(18)
 			generated = true
+		} else if err := checkInitialPassword(pw); err != nil {
+			return err
 		}
 		hash, err := auth.HashPassword(pw)
 		if err != nil {
 			return fmt.Errorf("initial admin password: %w", err)
 		}
-		if _, err := s.st.CreateUser(ctx, "admin", "Administrator", "", "admin", hash); err != nil {
+		u, err := s.st.CreateUser(ctx, "admin", "Administrator", "", "admin", hash)
+		if err != nil {
 			return err
 		}
+		// Whatever the source, the bootstrap password must be replaced at first login.
+		s.st.SetMustChangePassword(ctx, u.ID, true)
 		if generated {
-			s.log.Warn("created initial admin user with a GENERATED password — change it after logging in", "username", "admin", "password", pw)
+			// Never put the password in the searchable log table: write it to a 0600 file
+			// and print it to the console only (baseLog bypasses the DB log sink).
+			path := filepath.Join(s.cfg.DataDir, "initial-admin-password")
+			os.MkdirAll(s.cfg.DataDir, 0o755)
+			if err := os.WriteFile(path, []byte(pw+"\n"), 0o600); err != nil {
+				return fmt.Errorf("writing initial admin password: %w", err)
+			}
+			s.baseLog.Warn("created the initial admin user with a generated password; it must be changed at first login",
+				"username", "admin", "password_file", path)
+			fmt.Fprintf(os.Stderr, "\n  VibeMDM initial admin login:  admin / %s\n  (also saved to %s; you will be asked to change it)\n\n", pw, path)
 		} else {
-			s.log.Info("created initial admin user from VIBEMDM_ADMIN_PASSWORD", "username", "admin")
+			s.log.Info("created initial admin user from VIBEMDM_ADMIN_PASSWORD; it must be changed at first login", "username", "admin")
 		}
+	}
+	return nil
+}
+
+// checkInitialPassword rejects placeholder or weak bootstrap passwords from the environment.
+func checkInitialPassword(pw string) error {
+	switch strings.ToLower(pw) {
+	case "change-me-please", "change-me", "changeme", "admin", "password", "vibemdm", "adminadmin":
+		return errors.New("VIBEMDM_ADMIN_PASSWORD is a placeholder value; set a unique password or leave it empty to generate one")
+	}
+	if len(pw) < 12 {
+		return errors.New("VIBEMDM_ADMIN_PASSWORD must be at least 12 characters (or leave it empty to generate one)")
 	}
 	return nil
 }
@@ -371,8 +407,14 @@ func (s *Server) enrollmentProfile(ctx context.Context) ([]byte, error) {
 	if len(topics) == 0 {
 		return nil, errors.New("no APNs push certificate has been uploaded")
 	}
+	purpose := enroll.PurposeFrom(ctx)
+	ttl, single := purpose.ChallengePolicy()
+	challenge, err := s.st.MintSCEPChallenge(ctx, string(purpose), ttl, single)
+	if err != nil {
+		return nil, err
+	}
 	return enroll.Build(enroll.Params{
-		ServerURL: settings.ServerURL, Topic: topics[0], SCEPChallenge: settings.SCEPChallenge, OrgName: settings.OrgName,
+		ServerURL: settings.ServerURL, Topic: topics[0], SCEPChallenge: challenge, OrgName: settings.OrgName,
 		DisplayName: settings.EnrollmentProfileName, Identifier: settings.EnrollmentProfileIdentifier,
 		SigningCertPEM: settings.SigningCertPEM, SigningKeyPEM: settings.SigningKeyPEM,
 	})
@@ -405,6 +447,33 @@ func (w *statusWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return nil, nil, http.ErrNotSupported
 }
 
+// redactPath hides secrets that travel in URL paths.
+func redactPath(p string) string {
+	if strings.HasPrefix(p, "/enroll/configurator/") {
+		return "/enroll/configurator/[redacted]"
+	}
+	return p
+}
+
+// securityHeaders sets browser hardening headers on every response.
+func securityHeaders(next http.Handler, https bool) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; "+
+			"font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'")
+		if https {
+			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			h.Set("Cache-Control", "no-store")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *Server) requestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -417,7 +486,7 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 		} else if sw.status >= 400 || (!strings.HasPrefix(r.URL.Path, "/api/") && !strings.HasPrefix(r.URL.Path, "/assets/") && !strings.HasPrefix(r.URL.Path, "/agent/v1/tasks")) {
 			lvl = slog.LevelInfo
 		}
-		s.log.Log(r.Context(), lvl, "http", "method", r.Method, "path", r.URL.Path, "status", sw.status, "dur", dur.Round(time.Millisecond).String(), "remote", auth.ClientIP(r))
+		s.log.Log(r.Context(), lvl, "http", "method", r.Method, "path", redactPath(r.URL.Path), "status", sw.status, "dur", dur.Round(time.Millisecond).String(), "remote", auth.ClientIP(r))
 	})
 }
 
@@ -490,6 +559,7 @@ func (s *Server) housekeeping(ctx context.Context) {
 				s.health.RunAll(ctx)
 			}
 			if tick%60 == 1 {
+				s.st.PruneSCEPChallenges(ctx)
 				s.st.PruneHealth(ctx, 30)
 				s.st.PruneCommandEvents(ctx, 90)
 				s.logMaintenance(ctx)

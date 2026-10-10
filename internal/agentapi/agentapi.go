@@ -20,6 +20,7 @@ import (
 
 	"github.com/vibemdm/vibemdm/internal/auth"
 	"github.com/vibemdm/vibemdm/internal/compliance"
+	"github.com/vibemdm/vibemdm/internal/enroll"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/policy"
 	"github.com/vibemdm/vibemdm/internal/shell"
@@ -168,7 +169,7 @@ func (h *Handler) validateEnrollmentToken(ctx context.Context, token string) err
 
 func (h *Handler) enroll(w http.ResponseWriter, r *http.Request) {
 	var req model.AgentEnrollRequest
-	if err := decode(r, &req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(nil, r.Body, 64<<10)).Decode(&req); err != nil {
 		writeErr(w, 400, "invalid JSON")
 		return
 	}
@@ -183,13 +184,20 @@ func (h *Handler) enroll(w http.ResponseWriter, r *http.Request) {
 	}
 	devTok := "vmda_" + auth.RandomToken(32)
 	comp, err := h.st.EnrollAgent(r.Context(), req, store.HashToken(devTok))
+	if errors.Is(err, store.ErrAgentActive) {
+		h.log.Warn("agent enroll refused: computer already has an active agent", "serial", req.SerialNumber, "udid", req.UDID, "remote", auth.ClientIP(r))
+		h.st.Audit(r.Context(), "agent", "agent.enroll_refused", "computer", "", map[string]any{"serial": req.SerialNumber, "udid": req.UDID, "ip": auth.ClientIP(r)})
+		writeErr(w, 409, err.Error())
+		return
+	}
 	if err != nil {
 		h.log.Error("agent enroll", "err", err)
 		writeErr(w, 500, "enrollment failed")
 		return
 	}
 	settings, _ := h.st.GetSettings(r.Context())
-	h.st.Audit(r.Context(), "agent", "agent.enroll", "computer", comp.ID, map[string]any{"serial": req.SerialNumber, "hostname": req.Hostname})
+	h.st.Audit(r.Context(), "agent", "agent.enroll", "computer", comp.ID, map[string]any{"serial": req.SerialNumber, "hostname": req.Hostname,
+		"reinstall": req.PreviousDeviceToken != "", "ip": auth.ClientIP(r)})
 	h.log.Info("agent enrolled", "computer", comp.Name, "serial", comp.SerialNumber, "id", comp.ID)
 	h.hooks.Fire(webhook.AgentEnrolled, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "serial": comp.SerialNumber, "udid": comp.UDID})
 	writeJSON(w, 200, model.AgentEnrollResponse{
@@ -425,7 +433,7 @@ func (h *Handler) packageDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) enrollmentProfile(w http.ResponseWriter, r *http.Request) {
-	b, err := h.profile(r.Context())
+	b, err := h.profile(enroll.WithPurpose(r.Context(), enroll.PurposeAgent))
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -480,7 +488,7 @@ mv "$BIN_DIR/vibemdm-agent.tmp" "$BIN_DIR/vibemdm-agent"
 chmod 755 "$BIN_DIR/vibemdm-agent"
 xattr -d com.apple.quarantine "$BIN_DIR/vibemdm-agent" 2>/dev/null || true
 echo "Enrolling with $SERVER..."
-"$BIN_DIR/vibemdm-agent" enroll --server "$SERVER" --token "$TOKEN" {{if .MDM}}--mdm{{end}}
+VIBEMDM_ENROLL_TOKEN="$TOKEN" "$BIN_DIR/vibemdm-agent" enroll --server "$SERVER" {{if .MDM}}--mdm{{end}} {{if .Insecure}}--allow-insecure-http{{end}}
 echo "Done. The VibeMDM agent is installed and running."
 `))
 
@@ -491,13 +499,11 @@ func (h *Handler) installScript(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, err.Error())
 		return
 	}
+	// Never derive the URL from the Host header (it would be reflected into the script).
 	serverURL := settings.ServerURL
 	if serverURL == "" {
-		scheme := "https"
-		if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
-			scheme = "http"
-		}
-		serverURL = scheme + "://" + r.Host
+		writeErr(w, 503, "the server URL is not configured (Settings → General)")
+		return
 	}
 	if token == "" {
 		writeErr(w, 400, "token query parameter required")
@@ -512,7 +518,8 @@ func (h *Handler) installScript(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Content-Type", "text/x-shellscript")
-	installTemplate.Execute(w, map[string]any{"ServerURL": serverURL, "Token": token, "MDM": r.URL.Query().Get("mdm") != "0"})
+	installTemplate.Execute(w, map[string]any{"ServerURL": serverURL, "Token": token, "MDM": r.URL.Query().Get("mdm") != "0",
+		"Insecure": !strings.HasPrefix(serverURL, "https://")})
 }
 
 // autoRemediateFileVault queues Escrow Buddy when FileVault is on, the escrow

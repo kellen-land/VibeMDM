@@ -128,13 +128,13 @@ func (s *Store) SaveSettings(ctx context.Context, st model.Settings) error {
 
 // ---- admin users ----
 
-const userCols = `id, username, display_name, email, role, enabled, created_at, last_login_at`
+const userCols = `id, username, display_name, email, role, enabled, created_at, last_login_at, must_change_password`
 
 func scanUser(row interface{ Scan(...any) error }) (*model.AdminUser, string, error) {
 	var u model.AdminUser
 	var hash string
 	var last sql.NullTime
-	err := row.Scan(&u.ID, &u.Username, &u.DisplayName, &u.Email, &u.Role, &u.Enabled, &u.CreatedAt, &last, &hash)
+	err := row.Scan(&u.ID, &u.Username, &u.DisplayName, &u.Email, &u.Role, &u.Enabled, &u.CreatedAt, &last, &u.MustChangePassword, &hash)
 	if err != nil {
 		return nil, "", wrapNotFound(err)
 	}
@@ -203,7 +203,19 @@ func (s *Store) UpdateUser(ctx context.Context, id, displayName, email, role str
 
 // SetUserPassword updates a password hash.
 func (s *Store) SetUserPassword(ctx context.Context, id, hash string) error {
-	_, err := s.DB.ExecContext(ctx, `UPDATE admin_users SET password_hash=$2, updated_at=now() WHERE id=$1`, id, hash)
+	_, err := s.DB.ExecContext(ctx, `UPDATE admin_users SET password_hash=$2, must_change_password=FALSE, updated_at=now() WHERE id=$1`, id, hash)
+	return err
+}
+
+// SetMustChangePassword flags (or clears) a forced password change.
+func (s *Store) SetMustChangePassword(ctx context.Context, id string, must bool) error {
+	_, err := s.DB.ExecContext(ctx, `UPDATE admin_users SET must_change_password=$2 WHERE id=$1`, id, must)
+	return err
+}
+
+// DeleteUserSessions ends a user's sessions, optionally keeping one (by token hash).
+func (s *Store) DeleteUserSessions(ctx context.Context, userID, exceptHash string) error {
+	_, err := s.DB.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = $1 AND token_hash <> $2`, userID, exceptHash)
 	return err
 }
 

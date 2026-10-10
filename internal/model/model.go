@@ -512,6 +512,8 @@ type AdminUser struct {
 	Enabled     bool       `json:"enabled"`
 	CreatedAt   time.Time  `json:"created_at"`
 	LastLoginAt *time.Time `json:"last_login_at"`
+	// MustChangePassword blocks everything but changing the password (bootstrap accounts).
+	MustChangePassword bool `json:"must_change_password"`
 }
 
 // APIToken is a bearer token for automation.

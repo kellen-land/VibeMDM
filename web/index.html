@@ -7,19 +7,7 @@
     <meta name="theme-color" content="#0a0e10" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>VibeMDM</title>
-    <script>
-      // Apply the saved theme before first paint (dark-first default) to avoid a flash.
-      (function () {
-        try {
-          var t = localStorage.getItem('vibemdm-theme')
-          if (t !== 'light' && t !== 'dark') t = 'dark'
-          document.documentElement.dataset.theme = t
-          document.documentElement.style.colorScheme = t
-        } catch (e) {
-          document.documentElement.dataset.theme = 'dark'
-        }
-      })()
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

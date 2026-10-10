@@ -1,9 +1,11 @@
 package server
 
 import (
+	"crypto/subtle"
 	"html/template"
 	"net/http"
 
+	"github.com/vibemdm/vibemdm/internal/enroll"
 	"github.com/vibemdm/vibemdm/internal/store"
 )
 
@@ -35,11 +37,11 @@ footer{color:var(--muted);font-size:13px;text-align:center;margin-top:32px}
 <h2>Approve the profile</h2>
 <p>Open <strong>System Settings → General → Device Management</strong> (or <strong>Privacy &amp; Security → Profiles</strong>), select the downloaded profile and click <strong>Install</strong>. You will need an administrator password.</p>
 </div></div></div>
-<div class="card"><div class="step"><div class="num">3</div><div>
+{{if .InstallCommand}}<div class="card"><div class="step"><div class="num">3</div><div>
 <h2>Install the management agent <span style="color:var(--muted);font-weight:400">(administrators)</span></h2>
 <p>The agent runs scripts, policies and inventory. Paste this into Terminal:</p>
 <pre>{{.InstallCommand}}</pre>
-</div></div></div>
+</div></div></div>{{end}}
 {{end}}
 <footer>{{.Org}} · VibeMDM</footer>
 </main></body></html>`))
@@ -48,7 +50,7 @@ footer{color:var(--muted);font-size:13px;text-align:center;margin-top:32px}
 func (s *Server) enrollHandler(w http.ResponseWriter, r *http.Request) {
 	settings, err := s.st.GetSettings(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, "server error", 500)
 		return
 	}
 	token := r.URL.Query().Get("token")
@@ -57,27 +59,23 @@ func (s *Server) enrollHandler(w http.ResponseWriter, r *http.Request) {
 	if !ok && token != "" {
 		if _, err := s.st.CheckInvitation(r.Context(), store.HashToken(token)); err == nil {
 			ok = true
-		} else if token == settings.AgentEnrollmentSecret && token != "" {
+		} else if secretMatches(token, settings.AgentEnrollmentSecret) {
 			ok = true
 		}
 	}
 	if !ok {
 		data["Error"] = "This enrollment link is invalid or has expired. Ask your administrator for a new enrollment link."
 	} else {
-		base := settings.ServerURL
-		if base == "" {
-			base = "https://" + r.Host
-		}
 		q := ""
 		if token != "" {
 			q = "?token=" + template.URLQueryEscaper(token)
 		}
 		data["ProfileURL"] = "/enroll/profile" + q
-		tok := token
-		if tok == "" {
-			tok = settings.AgentEnrollmentSecret
+		// The agent install command needs a token; with open enrollment and no
+		// invitation in the link, never reveal the master enrollment secret.
+		if token != "" && settings.ServerURL != "" {
+			data["InstallCommand"] = `curl -fsSL "` + settings.ServerURL + `/agent/install.sh?token=` + template.URLQueryEscaper(token) + `" | sudo bash`
 		}
-		data["InstallCommand"] = `curl -fsSL "` + base + `/agent/install.sh?token=` + tok + `" | sudo bash`
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	enrollPage.Execute(w, data)
@@ -87,13 +85,14 @@ func (s *Server) enrollHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) enrollProfileHandler(w http.ResponseWriter, r *http.Request) {
 	settings, err := s.st.GetSettings(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, "server error", 500)
 		return
 	}
 	token := r.URL.Query().Get("token")
 	ok := settings.OpenEnrollment
 	if !ok && token != "" {
-		if _, err := s.st.CheckInvitation(r.Context(), store.HashToken(token)); err == nil || token == settings.AgentEnrollmentSecret {
+		// Each profile download uses up one use of an invitation.
+		if _, err := s.st.ConsumeInvitation(r.Context(), store.HashToken(token)); err == nil || secretMatches(token, settings.AgentEnrollmentSecret) {
 			ok = true
 		}
 	}
@@ -101,7 +100,7 @@ func (s *Server) enrollProfileHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid or expired enrollment token", http.StatusForbidden)
 		return
 	}
-	b, err := s.enrollmentProfile(r.Context())
+	b, err := s.enrollmentProfile(enroll.WithPurpose(r.Context(), enroll.PurposeUser))
 	if err != nil {
 		http.Error(w, "enrollment is not fully configured: "+err.Error(), http.StatusServiceUnavailable)
 		return
@@ -124,7 +123,7 @@ func (s *Server) configuratorProfileHandler(w http.ResponseWriter, r *http.Reque
 	token := r.PathValue("token")
 	ok := settings.OpenEnrollment
 	if !ok && token != "" {
-		if _, err := s.st.CheckInvitation(r.Context(), store.HashToken(token)); err == nil || (settings.AgentEnrollmentSecret != "" && token == settings.AgentEnrollmentSecret) {
+		if _, err := s.st.CheckInvitation(r.Context(), store.HashToken(token)); err == nil || secretMatches(token, settings.AgentEnrollmentSecret) {
 			ok = true
 		}
 	}
@@ -132,7 +131,7 @@ func (s *Server) configuratorProfileHandler(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "invalid or expired enrollment token", http.StatusForbidden)
 		return
 	}
-	b, err := s.enrollmentProfile(r.Context())
+	b, err := s.enrollmentProfile(enroll.WithPurpose(r.Context(), enroll.PurposeConfigurator))
 	if err != nil {
 		http.Error(w, "enrollment is not fully configured: "+err.Error(), http.StatusServiceUnavailable)
 		return
@@ -140,4 +139,9 @@ func (s *Server) configuratorProfileHandler(w http.ResponseWriter, r *http.Reque
 	s.st.Audit(r.Context(), "configurator", "enrollment.configurator_profile", "enrollment", "", map[string]any{"ip": r.RemoteAddr, "user_agent": r.UserAgent()})
 	w.Header().Set("Content-Type", "application/x-apple-aspen-config")
 	w.Write(b)
+}
+
+// secretMatches compares a presented token with a configured secret in constant time.
+func secretMatches(token, secret string) bool {
+	return token != "" && secret != "" && subtle.ConstantTimeCompare([]byte(token), []byte(secret)) == 1
 }

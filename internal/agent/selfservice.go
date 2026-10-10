@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/vibemdm/vibemdm/internal/model"
@@ -49,7 +50,7 @@ async function load(){
     const b=c.querySelector('button'); b.textContent=it.button_text||'Install';
     const st=c.querySelector('.status');
     b.onclick=async()=>{ b.disabled=true; st.textContent='Running…'; st.className='status';
-      try{ const rr=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:it.kind,id:it.id})});
+      try{ const rr=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json','X-VibeMDM-SelfService':'1'},body:JSON.stringify({kind:it.kind,id:it.id})});
         const out=await rr.json();
         if(rr.ok && out.ok){ st.textContent='Done'; st.className='status ok'; }
         else { st.textContent=out.error||'Failed'; st.className='status err'; }
@@ -60,6 +61,34 @@ async function load(){
 }
 load();
 </script></main></body></html>`))
+
+// selfServiceGuard protects the loopback portal from other websites: the Host
+// must be the portal itself (defeats DNS rebinding), and state-changing requests
+// need a custom header and JSON body, which cross-site pages cannot send without
+// a CORS preflight that this server never approves.
+func selfServiceGuard(next http.Handler) http.Handler {
+	_, port, _ := net.SplitHostPort(SelfServicePort)
+	allowed := map[string]bool{SelfServicePort: true, "localhost:" + port: true, "127.0.0.1:" + port: true}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !allowed[r.Host] {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			if r.Header.Get("X-VibeMDM-SelfService") != "1" || !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
+			if o := r.Header.Get("Origin"); o != "" && o != "http://"+r.Host {
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
+		}
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		next.ServeHTTP(w, r)
+	})
+}
 
 // serveSelfService hosts the local Self Service portal (loopback only).
 func (d *Daemon) serveSelfService(ctx context.Context) {
@@ -87,7 +116,10 @@ func (d *Daemon) serveSelfService(ctx context.Context) {
 	})
 	mux.HandleFunc("POST /api/run", func(w http.ResponseWriter, r *http.Request) {
 		var req struct{ Kind, ID string }
-		json.NewDecoder(r.Body).Decode(&req)
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&req); err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		pol, app, err := d.client.SelfServiceRun(r.Context(), req.Kind, req.ID)
 		if err != nil {
@@ -107,7 +139,7 @@ func (d *Daemon) serveSelfService(ctx context.Context) {
 		})
 		json.NewEncoder(w).Encode(map[string]any{"ok": ok})
 	})
-	srv := &http.Server{Addr: SelfServicePort, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Addr: SelfServicePort, Handler: selfServiceGuard(mux), ReadHeaderTimeout: 10 * time.Second}
 	ln, err := net.Listen("tcp", SelfServicePort)
 	if err != nil {
 		d.log.Warn("self service portal not started", "err", err)

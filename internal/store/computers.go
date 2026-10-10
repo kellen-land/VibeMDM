@@ -2,7 +2,9 @@ package store
 
 import (
 	"context"
+	"crypto/subtle"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -239,15 +241,36 @@ func (s *Store) TouchMDMCheckin(ctx context.Context, udid string) {
 	s.DB.ExecContext(ctx, `UPDATE computers SET mdm_last_checkin = now() WHERE udid = $1`, udid)
 }
 
+// ErrAgentActive is returned when an enrollment would replace a computer's active agent.
+var ErrAgentActive = errors.New("this computer already has an active agent; reset the agent on the computer's page in the console first")
+
+// agentReplaceAfter is how long an agent must be silent before a new enrollment may take over its record.
+const agentReplaceAfter = 30 * 24 * time.Hour
+
 // EnrollAgent creates or updates a computer for an agent enrollment and stores the token hash.
+//
+// UDIDs and serial numbers are not secrets, so an enrollment may only take over
+// an existing record whose agent is still active if it proves possession of
+// that agent's device token (a reinstall on the same Mac). Otherwise an admin
+// resets the agent first, or the old agent must have been silent for 30 days.
 func (s *Store) EnrollAgent(ctx context.Context, req model.AgentEnrollRequest, tokenHash string) (*model.Computer, error) {
 	var id string
-	err := s.DB.QueryRowContext(ctx, `SELECT id FROM computers WHERE udid = $1`, req.UDID).Scan(&id)
+	var curHash sql.NullString
+	var last sql.NullTime
+	err := s.DB.QueryRowContext(ctx, `SELECT id, agent_token_hash, agent_last_checkin FROM computers WHERE udid = $1`, req.UDID).Scan(&id, &curHash, &last)
 	if err == sql.ErrNoRows && req.SerialNumber != "" {
-		err = s.DB.QueryRowContext(ctx, `SELECT id FROM computers WHERE serial_number = $1 ORDER BY created_at LIMIT 1`, req.SerialNumber).Scan(&id)
+		err = s.DB.QueryRowContext(ctx, `SELECT id, agent_token_hash, agent_last_checkin FROM computers WHERE serial_number = $1 ORDER BY created_at LIMIT 1`,
+			req.SerialNumber).Scan(&id, &curHash, &last)
 	}
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
+	}
+	if err == nil && curHash.Valid && curHash.String != "" {
+		proved := req.PreviousDeviceToken != "" && subtle.ConstantTimeCompare([]byte(HashToken(req.PreviousDeviceToken)), []byte(curHash.String)) == 1
+		stale := !last.Valid || time.Since(last.Time) > agentReplaceAfter
+		if !proved && !stale {
+			return nil, ErrAgentActive
+		}
 	}
 	name := req.ComputerName
 	if name == "" {

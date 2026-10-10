@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -56,7 +57,7 @@ func (h *Handler) createWebhook(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err.Error())
 		return
 	}
-	if strings.TrimSpace(req.Name) == "" || !strings.HasPrefix(req.URL, "http") {
+	if strings.TrimSpace(req.Name) == "" || !validWebhookURL(req.URL) {
 		writeErr(w, 400, "name and an http(s) url are required")
 		return
 	}
@@ -79,10 +80,19 @@ func (h *Handler) createWebhook(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 201, map[string]string{"id": id})
 }
 
+func validWebhookURL(raw string) bool {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	return err == nil && (u.Scheme == "https" || u.Scheme == "http") && u.Host != "" && u.User == nil
+}
+
 func (h *Handler) updateWebhook(w http.ResponseWriter, r *http.Request) {
 	var req webhookReq
 	if err := decode(r, &req); err != nil {
 		writeErr(w, 400, err.Error())
+		return
+	}
+	if strings.TrimSpace(req.Name) == "" || !validWebhookURL(req.URL) {
+		writeErr(w, 400, "name and an http(s) url are required")
 		return
 	}
 	if len(req.Events) == 0 {
@@ -396,7 +406,7 @@ func (h *Handler) writeComputersCSV(w http.ResponseWriter, filename string, comp
 		for j, fi := range sel {
 			row[j] = csvFields[fi].Get(&comps[i])
 		}
-		cw.Write(row)
+		cw.Write(csvSafe(row))
 	}
 	cw.Flush()
 }

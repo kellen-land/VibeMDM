@@ -128,6 +128,7 @@ func (h *Handler) computerTasks(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "tasks")
 		return
 	}
+	redactTasksFor(r, items)
 	writeJSON(w, 200, listResp[model.AgentTask]{Items: items, Total: total})
 }
 
@@ -412,4 +413,20 @@ func (h *Handler) checkinNow(w http.ResponseWriter, r *http.Request) {
 	online := h.notifier.Waiting(c.ID)
 	h.notifier.RequestCheckin(c.ID)
 	writeJSON(w, 200, map[string]any{"ok": true, "agent_online": online})
+}
+
+// resetAgent revokes a computer's agent token so the agent can be enrolled again
+// (e.g. after reinstalling macOS). The old agent stops working immediately.
+func (h *Handler) resetAgent(w http.ResponseWriter, r *http.Request) {
+	comp, err := h.st.GetComputer(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "computer")
+		return
+	}
+	if err := h.st.UnenrollAgent(r.Context(), comp.ID); err != nil {
+		h.fail(w, err, "computer")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "agent.reset", "computer", comp.ID, map[string]any{"computer": comp.Name})
+	writeJSON(w, 200, map[string]bool{"ok": true})
 }

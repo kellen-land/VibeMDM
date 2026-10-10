@@ -221,15 +221,16 @@ const sofaURL = "https://sofafeed.macadmins.io/v1/macos_data_feed.json"
 
 var sofaCache struct {
 	sync.Mutex
-	at   time.Time
-	body []map[string]any
-	err  error
+	at       time.Time
+	body     []map[string]any
+	err      error
+	failedAt time.Time // back off after a failed fetch
 }
 
 func (h *Handler) updatesCatalog(w http.ResponseWriter, r *http.Request) {
 	sofaCache.Lock()
 	defer sofaCache.Unlock()
-	if sofaCache.body == nil || time.Since(sofaCache.at) > 6*time.Hour {
+	if (sofaCache.body == nil || time.Since(sofaCache.at) > 6*time.Hour) && time.Since(sofaCache.failedAt) > 5*time.Minute {
 		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 		defer cancel()
 		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, sofaURL, nil)
@@ -267,10 +268,14 @@ func (h *Handler) updatesCatalog(w http.ResponseWriter, r *http.Request) {
 			err = errors.New(resp.Status)
 		}
 		if err != nil {
-			sofaCache.err = err
+			sofaCache.err, sofaCache.failedAt = err, time.Now()
+			h.log.Warn("fetching the SOFA macOS feed failed", "err", err)
 		}
 	}
 	if sofaCache.body == nil {
+		if sofaCache.err == nil {
+			sofaCache.err = errors.New("not fetched yet")
+		}
 		writeErr(w, 502, "macOS version catalog unavailable: "+sofaCache.err.Error())
 		return
 	}

@@ -7,8 +7,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 	"strings"
 	"sync"
 	"time"
@@ -57,6 +59,10 @@ type Principal struct {
 	Username string
 	Role     string // admin | viewer
 	Via      string // session | token | agent
+	// SessionHash identifies the session (Via == "session").
+	SessionHash string
+	// MustChangePassword restricts the session to changing the password.
+	MustChangePassword bool
 }
 
 // IsAdmin reports admin role.
@@ -89,30 +95,57 @@ func New(st *store.Store, secure bool, ttl time.Duration) *Authenticator {
 	return &Authenticator{Store: st, SecureCookies: secure, SessionTTL: ttl, limiter: newLoginLimiter()}
 }
 
-// Login validates credentials and creates a session cookie.
+// dummyHash gives unknown usernames the same bcrypt cost as real ones (no timing oracle).
+var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("vibemdm-timing-equalizer"), 12)
+
+// ErrRateLimited is returned when login attempts are throttled.
+var ErrRateLimited = errors.New("too many failed attempts; try again later")
+
+// Login validates credentials and creates a session cookie. Attempts are
+// throttled per client IP and per username (with growing lockouts).
 func (a *Authenticator) Login(w http.ResponseWriter, r *http.Request, username, password string) (*model.AdminUser, error) {
 	ip := clientIP(r)
-	if !a.limiter.allow(ip) {
-		return nil, errors.New("too many failed attempts; try again in a minute")
+	ukey := "u:" + strings.ToLower(strings.TrimSpace(username))
+	if !a.limiter.allow(ip) || !a.limiter.allow(ukey) {
+		return nil, ErrRateLimited
 	}
 	user, hash, err := a.Store.GetUserByUsername(r.Context(), username)
+	if err != nil {
+		bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
+	}
 	if err != nil || !user.Enabled || !CheckPassword(hash, password) {
 		a.limiter.fail(ip)
-		// constant-ish response
-		time.Sleep(150 * time.Millisecond)
+		a.limiter.fail(ukey)
 		return nil, errors.New("invalid username or password")
 	}
 	a.limiter.reset(ip)
-	tok := RandomToken(32)
-	if err := a.Store.CreateSession(r.Context(), store.HashToken(tok), user.ID, a.SessionTTL, r.UserAgent(), ip); err != nil {
+	a.limiter.reset(ukey)
+	if err := a.startSession(w, r, user.ID); err != nil {
 		return nil, err
 	}
 	a.Store.TouchUserLogin(r.Context(), user.ID)
+	return user, nil
+}
+
+func (a *Authenticator) startSession(w http.ResponseWriter, r *http.Request, userID string) error {
+	tok := RandomToken(32)
+	if err := a.Store.CreateSession(r.Context(), store.HashToken(tok), userID, a.SessionTTL, r.UserAgent(), clientIP(r)); err != nil {
+		return err
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name: SessionCookie, Value: tok, Path: "/", HttpOnly: true, Secure: a.SecureCookies,
 		SameSite: http.SameSiteLaxMode, Expires: time.Now().Add(a.SessionTTL),
 	})
-	return user, nil
+	return nil
+}
+
+// RotateSession ends every session of the user (including the current one) and
+// issues a fresh cookie; used after a password change.
+func (a *Authenticator) RotateSession(w http.ResponseWriter, r *http.Request, userID string) error {
+	if err := a.Store.DeleteUserSessions(r.Context(), userID, ""); err != nil {
+		return err
+	}
+	return a.startSession(w, r, userID)
 }
 
 // Logout destroys the session.
@@ -136,9 +169,10 @@ func (a *Authenticator) Resolve(r *http.Request) *Principal {
 		return nil
 	}
 	if c, err := r.Cookie(SessionCookie); err == nil && c.Value != "" {
-		u, err := a.Store.GetSessionUser(r.Context(), store.HashToken(c.Value))
+		h := store.HashToken(c.Value)
+		u, err := a.Store.GetSessionUser(r.Context(), h)
 		if err == nil {
-			return &Principal{UserID: u.ID, Username: u.Username, Role: u.Role, Via: "session"}
+			return &Principal{UserID: u.ID, Username: u.Username, Role: u.Role, Via: "session", SessionHash: h, MustChangePassword: u.MustChangePassword}
 		}
 	}
 	return nil
@@ -150,6 +184,10 @@ func (a *Authenticator) Require(adminOnly bool, next http.Handler) http.Handler 
 		p := a.Resolve(r)
 		if p == nil {
 			writeJSONError(w, http.StatusUnauthorized, "authentication required")
+			return
+		}
+		if p.MustChangePassword && r.URL.Path != "/api/v1/auth/password" {
+			writeJSONError(w, http.StatusForbidden, "password change required")
 			return
 		}
 		if adminOnly && !p.IsAdmin() {
@@ -179,6 +217,9 @@ func RequireWrite(next http.Handler) http.Handler {
 	})
 }
 
+// SameOrigin reports whether a browser request came from this site (CSRF check).
+func SameOrigin(r *http.Request) bool { return sameOrigin(r) }
+
 func sameOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
@@ -196,17 +237,69 @@ func sameOrigin(r *http.Request) bool {
 	return strings.EqualFold(o, host)
 }
 
+var trustedProxies []netip.Prefix
+
+// SetTrustedProxies configures which peers may set X-Forwarded-For (CIDRs or IPs).
+// With none configured, forwarding headers are ignored.
+func SetTrustedProxies(list []string) error {
+	var out []netip.Prefix
+	for _, s := range list {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if !strings.Contains(s, "/") {
+			a, err := netip.ParseAddr(s)
+			if err != nil {
+				return fmt.Errorf("trusted proxy %q: %w", s, err)
+			}
+			out = append(out, netip.PrefixFrom(a, a.BitLen()))
+			continue
+		}
+		p, err := netip.ParsePrefix(s)
+		if err != nil {
+			return fmt.Errorf("trusted proxy %q: %w", s, err)
+		}
+		out = append(out, p.Masked())
+	}
+	trustedProxies = out
+	return nil
+}
+
+func isTrustedProxy(a netip.Addr) bool {
+	a = a.Unmap()
+	for _, p := range trustedProxies {
+		if p.Contains(a) {
+			return true
+		}
+	}
+	return false
+}
+
+// clientIP returns the caller's address. X-Forwarded-For is honoured only when
+// the direct peer is a trusted proxy, and is read right-to-left so a client
+// cannot prepend a spoofed address.
 func clientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		parts := strings.Split(xff, ",")
-		return strings.TrimSpace(parts[0])
-	}
-	if xr := r.Header.Get("X-Real-IP"); xr != "" {
-		return xr
-	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return r.RemoteAddr
+		host = r.RemoteAddr
+	}
+	peer, err := netip.ParseAddr(host)
+	if err != nil || !isTrustedProxy(peer) {
+		return host
+	}
+	parts := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+	for i := len(parts) - 1; i >= 0; i-- {
+		ip, err := netip.ParseAddr(strings.TrimSpace(parts[i]))
+		if err != nil {
+			break
+		}
+		if !isTrustedProxy(ip) {
+			return ip.Unmap().String()
+		}
+	}
+	if xr, err := netip.ParseAddr(strings.TrimSpace(r.Header.Get("X-Real-IP"))); err == nil {
+		return xr.Unmap().String()
 	}
 	return host
 }
@@ -238,7 +331,7 @@ func newLoginLimiter() *loginLimiter {
 		for range time.Tick(5 * time.Minute) {
 			l.mu.Lock()
 			for k, v := range l.fails {
-				if time.Now().After(v.until.Add(10 * time.Minute)) {
+				if time.Now().After(v.until.Add(2 * time.Hour)) {
 					delete(l.fails, k)
 				}
 			}
@@ -248,27 +341,33 @@ func newLoginLimiter() *loginLimiter {
 	return l
 }
 
-func (l *loginLimiter) allow(ip string) bool {
+const loginBurst = 6 // failures allowed before a lockout
+
+func (l *loginLimiter) allow(key string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	rec := l.fails[ip]
-	return rec == nil || rec.count < 8 || time.Now().After(rec.until)
+	rec := l.fails[key]
+	return rec == nil || time.Now().After(rec.until)
 }
 
-func (l *loginLimiter) fail(ip string) {
+// fail records a failure; every loginBurst failures lock the key out for
+// 1, 5, 15, then 60 minutes.
+func (l *loginLimiter) fail(key string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	rec := l.fails[ip]
+	rec := l.fails[key]
 	if rec == nil {
 		rec = &failRec{}
-		l.fails[ip] = rec
-	}
-	if time.Now().After(rec.until) && rec.count >= 8 {
-		rec.count = 0
+		l.fails[key] = rec
 	}
 	rec.count++
-	if rec.count >= 8 {
-		rec.until = time.Now().Add(time.Minute)
+	if rec.count%loginBurst == 0 {
+		steps := []time.Duration{time.Minute, 5 * time.Minute, 15 * time.Minute, time.Hour}
+		n := rec.count/loginBurst - 1
+		if n >= len(steps) {
+			n = len(steps) - 1
+		}
+		rec.until = time.Now().Add(steps[n])
 	}
 }
 

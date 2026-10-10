@@ -25,6 +25,10 @@ type Config struct {
 	LogDBLevel    slog.Level // minimum level stored in the searchable log table
 	SessionTTL    time.Duration
 	Version       string
+	// TrustedProxies may set X-Forwarded-For (CIDRs/IPs, comma separated).
+	TrustedProxies []string
+	// AllowHTTP permits a plain-http server URL (labs only: agents would talk without TLS).
+	AllowHTTP bool
 }
 
 func env(key, def string) string {
@@ -59,6 +63,12 @@ func FromEnv(version string) (*Config, error) {
 		APNsURL:       env("VIBEMDM_APNS_URL", ""),
 		EncryptionKey: env("VIBEMDM_ENCRYPTION_KEY", ""),
 		Version:       version,
+		AllowHTTP:     envBool("VIBEMDM_ALLOW_HTTP", false),
+	}
+	for _, p := range strings.Split(env("VIBEMDM_TRUSTED_PROXIES", ""), ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			c.TrustedProxies = append(c.TrustedProxies, p)
+		}
 	}
 	ttlHours, err := strconv.Atoi(env("VIBEMDM_SESSION_TTL_HOURS", "168"))
 	if err != nil || ttlHours < 1 {

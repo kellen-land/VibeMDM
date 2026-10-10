@@ -205,11 +205,18 @@ func currentBinary() string {
 func cmdEnroll(ctx context.Context, args []string, logger *slog.Logger) error {
 	fs := flag.NewFlagSet("enroll", flag.ExitOnError)
 	server := fs.String("server", "", "server URL")
-	token := fs.String("token", "", "enrollment token")
+	token := fs.String("token", "", "enrollment token (prefer the VIBEMDM_ENROLL_TOKEN environment variable: arguments are visible in ps)")
 	mdm := fs.Bool("mdm", false, "also open the MDM enrollment profile")
+	insecure := fs.Bool("allow-insecure-http", false, "allow a plain-http server URL (lab use only: commands would travel unencrypted)")
 	fs.Parse(args)
+	if *token == "" {
+		*token = os.Getenv("VIBEMDM_ENROLL_TOKEN")
+	}
 	if *server == "" || *token == "" {
-		return fmt.Errorf("--server and --token are required")
+		return fmt.Errorf("--server and an enrollment token (--token or VIBEMDM_ENROLL_TOKEN) are required")
+	}
+	if !strings.HasPrefix(*server, "https://") && !*insecure {
+		return fmt.Errorf("the server URL must use https:// (pass --allow-insecure-http only for a lab server)")
 	}
 	if os.Geteuid() != 0 {
 		return fmt.Errorf("enroll must be run as root (use sudo)")
@@ -218,9 +225,14 @@ func cmdEnroll(ctx context.Context, args []string, logger *slog.Logger) error {
 	si := agent.CollectSystemInfo(ctx)
 	client := agent.NewClient(*server, "", version)
 	fmt.Printf("Enrolling %s (%s) with %s…\n", si.ComputerName, si.SerialNumber, *server)
+	// A reinstall proves it is the same Mac by presenting the existing agent's token.
+	prev := ""
+	if old, err := agent.LoadConfig(""); err == nil {
+		prev = old.DeviceToken
+	}
 	resp, err := client.Enroll(ctx, model.AgentEnrollRequest{
 		Token: *token, SerialNumber: si.SerialNumber, UDID: si.UDID, Hostname: si.Hostname, ComputerName: si.ComputerName,
-		OSVersion: si.OSVersion, Architecture: si.Arch, AgentVersion: version,
+		OSVersion: si.OSVersion, Architecture: si.Arch, AgentVersion: version, PreviousDeviceToken: prev,
 	})
 	if err != nil {
 		return fmt.Errorf("enrollment failed: %w", err)
@@ -253,20 +265,22 @@ func cmdEnroll(ctx context.Context, args []string, logger *slog.Logger) error {
 			fmt.Printf("Could not download the MDM enrollment profile: %v\n", err)
 			return nil
 		}
-		user := agent.ConsoleUser(ctx)
-		dir := "/Users/Shared"
-		if user != "" {
-			if h := strings.TrimSpace(run(ctx, "dscl", ".", "-read", "/Users/"+user, "NFSHomeDirectory")); strings.Contains(h, "/") {
-				dir = filepath.Join(strings.TrimSpace(strings.TrimPrefix(h, "NFSHomeDirectory:")), "Downloads")
-			}
+		// Root never writes into a user-controlled directory (symlink attacks):
+		// create a fresh file in the sticky /Users/Shared and let the user open it.
+		f, err := os.CreateTemp("/Users/Shared", "VibeMDM-Enrollment-*.mobileconfig")
+		if err != nil {
+			fmt.Printf("Could not save the MDM enrollment profile: %v\n", err)
+			return nil
 		}
-		path := filepath.Join(dir, cfg.OrgName+" Enrollment.mobileconfig")
-		if err := os.WriteFile(path, prof, 0o644); err != nil {
-			path = "/Users/Shared/VibeMDM Enrollment.mobileconfig"
-			os.WriteFile(path, prof, 0o644)
+		path := f.Name()
+		_, werr := f.Write(prof)
+		f.Chmod(0o644)
+		f.Close()
+		if werr != nil {
+			fmt.Printf("Could not save the MDM enrollment profile: %v\n", werr)
+			return nil
 		}
-		if user != "" {
-			exec.Command("chown", user, path).Run()
+		if user := agent.ConsoleUser(ctx); user != "" {
 			uid := agent.ConsoleUserUID(ctx, user)
 			exec.Command("launchctl", "asuser", fmt.Sprint(uid), "sudo", "-u", user, "open", path).Run()
 			exec.Command("launchctl", "asuser", fmt.Sprint(uid), "sudo", "-u", user, "open", "x-apple.systempreferences:com.apple.Profiles-Settings.extension").Run()

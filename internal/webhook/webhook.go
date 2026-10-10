@@ -11,9 +11,14 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"net/url"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/vibemdm/vibemdm/internal/db"
@@ -84,7 +89,39 @@ type delivery struct {
 
 // New creates a dispatcher.
 func New(d *sql.DB, logger *slog.Logger) *Dispatcher {
-	return &Dispatcher{DB: d, Log: logger, Client: &http.Client{Timeout: 15 * time.Second}, queue: make(chan delivery, 512)}
+	return &Dispatcher{DB: d, Log: logger, Client: SafeClient(15 * time.Second), queue: make(chan delivery, 512)}
+}
+
+// SafeClient returns an HTTP client for admin-configured outbound URLs. It never
+// follows redirects and refuses loopback, link-local (cloud metadata) and
+// unspecified addresses, so a webhook cannot be aimed at the server itself.
+// Private (RFC 1918) networks stay allowed: self-hosted relays commonly live there.
+func SafeClient(timeout time.Duration) *http.Client {
+	dialer := &net.Dialer{Timeout: 10 * time.Second, Control: func(network, address string, _ syscall.RawConn) error {
+		host, _, err := net.SplitHostPort(address)
+		if err != nil {
+			return err
+		}
+		ip := net.ParseIP(host)
+		if ip == nil || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast() {
+			return fmt.Errorf("refusing to connect to %s", host)
+		}
+		return nil
+	}}
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.DialContext = dialer.DialContext
+	tr.Proxy = nil
+	return &http.Client{Timeout: timeout, Transport: tr,
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+}
+
+// errText describes a request error without the URL (webhook URLs act as secrets).
+func errText(err error) string {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		return ue.Op + ": " + ue.Err.Error()
+	}
+	return err.Error()
 }
 
 // Start launches the worker pool.
@@ -181,7 +218,7 @@ func (w *Dispatcher) deliver(ctx context.Context, d delivery) {
 		attempts++
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost, d.hook.URL, bytes.NewReader(d.payload))
 		if err != nil {
-			lastErr = err.Error()
+			lastErr = "invalid webhook URL"
 			break
 		}
 		req.Header.Set("Content-Type", "application/json")
@@ -194,7 +231,7 @@ func (w *Dispatcher) deliver(ctx context.Context, d delivery) {
 		}
 		resp, err := w.Client.Do(req)
 		if err != nil {
-			lastErr = err.Error()
+			lastErr = errText(err)
 		} else {
 			status = resp.StatusCode
 			resp.Body.Close()

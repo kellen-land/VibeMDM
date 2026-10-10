@@ -42,6 +42,7 @@
   `VIBEMDM_ENCRYPTION_KEY_OLD=… VIBEMDM_ENCRYPTION_KEY=… vibemdm rotate-encryption-key`. It re-encrypts everything in
   one transaction and changes nothing if the old key is wrong.
 - TLS is terminated by Caddy (or your proxy). Apple requires a publicly trusted certificate.
+- See [security.md](security.md) for the full security model, the hardening checklist and known limitations.
 
 ## Not (yet) included
 

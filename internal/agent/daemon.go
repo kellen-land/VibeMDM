@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"math/rand/v2"
 	"net"
@@ -220,20 +221,32 @@ func sleepCtx(ctx context.Context, dur time.Duration) bool {
 	}
 }
 
+// publicTriggers may be fired by any local user (the per-user LaunchAgent sends
+// "login"); everything else, including custom triggers, needs the root socket.
+var publicTriggers = map[string]bool{"login": true, "network_change": true, "checkin": true}
+
+// RootSocketPath accepts any trigger and is only accessible to root.
+const RootSocketPath = SocketPath + ".root"
+
 func (d *Daemon) serveSocket(ctx context.Context) {
-	os.Remove(SocketPath)
-	old := syscall.Umask(0o111)
-	ln, err := net.Listen("unix", SocketPath)
+	go d.listenTrigger(ctx, RootSocketPath, 0o600, false)
+	d.listenTrigger(ctx, SocketPath, 0o666, true)
+}
+
+func (d *Daemon) listenTrigger(ctx context.Context, path string, mode os.FileMode, restricted bool) {
+	os.Remove(path)
+	old := syscall.Umask(0o177)
+	ln, err := net.Listen("unix", path)
 	syscall.Umask(old)
 	if err != nil {
-		d.log.Warn("cannot listen on trigger socket", "err", err)
+		d.log.Warn("cannot listen on trigger socket", "path", path, "err", err)
 		return
 	}
-	os.Chmod(SocketPath, 0o666)
+	os.Chmod(path, mode)
 	go func() {
 		<-ctx.Done()
 		ln.Close()
-		os.Remove(SocketPath)
+		os.Remove(path)
 	}()
 	for {
 		conn, err := ln.Accept()
@@ -243,16 +256,21 @@ func (d *Daemon) serveSocket(ctx context.Context) {
 			}
 			continue
 		}
-		go d.handleConn(conn)
+		go d.handleConn(conn, restricted)
 	}
 }
 
-func (d *Daemon) handleConn(conn net.Conn) {
+func (d *Daemon) handleConn(conn net.Conn, restricted bool) {
 	defer conn.Close()
 	conn.SetDeadline(time.Now().Add(10 * time.Second))
 	var msg localTrigger
-	if err := json.NewDecoder(conn).Decode(&msg); err != nil || msg.Trigger == "" {
+	if err := json.NewDecoder(io.LimitReader(conn, 4096)).Decode(&msg); err != nil || msg.Trigger == "" {
 		conn.Write([]byte(`{"error":"bad request"}` + "\n"))
+		return
+	}
+	if restricted && !publicTriggers[msg.Trigger] {
+		d.log.Warn("refused local trigger from the unprivileged socket", "trigger", msg.Trigger)
+		conn.Write([]byte(`{"error":"this trigger requires root (run with sudo)"}` + "\n"))
 		return
 	}
 	d.log.Info("local trigger received", "trigger", msg.Trigger, "user", msg.User)
@@ -266,7 +284,11 @@ func (d *Daemon) handleConn(conn net.Conn) {
 
 // SendLocalTrigger asks a running daemon to fire a trigger.
 func SendLocalTrigger(trigger, user string) error {
-	conn, err := net.DialTimeout("unix", SocketPath, 3*time.Second)
+	path := SocketPath
+	if os.Geteuid() == 0 {
+		path = RootSocketPath
+	}
+	conn, err := net.DialTimeout("unix", path, 3*time.Second)
 	if err != nil {
 		return errors.New("agent daemon is not running")
 	}
@@ -276,5 +298,11 @@ func SendLocalTrigger(trigger, user string) error {
 		return err
 	}
 	var resp map[string]any
-	return json.NewDecoder(conn).Decode(&resp)
+	if err := json.NewDecoder(conn).Decode(&resp); err != nil {
+		return err
+	}
+	if msg, _ := resp["error"].(string); msg != "" {
+		return errors.New(msg)
+	}
+	return nil
 }

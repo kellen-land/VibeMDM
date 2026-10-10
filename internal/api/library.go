@@ -3,8 +3,10 @@ package api
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,6 +25,9 @@ func (h *Handler) listScripts(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "scripts")
 		return
 	}
+	for i := range items {
+		redactScriptFor(r, &items[i])
+	}
 	writeJSON(w, 200, listResp[model.Script]{Items: items, Total: len(items)})
 }
 
@@ -32,6 +37,7 @@ func (h *Handler) getScript(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "script")
 		return
 	}
+	redactScriptFor(r, s)
 	writeJSON(w, 200, s)
 }
 
@@ -180,11 +186,11 @@ func (h *Handler) uploadPackage(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			dst := filepath.Join(dir, fn)
-			if _, err := os.Stat(dst); err == nil {
+			f, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o640)
+			if errors.Is(err, fs.ErrExist) {
 				writeErr(w, 409, "a package file with that name already exists")
 				return
 			}
-			f, err := os.Create(dst)
 			if err != nil {
 				h.fail(w, err, "package file")
 				return

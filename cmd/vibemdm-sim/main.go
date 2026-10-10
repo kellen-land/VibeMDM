@@ -68,6 +68,7 @@ func main() {
 	prefix := flag.String("prefix", "SIM", "computer name prefix")
 	noMDM := flag.Bool("no-mdm", false, "skip MDM enrollment (agent only)")
 	flag.Parse()
+	loadSimTokens()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -428,13 +429,40 @@ func str(v any) string {
 
 // ---- agent simulation ----
 
+// simTokens remembers device tokens between simulator runs (like agent.json on a
+// real Mac) so a restart re-enrolls as a reinstall instead of a takeover.
+var simTokens = struct {
+	sync.Mutex
+	path string
+	m    map[string]string
+}{path: ".vibemdm-sim-tokens.json", m: map[string]string{}}
+
+func loadSimTokens() {
+	if b, err := os.ReadFile(simTokens.path); err == nil {
+		json.Unmarshal(b, &simTokens.m)
+	}
+}
+
+func saveSimToken(key, tok string) {
+	simTokens.Lock()
+	defer simTokens.Unlock()
+	simTokens.m[key] = tok
+	b, _ := json.MarshalIndent(simTokens.m, "", "  ")
+	os.WriteFile(simTokens.path, b, 0o600)
+}
+
 func (d *device) enrollAgent(ctx context.Context, token string) error {
 	c := agent.NewClient(d.server, "", version)
+	key := d.server + "|" + d.udid
+	simTokens.Lock()
+	prev := simTokens.m[key]
+	simTokens.Unlock()
 	resp, err := c.Enroll(ctx, model.AgentEnrollRequest{Token: token, SerialNumber: d.serial, UDID: d.udid, Hostname: strings.ToLower(d.name) + ".local",
-		ComputerName: d.name, OSVersion: d.osVer, Architecture: "arm64", AgentVersion: version})
+		ComputerName: d.name, OSVersion: d.osVer, Architecture: "arm64", AgentVersion: version, PreviousDeviceToken: prev})
 	if err != nil {
 		return err
 	}
+	saveSimToken(key, resp.DeviceToken)
 	d.agentTok = resp.DeviceToken
 	d.log.Info("agent enrolled", "computer_id", resp.ComputerID)
 	return nil

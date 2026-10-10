@@ -2,7 +2,9 @@ package store
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"strconv"
@@ -225,4 +227,33 @@ func (s *Store) RekeySecrets(ctx context.Context, oldBox, newBox *secrets.Box) (
 		n++
 	}
 	return n, tx.Commit()
+}
+
+// MintSCEPChallenge creates a SCEP challenge that expires after ttl and, when
+// singleUse, works for exactly one certificate request. It returns the plaintext.
+func (s *Store) MintSCEPChallenge(ctx context.Context, purpose string, ttl time.Duration, singleUse bool) (string, error) {
+	b := make([]byte, 24)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	ch := base64.RawURLEncoding.EncodeToString(b)
+	_, err := s.DB.ExecContext(ctx, `INSERT INTO scep_challenges (challenge_hash, purpose, single_use, expires_at) VALUES ($1,$2,$3,$4)`,
+		HashToken(ch), purpose, singleUse, time.Now().Add(ttl))
+	return ch, err
+}
+
+// ConsumeSCEPChallenge reports whether a minted challenge is valid, using it up if single-use.
+func (s *Store) ConsumeSCEPChallenge(ctx context.Context, challenge string) bool {
+	if challenge == "" {
+		return false
+	}
+	var h string
+	err := s.DB.QueryRowContext(ctx, `UPDATE scep_challenges SET used_at = now()
+		WHERE challenge_hash = $1 AND expires_at > now() AND (used_at IS NULL OR NOT single_use) RETURNING challenge_hash`, HashToken(challenge)).Scan(&h)
+	return err == nil
+}
+
+// PruneSCEPChallenges deletes expired challenges.
+func (s *Store) PruneSCEPChallenges(ctx context.Context) {
+	s.DB.ExecContext(ctx, `DELETE FROM scep_challenges WHERE expires_at < now() - interval '1 day'`)
 }

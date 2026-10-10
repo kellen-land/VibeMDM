@@ -40,6 +40,26 @@ type pending struct {
 	nonce      string
 	agentCh    chan Conn
 	done       chan struct{}
+	cancel     context.CancelFunc
+	reason     string // why the server ended the session (CloseAll)
+}
+
+// MaxSessionDuration is the hard limit for one remote shell session.
+const MaxSessionDuration = 4 * time.Hour
+
+// CloseAll ends every pending and active session (e.g. the feature was turned off).
+func (h *Hub) CloseAll(reason string) int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	n := 0
+	for _, p := range h.pending {
+		if p.cancel != nil {
+			p.reason = reason
+			p.cancel()
+			n++
+		}
+	}
+	return n
 }
 
 // Hub coordinates pending sessions between the admin and agent handlers.
@@ -102,6 +122,28 @@ func (h *Hub) Run(ctx context.Context, sessionID, computerID, nonce string, admi
 	defer h.unregister(sessionID)
 	defer close(p.done)
 
+	// Every session has a hard time limit and can be ended by CloseAll.
+	runCtx, runCancel := context.WithTimeout(ctx, MaxSessionDuration)
+	defer runCancel()
+	h.mu.Lock()
+	p.cancel = runCancel
+	h.mu.Unlock()
+	ended := func() Result {
+		h.mu.Lock()
+		reason := p.reason
+		h.mu.Unlock()
+		if reason != "" {
+			admin.WriteFrame(context.Background(), Frame{T: "e", Msg: "session closed: " + reason})
+			return Result{Status: "closed", Reason: reason}
+		}
+		if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
+			admin.WriteFrame(context.Background(), Frame{T: "e", Msg: "session closed: maximum session length reached"})
+			return Result{Status: "timeout", Reason: "maximum session length reached"}
+		}
+		return Result{Status: "error", Reason: "server shutting down"}
+	}
+	ctx = runCtx
+
 	var agent Conn
 	select {
 	case agent = <-p.agentCh:
@@ -109,7 +151,7 @@ func (h *Hub) Run(ctx context.Context, sessionID, computerID, nonce string, admi
 		admin.WriteFrame(ctx, Frame{T: "e", Msg: "the Mac's agent did not connect (it may be offline)"})
 		return Result{Status: "timeout", Reason: "agent did not connect"}
 	case <-ctx.Done():
-		return Result{Status: "error", Reason: "server shutting down"}
+		return ended()
 	}
 	if onConnect != nil {
 		onConnect()
@@ -214,7 +256,8 @@ func (h *Hub) Run(ctx context.Context, sessionID, computerID, nonce string, admi
 	reason := "session closed"
 	status := "closed"
 	if relayCtx.Err() != nil && ctx.Err() != nil {
-		reason = "server shutting down"
+		r := ended()
+		status, reason = r.Status, r.Reason
 	}
 	mu.Lock()
 	tr := string(transcript)

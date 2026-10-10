@@ -4,6 +4,7 @@
 
 {$DOMAIN} {
 	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 	# Package uploads can be large.
 	request_body {
 		max_size 8GB

@@ -118,6 +118,11 @@ func decode(r *http.Request, v any) error {
 	return nil
 }
 
+// decodeSmall decodes a small JSON body (public endpoints).
+func decodeSmall(r *http.Request, v any) error {
+	return json.NewDecoder(http.MaxBytesReader(nil, r.Body, 64<<10)).Decode(v)
+}
+
 func actor(r *http.Request) string {
 	if p := auth.FromContext(r.Context()); p != nil {
 		return p.Username
@@ -169,6 +174,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("POST /api/v1/computers/{id}/push", h.pushComputer)
 	r("POST /api/v1/computers/{id}/update-inventory", h.updateInventory)
 	r("POST /api/v1/computers/{id}/checkin", h.checkinNow)
+	adm("POST /api/v1/computers/{id}/reset-agent", h.resetAgent)
 	mux.Handle("GET /api/v1/computers/{id}/shell", h.auth.Require(true, http.HandlerFunc(h.shellWS)))
 	adm("GET /api/v1/shell-sessions", h.listShellSessions)
 	adm("GET /api/v1/shell-sessions/{id}", h.getShellTranscript)
@@ -355,7 +361,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("POST /api/v1/tasks/{id}/cancel", h.cancelTask)
 
 	r("GET /api/v1/enrollment/status", h.enrollmentStatus)
-	r("GET /api/v1/enrollment/profile", h.downloadEnrollmentProfile)
+	adm("GET /api/v1/enrollment/profile", h.downloadEnrollmentProfile)
 	r("GET /api/v1/enrollment/invitations", h.listInvitations)
 	r("POST /api/v1/enrollment/invitations", h.createInvitation)
 	r("PATCH /api/v1/enrollment/invitations/{id}", h.updateInvitation)
@@ -377,7 +383,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	adm("PUT /api/v1/users/{id}", h.updateUser)
 	adm("DELETE /api/v1/users/{id}", h.deleteUser)
 	adm("POST /api/v1/users/{id}/password", h.setUserPassword)
-	r("POST /api/v1/auth/password", h.changeOwnPassword)
+	// Any signed-in user (viewers too) may change their own password.
+	mux.Handle("POST /api/v1/auth/password", h.auth.Require(false, http.HandlerFunc(h.changeOwnPassword)))
 	adm("GET /api/v1/api-tokens", h.listAPITokens)
 	adm("POST /api/v1/api-tokens", h.createAPIToken)
 	adm("DELETE /api/v1/api-tokens/{id}", h.deleteAPIToken)
@@ -388,15 +395,24 @@ func (h *Handler) Register(mux *http.ServeMux) {
 // ---- auth ----
 
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
+	if !auth.SameOrigin(r) {
+		writeErr(w, 403, "cross-origin request rejected")
+		return
+	}
 	var req struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
-	if err := decode(r, &req); err != nil {
+	if err := decodeSmall(r, &req); err != nil {
 		writeErr(w, 400, err.Error())
 		return
 	}
 	u, err := h.auth.Login(w, r, req.Username, req.Password)
+	if errors.Is(err, auth.ErrRateLimited) {
+		h.log.Warn("login throttled", "username", req.Username, "ip", auth.ClientIP(r))
+		writeErr(w, 429, err.Error())
+		return
+	}
 	if err != nil {
 		writeErr(w, 401, err.Error())
 		return
@@ -406,6 +422,10 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
+	if !auth.SameOrigin(r) {
+		writeErr(w, 403, "cross-origin request rejected")
+		return
+	}
 	h.auth.Logout(w, r)
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
@@ -457,8 +477,17 @@ func (h *Handler) changeOwnPassword(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err.Error())
 		return
 	}
+	if req.New == req.Current {
+		writeErr(w, 400, "choose a password different from the current one")
+		return
+	}
 	if err := h.st.SetUserPassword(r.Context(), u.ID, newHash); err != nil {
 		h.fail(w, err, "password")
+		return
+	}
+	// Sign out every other session (a stolen cookie stops working) and re-issue ours.
+	if err := h.auth.RotateSession(w, r, u.ID); err != nil {
+		h.fail(w, err, "session")
 		return
 	}
 	h.st.Audit(r.Context(), p.Username, "user.password_change", "user", u.ID, nil)

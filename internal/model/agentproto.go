@@ -14,6 +14,8 @@ type AgentEnrollRequest struct {
 	OSVersion    string `json:"os_version"`
 	Architecture string `json:"architecture"`
 	AgentVersion string `json:"agent_version"`
+	// PreviousDeviceToken proves a reinstall on the same Mac (the existing agent's token).
+	PreviousDeviceToken string `json:"previous_device_token,omitempty"`
 }
 
 // AgentEnrollResponse returns the device token.

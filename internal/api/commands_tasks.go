@@ -51,6 +51,7 @@ func (h *Handler) listTasks(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "tasks")
 		return
 	}
+	redactTasksFor(r, items)
 	writeJSON(w, 200, listResp[model.AgentTask]{Items: items, Total: total})
 }
 
@@ -60,7 +61,9 @@ func (h *Handler) getTask(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "task")
 		return
 	}
-	writeJSON(w, 200, t)
+	one := []model.AgentTask{*t}
+	redactTasksFor(r, one)
+	writeJSON(w, 200, one[0])
 }
 
 func (h *Handler) cancelTask(w http.ResponseWriter, r *http.Request) {

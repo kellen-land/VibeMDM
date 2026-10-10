@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/coder/websocket"
@@ -50,11 +51,14 @@ func (h *Handler) shellWS(w http.ResponseWriter, r *http.Request) {
 	ip := auth.ClientIP(r)
 	sessionID, err := h.st.CreateShellSession(r.Context(), comp.ID, p.Username, ip)
 	if err != nil {
+		if strings.Contains(err.Error(), "shell_sessions_one_live_idx") {
+			c.Close(websocket.StatusPolicyViolation, "a shell session is already active for this computer")
+			return
+		}
 		c.Close(websocket.StatusInternalError, "audit record failed")
 		return
 	}
 	h.st.Audit(r.Context(), p.Username, "shell.open", "computer", comp.ID, map[string]any{"session": sessionID, "ip": ip})
-	h.hooks.Fire(webhook.ShellSessionOpened, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "actor": p.Username, "ip": ip, "session": sessionID})
 	h.hooks.Fire(webhook.ShellSessionOpened, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "actor": p.Username, "ip": ip, "session": sessionID})
 	h.log.Info("remote shell opened", "computer", comp.Name, "actor", p.Username, "session", sessionID, "ip", ip)
 

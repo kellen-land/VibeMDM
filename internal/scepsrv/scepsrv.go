@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
-	"crypto/subtle"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
@@ -38,8 +37,8 @@ type Depot interface {
 	PutSCEPCert(ctx context.Context, serial string, cn, certPEM string, notBefore, notAfter time.Time) error
 }
 
-// ChallengeFunc returns the current SCEP challenge password.
-type ChallengeFunc func(ctx context.Context) string
+// ChallengeFunc verifies a SCEP challenge password (and may consume it).
+type ChallengeFunc func(ctx context.Context, challenge string) bool
 
 // Server is the SCEP service.
 type Server struct {
@@ -212,11 +211,7 @@ func (s *Server) signCSR(ctx context.Context, m *scep.CSRReqMessage) (*x509.Cert
 	if err := m.CSR.CheckSignature(); err != nil {
 		return nil, fmt.Errorf("CSR signature: %w", err)
 	}
-	expected := ""
-	if s.challenge != nil {
-		expected = s.challenge(ctx)
-	}
-	if expected == "" || subtle.ConstantTimeCompare([]byte(expected), []byte(m.ChallengePassword)) != 1 {
+	if s.challenge == nil || m.ChallengePassword == "" || !s.challenge(ctx, m.ChallengePassword) {
 		return nil, errors.New("invalid SCEP challenge")
 	}
 	serialN, err := s.depot.NextSCEPSerial(ctx)

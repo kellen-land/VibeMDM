@@ -49,7 +49,7 @@ func (m *memDepot) PutSCEPCert(context.Context, string, string, string, time.Tim
 
 func TestGenerateAndVerify(t *testing.T) {
 	d := &memDepot{}
-	s, err := New(context.Background(), d, func(context.Context) string { return "chal" }, "Test", slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	s, err := New(context.Background(), d, func(_ context.Context, c string) bool { return c == "chal" }, "Test", slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	if err != nil {
 		t.Fatal(err)
 	}

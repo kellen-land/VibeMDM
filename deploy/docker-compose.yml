@@ -39,10 +39,12 @@ services:
       VIBEMDM_ENCRYPTION_KEY: ${VIBEMDM_ENCRYPTION_KEY:-}
       VIBEMDM_DEBUG: ${VIBEMDM_DEBUG:-false}
       VIBEMDM_LOG_FORMAT: ${VIBEMDM_LOG_FORMAT:-text}
+      VIBEMDM_TRUSTED_PROXIES: ${VIBEMDM_TRUSTED_PROXIES:-172.16.0.0/12}
+      VIBEMDM_ALLOW_HTTP: ${VIBEMDM_ALLOW_HTTP:-}
     volumes:
       - vibemdm-data:/data
     ports:
-      - "${VIBEMDM_PORT:-8080}:8080"
+      - "${VIBEMDM_BIND:-127.0.0.1}:${VIBEMDM_PORT:-8080}:8080"
 
   caddy:
     image: caddy:2-alpine

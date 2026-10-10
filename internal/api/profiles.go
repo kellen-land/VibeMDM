@@ -29,6 +29,7 @@ func (h *Handler) listProfiles(w http.ResponseWriter, r *http.Request) {
 		if st == nil {
 			st = map[string]int{}
 		}
+		redactProfileFor(r, &p)
 		out = append(out, profileWithStatus{ConfigProfile: p, Status: st})
 	}
 	writeJSON(w, 200, listResp[profileWithStatus]{Items: out, Total: len(out)})
@@ -44,6 +45,7 @@ func (h *Handler) getProfile(w http.ResponseWriter, r *http.Request) {
 	if st == nil {
 		st = map[string]int{}
 	}
+	redactProfileFor(r, p)
 	writeJSON(w, 200, profileWithStatus{ConfigProfile: *p, Status: st})
 }
 

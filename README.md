@@ -99,6 +99,7 @@ locally (pushes will fail, the simulated devices poll instead).
 - [docs/architecture.md](docs/architecture.md) – how the pieces fit together, data model, security notes
 - [docs/api.md](docs/api.md) – REST API overview and tokens
 - [docs/enrollment.md](docs/enrollment.md) – enrollment options without Apple Business Manager (Mac, iPhone, iPad)
+- [docs/security.md](docs/security.md) – security model, production hardening checklist, known limitations
 - [docs/health.md](docs/health.md) – misconfiguration detection, remediations and self-healing
 - [docs/inspector.md](docs/inspector.md) – MDM command inspector: timelines, summaries, redaction
 - [docs/software-updates.md](docs/software-updates.md) – native DDM, update enforcement and settings plans

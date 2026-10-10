@@ -3,8 +3,12 @@ package api
 import (
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
+	"github.com/vibemdm/vibemdm/internal/enroll"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -99,8 +103,8 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ServerURL != nil {
 		u := strings.TrimRight(strings.TrimSpace(*req.ServerURL), "/")
-		if u != "" && !strings.HasPrefix(u, "https://") && !strings.HasPrefix(u, "http://") {
-			writeErr(w, 400, "server_url must start with https://")
+		if err := h.checkServerURL(u); err != nil {
+			writeErr(w, 400, err.Error())
 			return
 		}
 		s.ServerURL = u
@@ -125,6 +129,12 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request) {
 		s.InventoryIntervalHours = *req.InventoryIntervalHours
 	}
 	if req.RemoteShellEnabled != nil {
+		if s.RemoteShellEnabled && !*req.RemoteShellEnabled && h.shellHub != nil {
+			// Turning the feature off also ends shells that are already open.
+			if n := h.shellHub.CloseAll("remote shell was disabled by an administrator"); n > 0 {
+				h.log.Info("closed open remote shells after disabling the feature", "count", n)
+			}
+		}
 		s.RemoteShellEnabled = *req.RemoteShellEnabled
 		h.st.Audit(r.Context(), actor(r), "settings.remote_shell", "settings", "", map[string]any{"enabled": *req.RemoteShellEnabled})
 	}
@@ -157,6 +167,25 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	h.st.Audit(r.Context(), actor(r), "settings.update", "settings", "", nil)
 	writeJSON(w, 200, h.view(s, true))
+}
+
+// checkServerURL requires https unless the host is loopback or VIBEMDM_ALLOW_HTTP is set:
+// over plain http anyone on the network could inject agent tasks (root code execution).
+func (h *Handler) checkServerURL(u string) error {
+	if u == "" {
+		return nil
+	}
+	pu, err := url.Parse(u)
+	if err != nil || pu.Host == "" || (pu.Scheme != "https" && pu.Scheme != "http") || pu.Path != "" && pu.Path != "/" {
+		return errors.New("server_url must be an absolute URL such as https://mdm.example.com")
+	}
+	if pu.Scheme == "http" && !h.cfg.AllowHTTP {
+		host := pu.Hostname()
+		if ip := net.ParseIP(host); host != "localhost" && (ip == nil || !ip.IsLoopback()) {
+			return errors.New("server_url must use https:// (set VIBEMDM_ALLOW_HTTP=1 only for an isolated lab)")
+		}
+	}
+	return nil
 }
 
 func (h *Handler) rotateEnrollmentSecret(w http.ResponseWriter, r *http.Request) {
@@ -396,7 +425,7 @@ func (h *Handler) enrollmentStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) downloadEnrollmentProfile(w http.ResponseWriter, r *http.Request) {
-	b, err := h.profile(r.Context())
+	b, err := h.profile(enroll.WithPurpose(r.Context(), enroll.PurposeAdmin))
 	if err != nil {
 		writeErr(w, 400, err.Error())
 		return
@@ -431,7 +460,7 @@ func (h *Handler) createInvitation(w http.ResponseWriter, r *http.Request) {
 		t := time.Now().Add(time.Duration(*req.ExpiresDays) * 24 * time.Hour)
 		exp = &t
 	}
-	inv, err := h.st.CreateInvitation(r.Context(), req.Name, store.HashToken(tok), tok[:8], req.MaxUses, exp, auth.FromContext(r.Context()).UserID)
+	inv, err := h.st.CreateInvitation(r.Context(), req.Name, store.HashToken(tok), tok[:8], req.MaxUses, exp, creatorUserID(r))
 	if err != nil {
 		h.fail(w, err, "invitation")
 		return
@@ -571,11 +600,17 @@ func (h *Handler) setUserPassword(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err.Error())
 		return
 	}
-	if err := h.st.SetUserPassword(r.Context(), r.PathValue("id"), hash); err != nil {
+	id := r.PathValue("id")
+	if err := h.st.SetUserPassword(r.Context(), id, hash); err != nil {
 		h.fail(w, err, "user")
 		return
 	}
-	h.st.Audit(r.Context(), actor(r), "user.password_reset", "user", r.PathValue("id"), nil)
+	// A reset ends the user's sessions; an admin-chosen password must be changed at next login.
+	h.st.DeleteUserSessions(r.Context(), id, "")
+	if p := auth.FromContext(r.Context()); p == nil || p.UserID != id {
+		h.st.SetMustChangePassword(r.Context(), id, true)
+	}
+	h.st.Audit(r.Context(), actor(r), "user.password_reset", "user", id, nil)
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 
@@ -611,7 +646,7 @@ func (h *Handler) createAPIToken(w http.ResponseWriter, r *http.Request) {
 		t := time.Now().Add(time.Duration(*req.ExpiresDays) * 24 * time.Hour)
 		exp = &t
 	}
-	t, err := h.st.CreateAPIToken(r.Context(), req.Name, store.HashToken(tok), prefix, req.Role, auth.FromContext(r.Context()).UserID, exp)
+	t, err := h.st.CreateAPIToken(r.Context(), req.Name, store.HashToken(tok), prefix, req.Role, creatorUserID(r), exp)
 	if err != nil {
 		h.fail(w, err, "api token")
 		return
@@ -636,4 +671,13 @@ func (h *Handler) listAudit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, listResp[model.AuditEntry]{Items: items, Total: total})
+}
+
+// creatorUserID is the admin user behind a request ("" for API-token callers,
+// whose ID is a token, not a user).
+func creatorUserID(r *http.Request) string {
+	if p := auth.FromContext(r.Context()); p != nil && p.Via == "session" {
+		return p.UserID
+	}
+	return ""
 }
