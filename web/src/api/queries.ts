@@ -51,6 +51,10 @@ import type {
   ShellSessionDetail,
   WebhookDelivery,
   WebhookList,
+  UpdatesOverview,
+  UpdatePlan,
+  UpdatesCatalog,
+  ComputerDDM,
 } from './types'
 
 export const qk = {
@@ -116,6 +120,11 @@ export const qk = {
   customLabel: (id: string) => ['custom-label', id] as const,
   installomatorPreview: (body: object) => ['installomator-preview', body] as const,
   diagnostics: (computerId: string) => ['computer', computerId, 'diagnostics'] as const,
+  updatesOverview: ['updates', 'overview'] as const,
+  updatePlans: ['updates', 'plans'] as const,
+  updatePlan: (id: string) => ['updates', 'plan', id] as const,
+  updatesCatalog: ['updates', 'catalog'] as const,
+  computerDDM: (id: string) => ['computer', id, 'ddm'] as const,
 }
 
 type Opts<T> = Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'>
@@ -412,4 +421,27 @@ export function useApiMutation<TVars, TData = unknown>(fn: (vars: TVars) => Prom
       onSuccess?.(data, vars)
     },
   })
+}
+
+// ---- Software updates (DDM) ----
+
+export function useUpdatesOverview() {
+  return useQuery({ queryKey: qk.updatesOverview, queryFn: () => api.get<UpdatesOverview>('/api/v1/updates/overview'), refetchInterval: 30_000 })
+}
+
+export function useUpdatePlans() {
+  return useQuery({ queryKey: qk.updatePlans, queryFn: () => api.get<ListResponse<UpdatePlan>>('/api/v1/updates/plans') })
+}
+
+export function useUpdatePlan(id: string | undefined) {
+  return useQuery({ queryKey: qk.updatePlan(id ?? ''), queryFn: () => api.get<UpdatePlan>(`/api/v1/updates/plans/${id}`), enabled: !!id })
+}
+
+/** SOFA-backed catalog; the server answers 502 when the feed is unreachable, so don't retry hard. */
+export function useUpdatesCatalog() {
+  return useQuery({ queryKey: qk.updatesCatalog, queryFn: () => api.get<UpdatesCatalog>('/api/v1/updates/catalog'), staleTime: 30 * 60_000, retry: false })
+}
+
+export function useComputerDDM(id: string) {
+  return useQuery({ queryKey: qk.computerDDM(id), queryFn: () => api.get<ComputerDDM>(`/api/v1/computers/${id}/ddm`), enabled: !!id, refetchInterval: 15_000 })
 }

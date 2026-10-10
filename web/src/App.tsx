@@ -32,6 +32,8 @@ import { FileVaultPage } from './pages/FileVaultPage'
 import { LogsPage } from './pages/LogsPage'
 import { CustomLabelsPage } from './pages/CustomLabelsPage'
 import { CustomLabelEditorPage } from './pages/CustomLabelEditorPage'
+import { SoftwareUpdatesPage } from './pages/updates/SoftwareUpdatesPage'
+import { UpdatePlanEditorPage } from './pages/updates/UpdatePlanEditorPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -90,6 +92,10 @@ export function App() {
         <Route path="/logs/:tab" element={<LogsPage />} />
         <Route path="/commands/:uuid" element={<CommandInspectorPage />} />
         <Route path="/filevault" element={<FileVaultPage />} />
+        <Route path="/updates" element={<SoftwareUpdatesPage />} />
+        <Route path="/updates/plans/new" element={<UpdatePlanEditorPage />} />
+        <Route path="/updates/plans/:id" element={<UpdatePlanEditorPage />} />
+        <Route path="/updates/:tab" element={<SoftwareUpdatesPage />} />
         <Route path="/enrollment" element={<EnrollmentPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/settings/:tab" element={<SettingsPage />} />

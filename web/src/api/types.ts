@@ -1108,3 +1108,122 @@ export interface DiagnosticBundle {
   created_at: string
   uploaded_at: string | null
 }
+
+// ---- Software updates / Declarative Device Management (internal/api/updates.go, internal/ddm) ----
+
+export type UpdatePlanKind = 'enforcement' | 'settings'
+export type UpdateAction = 'Allowed' | 'AlwaysOn' | 'AlwaysOff'
+
+/** ddm.Settings: every field is optional; omitted means "leave the macOS default". */
+export interface UpdateSettings {
+  notifications?: boolean
+  allow_standard_user_os_updates?: boolean
+  /** 1–90 */
+  major_deferral_days?: number
+  minor_deferral_days?: number
+  system_deferral_days?: number
+  auto_download?: UpdateAction
+  auto_install_os_updates?: UpdateAction
+  auto_install_security_updates?: UpdateAction
+  rapid_security_response?: boolean
+  rapid_security_response_rollback?: boolean
+}
+
+/** model.UpdatePlan */
+export interface UpdatePlan {
+  id: string
+  name: string
+  enabled: boolean
+  kind: UpdatePlanKind
+  target_os_version: string
+  target_build_version: string
+  /** "YYYY-MM-DDTHH:MM:SS" in the Mac's local time. */
+  target_local_datetime: string
+  details_url: string
+  settings: UpdateSettings | null
+  scope: Scope
+  created_at: string
+  updated_at: string
+}
+
+export type UpdateState = 'up_to_date' | 'pending' | 'failed' | 'not_targeted' | 'no_ddm' | 'unsupported'
+
+/** api.updateRow */
+export interface UpdateRow {
+  computer_id: string
+  computer_name: string
+  os_version: string
+  os_build: string
+  mdm_enrolled: boolean
+  enforcement_plan: string
+  target_os_version: string
+  deadline: string
+  settings_plan: string
+  state: UpdateState
+  install_state: string
+  pending_version?: Record<string, unknown>
+  failure_reason?: Record<string, unknown>
+  declarations_in_sync: boolean
+  last_status_at: string | null
+}
+
+export interface UpdatesOverview {
+  computers: UpdateRow[] | null
+  /** Only states with at least one Mac are present. */
+  counts: Partial<Record<UpdateState, number>>
+}
+
+export interface CatalogRelease {
+  version: string
+  release_date: string
+  update_name: string
+}
+
+export interface CatalogVersion {
+  name: string
+  latest_version: string
+  latest_build: string
+  release_date: string
+  actively_exploited_cves: string[] | null
+  recent_releases: CatalogRelease[] | null
+}
+
+export interface UpdatesCatalog {
+  versions: CatalogVersion[]
+  source: string
+  fetched_at: string
+}
+
+/** ddm.Declaration (no json renames: Apple's field names). */
+export interface DDMDeclaration {
+  Type: string
+  Identifier: string
+  ServerToken: string
+  Payload: Record<string, unknown> | null
+}
+
+/** model.DDMState */
+export interface DDMState {
+  computer_id: string
+  served_token: string
+  sync_sent_token: string
+  sync_sent_at: string | null
+  last_sync_at: string | null
+  last_status_at: string | null
+  status: Record<string, unknown> | null
+  declarations_status: Record<string, unknown> | null
+  errors: unknown[] | null
+}
+
+export interface DDMReport {
+  at: string
+  report: Record<string, unknown>
+}
+
+export interface ComputerDDM {
+  summary: UpdateRow
+  declarations: DDMDeclaration[] | null
+  declarations_token: string
+  state: DDMState | null
+  recent_reports: DDMReport[] | null
+}

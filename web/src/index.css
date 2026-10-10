@@ -131,6 +131,12 @@ body {
   @apply text-[10.5px] font-semibold uppercase tracking-[0.07em] text-ink-muted;
 }
 
+/* 45° hatch on a neutral fill: distinguishes a third neutral segment in status bars without a new hue */
+@utility hatch-neutral {
+  background-color: var(--line);
+  background-image: repeating-linear-gradient(45deg, var(--line-strong) 0 2px, transparent 2px 6px);
+}
+
 /* CodeMirror sizing */
 .cm-editor {
   font-size: 13px;
