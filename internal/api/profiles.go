@@ -153,6 +153,11 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "profile")
 		return
 	}
+	if existing.SchemaSource != "" && existing.Payload != out.Payload {
+		// Hand-edited XML no longer matches the schema form values.
+		h.st.SetProfileSchema(r.Context(), out.ID, "", nil)
+		out.SchemaSource, out.SchemaValues = "", nil
+	}
 	h.st.Audit(r.Context(), actor(r), "profile.update", "profile", out.ID, map[string]any{"name": out.Name})
 	// Payload or scope changes re-push to scoped devices.
 	h.syncProfileAsync(out, actor(r), existing.Payload != out.Payload)

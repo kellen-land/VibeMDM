@@ -22,6 +22,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/scepsrv"
 	"github.com/vibemdm/vibemdm/internal/shell"
 	"github.com/vibemdm/vibemdm/internal/store"
+	"github.com/vibemdm/vibemdm/internal/superwf"
 	"github.com/vibemdm/vibemdm/internal/webhook"
 
 	"github.com/micromdm/nanomdm/storage"
@@ -46,6 +47,7 @@ type Handler struct {
 	escrow     *escrow.Identity
 	health     *health.Engine
 	compliance *compliance.Service
+	superSvc   *superwf.Service
 	log        *slog.Logger
 }
 
@@ -68,12 +70,13 @@ type Deps struct {
 	Escrow     *escrow.Identity
 	Health     *health.Engine
 	Compliance *compliance.Service
+	Super      *superwf.Service
 	Log        *slog.Logger
 }
 
 // New creates the handler.
 func New(d Deps) *Handler {
-	return &Handler{cfg: d.Cfg, st: d.Store, auth: d.Auth, cmdr: d.Commander, engine: d.Engine, notifier: d.Notifier, scep: d.SCEP, pushStore: d.PushStore, profile: d.Profile, shellHub: d.ShellHub, hooks: d.Hooks, escrow: d.Escrow, health: d.Health, compliance: d.Compliance, log: d.Log}
+	return &Handler{cfg: d.Cfg, st: d.Store, auth: d.Auth, cmdr: d.Commander, engine: d.Engine, notifier: d.Notifier, scep: d.SCEP, pushStore: d.PushStore, profile: d.Profile, shellHub: d.ShellHub, hooks: d.Hooks, escrow: d.Escrow, health: d.Health, compliance: d.Compliance, superSvc: d.Super, log: d.Log}
 }
 
 // ---- helpers ----
@@ -201,6 +204,15 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("DELETE /api/v1/network-segments/{id}", h.deleteSegment)
 	r("POST /api/v1/scope/preview", h.scopePreview)
 
+	// Application & custom settings (JSON schemas)
+	r("GET /api/v1/custom-schemas", h.listSchemas)
+	r("POST /api/v1/custom-schemas", h.saveSchema)
+	r("GET /api/v1/custom-schemas/{id}", h.getSchema)
+	r("PUT /api/v1/custom-schemas/{id}", h.saveSchema)
+	r("DELETE /api/v1/custom-schemas/{id}", h.deleteSchema)
+	r("POST /api/v1/custom-schemas/{id}/preview", h.previewSchemaProfile)
+	r("POST /api/v1/custom-schemas/{id}/profiles", h.saveSchemaProfile)
+
 	// Compliance (macOS Security Compliance Project)
 	r("GET /api/v1/compliance/catalog", h.complianceCatalog)
 	r("GET /api/v1/compliance/catalog/rules", h.complianceRules)
@@ -239,6 +251,10 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("DELETE /api/v1/updates/plans/{id}", h.deletePlan)
 	r("GET /api/v1/updates/overview", h.updatesOverview)
 	r("GET /api/v1/updates/catalog", h.updatesCatalog)
+	r("GET /api/v1/updates/super", h.getSuper)
+	r("PUT /api/v1/updates/super", h.saveSuper)
+	r("GET /api/v1/updates/super/status", h.superStatus)
+	r("POST /api/v1/updates/super/install", h.installSuper)
 	r("GET /api/v1/computers/{id}/ddm", h.computerDDM)
 	r("POST /api/v1/computers/{id}/ddm/sync", h.syncComputerDDM)
 

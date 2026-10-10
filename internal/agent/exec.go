@@ -544,6 +544,16 @@ func (e *Executor) RunTask(ctx context.Context, t model.AgentTask) {
 			break
 		}
 		apply(e.RunComplianceScan(ctx, scan))
+	case "install_super":
+		apply(e.InstallSuper(ctx, str(t.Payload["url"]), str(t.Payload["sha256"]), str(t.Payload["auth_mode"]),
+			str(t.Payload["auth_account"]), str(t.Payload["auth_password"])))
+		if res.Stdout != "" {
+			res.Stdout = redactSecret(res.Stdout, str(t.Payload["auth_password"]))
+		}
+		res.Stderr = redactSecret(res.Stderr, str(t.Payload["auth_password"]))
+		if err := e.Recon(ctx); err != nil {
+			e.log.Warn("inventory after installing super", "err", err)
+		}
 	case "collect_diagnostics":
 		apply(e.CollectDiagnostics(ctx, str(t.Payload["bundle_id"])))
 	case "notify":
@@ -607,4 +617,12 @@ func (e *Executor) CheckinAndRun(ctx context.Context, trigger string) (int, erro
 		}
 	}
 	return len(resp.Policies), nil
+}
+
+// redactSecret removes a secret value from command output.
+func redactSecret(s, secret string) string {
+	if secret == "" {
+		return s
+	}
+	return strings.ReplaceAll(s, secret, "[redacted]")
 }

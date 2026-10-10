@@ -28,7 +28,7 @@ func redactScriptFor(r *http.Request, s *model.Script) {
 	}
 }
 
-var taskSecretKeys = []string{"command", "contents", "parameters", "env", "script"}
+var taskSecretKeys = []string{"command", "contents", "parameters", "env", "script", "auth_password"}
 
 func redactTasksFor(r *http.Request, ts []model.AgentTask) {
 	if isAdmin(r) {

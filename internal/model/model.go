@@ -310,6 +310,20 @@ type ConfigProfile struct {
 	Scope       Scope     `json:"scope"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	// SchemaSource is "custom:<id>" or "builtin:<domain>" when built from a JSON schema.
+	SchemaSource string         `json:"schema_source"`
+	SchemaValues map[string]any `json:"schema_values,omitempty"`
+}
+
+// CustomSchema is an uploaded Jamf-style external application JSON schema.
+type CustomSchema struct {
+	ID               string          `json:"id"`
+	Name             string          `json:"name"`
+	PreferenceDomain string          `json:"preference_domain"`
+	Schema           json.RawMessage `json:"schema,omitempty"`
+	CreatedBy        string          `json:"created_by"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
 }
 
 // ProfileDeployment tracks a profile on a computer.
@@ -902,4 +916,16 @@ type AgentComplianceSubmit struct {
 	DurationMS int64                       `json:"duration_ms"`
 	Results    []AgentComplianceRuleResult `json:"results"`
 	Error      string                      `json:"error,omitempty"`
+}
+
+// SuperConfig is the fleet-wide S.U.P.E.R.M.A.N. deployment.
+type SuperConfig struct {
+	Enabled     bool      `json:"enabled"`
+	Scope       Scope     `json:"scope"`
+	AuthMode    string    `json:"auth_mode"` // none | local | service
+	AuthAccount string    `json:"auth_account"`
+	HasPassword bool      `json:"has_password"`
+	ProfileID   *string   `json:"profile_id"`
+	Version     string    `json:"version"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }

@@ -50,6 +50,7 @@ type device struct {
 	prkReady bool                      // a recovery key exists that macOS would escrow
 	prkGen   int                       // regeneration counter (new key each time)
 	scans    int                       // compliance scans run (drift appears on the 2nd)
+	superVer string                    // simulated super installation
 	server   string
 	topic    string
 	client   *http.Client
@@ -659,6 +660,10 @@ func (d *device) runTask(ctx context.Context, c *agent.Client, t model.AgentTask
 			break
 		}
 		res.Stdout = fmt.Sprintf("[simulator] %s: %d passed, %d failed, %d remediated", scan.Baseline, counts["pass"], counts["fail"], counts["remediated"])
+	case "install_super":
+		d.superVer = str(t.Payload["version"])
+		res.Stdout = "[simulator] super " + d.superVer + " installed (auth: " + str(t.Payload["auth_mode"]) + ")"
+		d.inventory(ctx, c, "")
 	case "filevault_regenerate":
 		if d.idx%2 != 0 {
 			res.Status, res.ExitCode, res.Stdout = "failed", 1, "FileVault is not enabled on this Mac; nothing to escrow."
@@ -706,6 +711,11 @@ func (d *device) inventory(ctx context.Context, c *agent.Client, user string) {
 			{Username: "itadmin", UID: intp(502), RealName: "IT Admin", Home: "/Users/itadmin", IsAdmin: true, SecureToken: &tr}},
 		ExtensionAttributes: eas, Hardware: map[string]any{"chip_type": "Apple M3 Pro", "machine_name": modelName(d.model), "physical_memory": "36 GB", "serial_number": d.serial},
 		Extra: map[string]any{"simulator": true}, CollectedAt: time.Now().UTC(),
+	}
+	if d.superVer != "" {
+		inv.Extra["super"] = map[string]any{"path": "/Library/Management/super/com.macjutsu.super.plist", "SuperVersion": d.superVer,
+			"SuperStatus": time.Now().Format("Mon Jan 2 15:04:05") + ": Waiting for the next scheduled check.", "NextAutoLaunch": time.Now().Add(4 * time.Hour).Format("2006-01-02:15:04:05"),
+			"DeadlineCounterSoft": "0", "LastSuccessfulCheckDate": time.Now().Format("2006-01-02:15:04")}
 	}
 	if len(d.profiles) > 0 {
 		for id, p := range d.profiles {

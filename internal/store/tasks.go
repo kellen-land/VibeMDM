@@ -89,7 +89,9 @@ func (s *Store) CompleteTask(ctx context.Context, id, computerID string, res mod
 	if status != "completed" && status != "failed" {
 		status = "failed"
 	}
-	out, err := s.DB.ExecContext(ctx, `UPDATE agent_tasks SET status=$3, result=$4::jsonb, completed_at=now() WHERE id=$1 AND computer_id=$2 AND status IN ('queued','sent')`,
+	// Credentials carried by a task (e.g. super's auth password) are scrubbed once it ends.
+	out, err := s.DB.ExecContext(ctx, `UPDATE agent_tasks SET status=$3, result=$4::jsonb, completed_at=now(), payload = payload - 'auth_password'
+		WHERE id=$1 AND computer_id=$2 AND status IN ('queued','sent')`,
 		id, computerID, status, jsonArg(res))
 	if err != nil {
 		return err
@@ -160,6 +162,8 @@ func (s *Store) ListTasks(ctx context.Context, f TaskFilter) ([]model.AgentTask,
 
 // ExpireStaleTasks fails tasks that were sent but never completed.
 func (s *Store) ExpireStaleTasks(ctx context.Context) {
-	s.DB.ExecContext(ctx, `UPDATE agent_tasks SET status='failed', result = jsonb_build_object('error','Timed out waiting for agent result'), completed_at=now()
-		WHERE status='sent' AND sent_at < now() - interval '2 hours'`)
+	s.DB.ExecContext(ctx, `UPDATE agent_tasks SET status='failed', result = jsonb_build_object('error','Timed out waiting for agent result'), completed_at=now(),
+		payload = payload - 'auth_password' WHERE status='sent' AND sent_at < now() - interval '2 hours'`)
+	s.DB.ExecContext(ctx, `UPDATE agent_tasks SET status='cancelled', completed_at=now(), payload = payload - 'auth_password'
+		WHERE status='queued' AND payload ? 'auth_password' AND created_at < now() - interval '24 hours'`)
 }

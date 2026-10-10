@@ -252,6 +252,13 @@ func CollectInventory(ctx context.Context, version string, eas []model.Extension
 		mu.Unlock()
 	})
 	par(func() {
+		if st := CollectSuperStatus(ctx); st != nil {
+			mu.Lock()
+			inv.Extra["super"] = st
+			mu.Unlock()
+		}
+	})
+	par(func() {
 		users := CollectLocalUsers(ctx)
 		mu.Lock()
 		inv.LocalUsers = users

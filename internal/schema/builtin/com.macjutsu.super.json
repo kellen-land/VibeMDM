@@ -1,0 +1,312 @@
+{
+  "title": "S.U.P.E.R.M.A.N. (com.macjutsu.super)",
+  "description": "Managed preferences for super 5.1.x, the open-source macOS update workflow by Kevin White (Apache-2.0, github.com/Macjutsu/super). Leave fields empty to use super's defaults. Credentials are never set by profile.",
+  "__preferencedomain": "com.macjutsu.super",
+  "__version": "5.1",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "properties": {
+    "InstallMacOSMajorUpgrades": {
+      "title": "Allow major macOS upgrades",
+      "description": "Let super upgrade to a new major macOS version, not only install minor updates.",
+      "type": "boolean",
+      "property_order": 10
+    },
+    "InstallMacOSMajorVersionTarget": {
+      "title": "Major version target",
+      "description": "Highest major macOS version super may upgrade to, e.g. 26.",
+      "type": "string",
+      "property_order": 11,
+      "pattern": "^[0-9]+(\\.[0-9]+)*$"
+    },
+    "InstallNonSystemUpdatesWithoutRestarting": {
+      "title": "Install non-system updates without restarting",
+      "description": "Install Safari and other non-system updates without a restart.",
+      "type": "boolean",
+      "property_order": 12
+    },
+    "InstallRapidSecurityResponses": {
+      "title": "Install Rapid Security Responses",
+      "description": "Also install Background Security Improvement / RSR updates (5.1).",
+      "type": "boolean",
+      "property_order": 13
+    },
+    "WorkflowInstallNow": {
+      "title": "Install now",
+      "description": "Skip deferrals and install as soon as possible.",
+      "type": "boolean",
+      "property_order": 20
+    },
+    "WorkflowOnlyDownload": {
+      "title": "Only download",
+      "description": "Download updates but never install them.",
+      "type": "boolean",
+      "property_order": 21
+    },
+    "WorkflowRequireActiveUser": {
+      "title": "Require an active user",
+      "description": "Only run the workflow when a user is logged in.",
+      "type": "boolean",
+      "property_order": 22
+    },
+    "WorkflowRestartWithoutUpdates": {
+      "title": "Restart even without updates",
+      "description": "Restart the Mac at the end of the workflow even when no updates were installed.",
+      "type": "boolean",
+      "property_order": 23
+    },
+    "WorkflowDisableUpdateCheck": {
+      "title": "Disable the update check",
+      "description": "Skip checking Apple for updates.",
+      "type": "boolean",
+      "property_order": 24
+    },
+    "WorkflowDisableRelaunch": {
+      "title": "Disable automatic relaunch",
+      "description": "Do not relaunch super automatically after it finishes.",
+      "type": "boolean",
+      "property_order": 25
+    },
+    "DeferralTimerDefault": {
+      "title": "Default deferral (minutes)",
+      "description": "How long a deferral lasts when the user does not pick one. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 30,
+      "options": {
+        "inputAttributes": {
+          "placeholder": "60"
+        }
+      }
+    },
+    "DeferralTimerMenu": {
+      "title": "Deferral menu (minutes)",
+      "description": "Comma-separated deferral choices offered to the user, e.g. 60,240,1440.",
+      "type": "string",
+      "property_order": 31,
+      "pattern": "^[0-9]+(,[0-9]+)*$"
+    },
+    "DeferralTimerFocus": {
+      "title": "Focus deferral (minutes)",
+      "description": "Automatic deferral while the user is in a Focus / Do Not Disturb mode. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 32
+    },
+    "DeferralTimerError": {
+      "title": "Error deferral (minutes)",
+      "description": "Wait time after an error before trying again. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 33
+    },
+    "DeferralTimerWorkflowRelaunch": {
+      "title": "Relaunch interval (minutes)",
+      "description": "How often super relaunches to re-check. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 34
+    },
+    "ScheduleWorkflowActive": {
+      "title": "Maintenance windows",
+      "description": "When the workflow may run, as DAY:hh:mm-hh:mm entries separated by commas, e.g. MON:09:00-17:00,TUE:09:00-17:00.",
+      "type": "string",
+      "property_order": 40
+    },
+    "ScheduleDeferredStartDays": {
+      "title": "Delay start (days)",
+      "description": "Days to wait after an update is released before starting. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 41
+    },
+    "ScheduleZeroDateManual": {
+      "title": "Manual zero date",
+      "description": "Fixed start date for day-based deadlines (YYYY-MM-DD:hh:mm).",
+      "type": "string",
+      "property_order": 42,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+      "options": {
+        "inputAttributes": {
+          "placeholder": "2026-12-01:17:00"
+        }
+      }
+    },
+    "ScheduledInstallDays": {
+      "title": "Scheduled install after (days)",
+      "description": "Install automatically this many days after the zero date. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 43
+    },
+    "ScheduledInstallDate": {
+      "title": "Scheduled install date",
+      "description": "Install automatically at this date (YYYY-MM-DD:hh:mm).",
+      "type": "string",
+      "property_order": 44,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+      "options": {
+        "inputAttributes": {
+          "placeholder": "2026-12-01:17:00"
+        }
+      }
+    },
+    "ScheduledInstallUserChoice": {
+      "title": "Let the user choose the install time",
+      "description": "Ask the user to schedule the installation.",
+      "type": "boolean",
+      "property_order": 45
+    },
+    "ScheduledInstallReminder": {
+      "title": "Scheduled install reminders (minutes)",
+      "description": "Comma-separated reminder times before a scheduled install.",
+      "type": "string",
+      "property_order": 46,
+      "pattern": "^[0-9]+(,[0-9]+)*$"
+    },
+    "DeadlineCountFocus": {
+      "title": "Focus deferral count deadline",
+      "description": "Number of Focus-mode deferrals allowed. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 50
+    },
+    "DeadlineCountSoft": {
+      "title": "Soft deadline (deferral count)",
+      "description": "Deferrals allowed before super stops offering deferral. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 51
+    },
+    "DeadlineCountHard": {
+      "title": "Hard deadline (deferral count)",
+      "description": "Deferrals allowed before super installs and restarts without asking. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 52
+    },
+    "DeadlineDaysFocus": {
+      "title": "Focus deadline (days)",
+      "description": "Days after the zero date during which Focus mode can defer. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 53
+    },
+    "DeadlineDaysSoft": {
+      "title": "Soft deadline (days)",
+      "description": "Days after the zero date before deferral is no longer offered. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 54
+    },
+    "DeadlineDaysHard": {
+      "title": "Hard deadline (days)",
+      "description": "Days after the zero date before a forced install and restart. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 55
+    },
+    "DeadlineDateFocus": {
+      "title": "Focus deadline (date)",
+      "description": "Date after which Focus mode no longer defers (YYYY-MM-DD:hh:mm).",
+      "type": "string",
+      "property_order": 56,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+      "options": {
+        "inputAttributes": {
+          "placeholder": "2026-12-01:17:00"
+        }
+      }
+    },
+    "DeadlineDateSoft": {
+      "title": "Soft deadline (date)",
+      "description": "Date after which deferral is no longer offered (YYYY-MM-DD:hh:mm).",
+      "type": "string",
+      "property_order": 57,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+      "options": {
+        "inputAttributes": {
+          "placeholder": "2026-12-01:17:00"
+        }
+      }
+    },
+    "DeadlineDateHard": {
+      "title": "Hard deadline (date)",
+      "description": "Date of the forced install and restart (YYYY-MM-DD:hh:mm).",
+      "type": "string",
+      "property_order": 58,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}:[0-9]{2}:[0-9]{2}$",
+      "options": {
+        "inputAttributes": {
+          "placeholder": "2026-12-01:17:00"
+        }
+      }
+    },
+    "DialogTimeoutDefault": {
+      "title": "Dialog timeout (seconds)",
+      "description": "How long dialogs wait for the user before the default action. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 60
+    },
+    "DialogTimeoutUserAuth": {
+      "title": "Authentication dialog timeout (seconds)",
+      "description": "Timeout for the dialog asking for the user's password. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 61
+    },
+    "DialogTimeoutSoftDeadline": {
+      "title": "Soft-deadline dialog timeout (seconds)",
+      "description": "Timeout for the dialog shown at the soft deadline. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 62
+    },
+    "DisplayIconFile": {
+      "title": "Dialog icon",
+      "description": "Path or URL of the icon shown in super's dialogs (5.1).",
+      "type": "string",
+      "property_order": 70
+    },
+    "DisplaySilently": {
+      "title": "Run silently",
+      "description": "When to suppress dialogs: comma-separated ALWAYS, DIALOG, DEADLINE, SCHEDULED, INSTALLNOW, ERROR.",
+      "type": "string",
+      "property_order": 71,
+      "pattern": "^(ALWAYS|DIALOG|DEADLINE|SCHEDULED|INSTALLNOW|ERROR)(,(ALWAYS|DIALOG|DEADLINE|SCHEDULED|INSTALLNOW|ERROR))*$"
+    },
+    "DisplayHelpMessage": {
+      "title": "Show help message",
+      "description": "Show a help message in dialogs.",
+      "type": "boolean",
+      "property_order": 72
+    },
+    "AuthMDMFailoverToUser": {
+      "title": "Fall back to user authentication",
+      "description": "Ask the user for their password when automatic authentication is not possible (5.1).",
+      "type": "boolean",
+      "property_order": 80
+    },
+    "TestMode": {
+      "title": "Test mode",
+      "description": "Run the workflow without installing anything (for trying out settings).",
+      "type": "boolean",
+      "property_order": 90
+    },
+    "TestModeTimeout": {
+      "title": "Test mode timeout (seconds)",
+      "description": "How long test-mode dialogs stay up. (super stores numbers as text.)",
+      "type": "string",
+      "pattern": "^[0-9]+$",
+      "property_order": 91
+    },
+    "VerboseMode": {
+      "title": "Verbose logging",
+      "description": "Write detailed logs to super.log.",
+      "type": "boolean",
+      "property_order": 92
+    }
+  }
+}

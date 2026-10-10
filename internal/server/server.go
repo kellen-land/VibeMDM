@@ -44,6 +44,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/secrets"
 	"github.com/vibemdm/vibemdm/internal/shell"
 	"github.com/vibemdm/vibemdm/internal/store"
+	"github.com/vibemdm/vibemdm/internal/superwf"
 	"github.com/vibemdm/vibemdm/internal/webhook"
 	"github.com/vibemdm/vibemdm/internal/webui"
 )
@@ -57,6 +58,7 @@ type Server struct {
 	scep       *scepsrv.Server
 	hooks      *webhook.Dispatcher
 	health     *health.Engine
+	superSvc   *superwf.Service
 	compliance *compliance.Service
 	escrow     *escrow.Identity
 	cmdr       *mdmsvc.Commander
@@ -201,6 +203,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	agentHandler := agentapi.New(st, engine, notifier, shellHub, hooks, cfg.DataDir, cfg.AgentDir, cfg.Version, s.enrollmentProfile, logger.With("component", "agent"))
 	s.compliance = compliance.NewService(st, notifier.Notify, logger.With("component", "compliance"))
 	agentHandler.WithCompliance(s.compliance)
+	s.superSvc = superwf.New(st, notifier.Notify, logger.With("component", "super"))
 	agentHandler.Register(s.mux)
 
 	// Health: misconfiguration detection, remediation and self-healing.
@@ -219,7 +222,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	authn := auth.New(st, secure, cfg.SessionTTL)
 	adminAPI := api.New(api.Deps{
 		Cfg: cfg, Store: st, Auth: authn, Commander: commander, Engine: engine, Notifier: notifier, SCEP: scepServer,
-		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Health: s.health, Compliance: s.compliance, Log: logger.With("component", "api"),
+		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Health: s.health, Compliance: s.compliance, Super: s.superSvc, Log: logger.With("component", "api"),
 	})
 	adminAPI.Register(s.mux)
 
@@ -553,6 +556,9 @@ func (s *Server) housekeeping(ctx context.Context) {
 			}
 			if tick%10 == 3 {
 				s.compliance.Schedule(ctx)
+			}
+			if tick%30 == 4 {
+				s.superSvc.Reconcile(ctx)
 			}
 			if tick%5 == 2 {
 				// Offset from the other jobs so the first run sees fresh state.

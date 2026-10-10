@@ -1,0 +1,305 @@
+{
+  "title": "XCreds (com.twocanoes.xcreds)",
+  "description": "Managed preferences for XCreds by Twocanoes (BSD-3-Clause, github.com/twocanoes/xcreds): sign in to the Mac with a cloud identity provider (OIDC) and keep the local password in sync. XCreds requires a license after a 14-day trial; deliver it with the LicenseFile key or a separate profile.",
+  "__preferencedomain": "com.twocanoes.xcreds",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "properties": {
+    "discoveryURL": {
+      "title": "OpenID Connect discovery URL",
+      "description": "Your identity provider's .well-known/openid-configuration URL (Entra ID: https://login.microsoftonline.com/<tenant>/v2.0/.well-known/openid-configuration; Google: https://accounts.google.com/.well-known/openid-configuration).",
+      "type": "string",
+      "property_order": 10,
+      "pattern": "^https://.+"
+    },
+    "clientID": {
+      "title": "Client ID",
+      "description": "Application (client) ID registered with the identity provider.",
+      "type": "string",
+      "property_order": 11
+    },
+    "clientSecret": {
+      "title": "Client secret",
+      "description": "Client secret, if your provider requires one (Google does). Stored in the profile in clear text.",
+      "type": "string",
+      "property_order": 12
+    },
+    "redirectURI": {
+      "title": "Redirect URI",
+      "description": "Must match the app registration.",
+      "type": "string",
+      "property_order": 13,
+      "default": "xcreds://auth/",
+      "options": {
+        "inputAttributes": {
+          "placeholder": "xcreds://auth/"
+        }
+      }
+    },
+    "scopes": {
+      "title": "Scopes",
+      "description": "Space-separated OAuth scopes.",
+      "type": "string",
+      "property_order": 14,
+      "options": {
+        "inputAttributes": {
+          "placeholder": "profile openid offline_access"
+        }
+      }
+    },
+    "shouldShowCloudLoginByDefault": {
+      "title": "Show cloud login by default",
+      "description": "Show the identity provider's sign-in page at the login window instead of the Mac login.",
+      "type": "boolean",
+      "property_order": 20
+    },
+    "shouldPreferLocalLoginInsteadOfCloudLogin": {
+      "title": "Prefer local login",
+      "description": "Show the standard Mac login first.",
+      "type": "boolean",
+      "property_order": 21
+    },
+    "shouldDetectNetworkToDetermineLoginWindow": {
+      "title": "Use local login when offline",
+      "description": "Fall back to the Mac login window when there is no network.",
+      "type": "boolean",
+      "property_order": 22
+    },
+    "shouldShowMacLoginButton": {
+      "title": "Show \"Mac Login\" button",
+      "description": "Let users switch to the standard login window.",
+      "type": "boolean",
+      "property_order": 23
+    },
+    "shouldShowLocalOnlyCheckbox": {
+      "title": "Show local-only checkbox",
+      "description": "Allow signing in with the local account only.",
+      "type": "boolean",
+      "property_order": 24
+    },
+    "cloudLoginText": {
+      "title": "Cloud login button text",
+      "description": "Label for the cloud sign-in button.",
+      "type": "string",
+      "property_order": 25
+    },
+    "loginWindowBackgroundImageURL": {
+      "title": "Login window background image",
+      "description": "Path or URL of the background image.",
+      "type": "string",
+      "property_order": 26
+    },
+    "loginWindowLogoPath": {
+      "title": "Login window logo",
+      "description": "Path of the logo shown at the login window.",
+      "type": "string",
+      "property_order": 27
+    },
+    "shouldShowConfigureWifiButton": {
+      "title": "Show Wi-Fi button",
+      "description": "Let users join a Wi-Fi network from the login window.",
+      "type": "boolean",
+      "property_order": 28
+    },
+    "shouldShowShutdownButton": {
+      "title": "Show Shut Down button",
+      "description": "",
+      "type": "boolean",
+      "property_order": 29
+    },
+    "shouldShowRestartButton": {
+      "title": "Show Restart button",
+      "description": "",
+      "type": "boolean",
+      "property_order": 30
+    },
+    "shouldShowSystemInfoButton": {
+      "title": "Show system info button",
+      "description": "",
+      "type": "boolean",
+      "property_order": 31
+    },
+    "map_username": {
+      "title": "Username claim",
+      "description": "Token claim used for the local short name (default: name).",
+      "type": "string",
+      "property_order": 40
+    },
+    "map_fullname": {
+      "title": "Full name claim",
+      "description": "Token claim used for the full name (default: name).",
+      "type": "string",
+      "property_order": 41
+    },
+    "map_firstname": {
+      "title": "First name claim",
+      "description": "Default: given_name.",
+      "type": "string",
+      "property_order": 42
+    },
+    "map_lastname": {
+      "title": "Last name claim",
+      "description": "Default: family_name.",
+      "type": "string",
+      "property_order": 43
+    },
+    "map_uid": {
+      "title": "UID claim",
+      "description": "Token claim used for the numeric user ID.",
+      "type": "string",
+      "property_order": 44
+    },
+    "aliasName": {
+      "title": "Alias claim",
+      "description": "Claim added as an alias of the local account, e.g. upn, so users can sign in with their email.",
+      "type": "string",
+      "property_order": 45
+    },
+    "allowedUsersArray": {
+      "title": "Allowed users",
+      "description": "Only these users (matched against the allow-users claim) may sign in.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "property_order": 50
+    },
+    "allowUsersClaim": {
+      "title": "Allow-users claim",
+      "description": "Claim compared with Allowed users (default: upn).",
+      "type": "string",
+      "property_order": 51
+    },
+    "allowLoginIfMemberOfGroup": {
+      "title": "Allowed groups",
+      "description": "Only members of these groups may sign in.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "property_order": 52
+    },
+    "CreateAdminUser": {
+      "title": "Create users as administrators",
+      "description": "New local accounts are admins.",
+      "type": "boolean",
+      "property_order": 53
+    },
+    "CreateAdminIfGroupMember": {
+      "title": "Admin groups",
+      "description": "Members of these groups get admin accounts.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "property_order": 54
+    },
+    "skipUserSetupBuddy": {
+      "title": "Skip Setup Assistant for new users",
+      "description": "",
+      "type": "boolean",
+      "property_order": 55
+    },
+    "PasswordOverwriteSilent": {
+      "title": "Overwrite local password silently",
+      "description": "When the cloud password changed, update the local password without asking (needs an admin account configured via settingsOverrideScriptPath).",
+      "type": "boolean",
+      "property_order": 60
+    },
+    "KeychainReset": {
+      "title": "Reset keychain if the password cannot be synced",
+      "description": "",
+      "type": "boolean",
+      "property_order": 61
+    },
+    "verifyPassword": {
+      "title": "Verify the local password",
+      "description": "Ask users to confirm their local password when it differs.",
+      "type": "boolean",
+      "property_order": 62
+    },
+    "refreshRateHours": {
+      "title": "Token refresh (hours)",
+      "description": "How often XCreds re-checks the cloud password.",
+      "type": "integer",
+      "property_order": 70,
+      "minimum": 0,
+      "maximum": 168
+    },
+    "refreshRateMinutes": {
+      "title": "Token refresh (minutes)",
+      "description": "Added to the hours value.",
+      "type": "integer",
+      "property_order": 71,
+      "minimum": 0,
+      "maximum": 59
+    },
+    "shouldShowRefreshBanner": {
+      "title": "Show refresh banner",
+      "description": "",
+      "type": "boolean",
+      "property_order": 72
+    },
+    "shouldUseROPGForLoginWindowLogin": {
+      "title": "Use ROPG at the login window",
+      "description": "Verify passwords with the resource-owner password grant (Entra ID).",
+      "type": "boolean",
+      "property_order": 80
+    },
+    "shouldUseROPGForMenuLogin": {
+      "title": "Use ROPG in the menu bar app",
+      "description": "",
+      "type": "boolean",
+      "property_order": 81
+    },
+    "shouldUseROPGForPasswordChangeChecking": {
+      "title": "Use ROPG to detect password changes",
+      "description": "",
+      "type": "boolean",
+      "property_order": 82
+    },
+    "resource": {
+      "title": "ROPG resource",
+      "description": "Resource for ROPG requests, e.g. https://graph.microsoft.com.",
+      "type": "string",
+      "property_order": 83
+    },
+    "shouldSetGoogleAccessTypeToOffline": {
+      "title": "Google: request offline access",
+      "description": "Required for refresh tokens with Google Workspace.",
+      "type": "boolean",
+      "property_order": 84
+    },
+    "shouldSetGoogleHDParam": {
+      "title": "Google: restrict to hosted domain",
+      "description": "",
+      "type": "boolean",
+      "property_order": 85
+    },
+    "passwordChangeURL": {
+      "title": "Password change URL",
+      "description": "Opened from the menu bar app's \"Change Password\" item.",
+      "type": "string",
+      "property_order": 90
+    },
+    "shouldShowSignInMenuItem": {
+      "title": "Show \"Sign In\" in the menu bar app",
+      "description": "",
+      "type": "boolean",
+      "property_order": 91
+    },
+    "shouldSwitchToLoginWindowWhenLocked": {
+      "title": "Use the XCreds login window when locked",
+      "description": "",
+      "type": "boolean",
+      "property_order": 92
+    },
+    "settingsOverrideScriptPath": {
+      "title": "Settings override script",
+      "description": "Path of a root-owned script that supplies secrets such as the local admin credentials (keeps them out of profiles).",
+      "type": "string",
+      "property_order": 95
+    }
+  }
+}

@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"strconv"
 	"strings"
 
@@ -9,15 +10,20 @@ import (
 	"github.com/vibemdm/vibemdm/internal/model"
 )
 
-const profileCols = `id, name, description, category, identifier, uuid, level, payload, scope, created_at, updated_at`
+const profileCols = `id, name, description, category, identifier, uuid, level, payload, scope, created_at, updated_at, schema_source, schema_values`
 
 func scanProfile(row interface{ Scan(...any) error }) (*model.ConfigProfile, error) {
 	var p model.ConfigProfile
 	var scope db.JSON[model.Scope]
-	if err := row.Scan(&p.ID, &p.Name, &p.Description, &p.Category, &p.Identifier, &p.UUID, &p.Level, &p.Payload, &scope, &p.CreatedAt, &p.UpdatedAt); err != nil {
+	var vals db.JSON[map[string]any]
+	if err := row.Scan(&p.ID, &p.Name, &p.Description, &p.Category, &p.Identifier, &p.UUID, &p.Level, &p.Payload, &scope, &p.CreatedAt, &p.UpdatedAt,
+		&p.SchemaSource, &vals); err != nil {
 		return nil, wrapNotFound(err)
 	}
 	p.Scope = scope.V
+	if p.SchemaSource != "" {
+		p.SchemaValues = vals.V
+	}
 	p.Scope.Normalize()
 	return &p, nil
 }
@@ -151,4 +157,88 @@ func itoa(n int) string { return strconv.Itoa(n) }
 // GetProfileByIdentifier returns a profile by its PayloadIdentifier.
 func (s *Store) GetProfileByIdentifier(ctx context.Context, identifier string) (*model.ConfigProfile, error) {
 	return scanProfile(s.DB.QueryRowContext(ctx, `SELECT `+profileCols+` FROM config_profiles WHERE identifier = $1`, identifier))
+}
+
+// SetProfileSchema records (or clears, with source "") the schema a profile was built from.
+func (s *Store) SetProfileSchema(ctx context.Context, profileID, source string, values map[string]any) error {
+	if values == nil {
+		values = map[string]any{}
+	}
+	_, err := s.DB.ExecContext(ctx, `UPDATE config_profiles SET schema_source = $2, schema_values = $3::jsonb WHERE id = $1`, profileID, source, jsonArg(values))
+	return err
+}
+
+// ---- custom schemas ----
+
+// ListCustomSchemas returns uploaded schemas (without the schema body unless full).
+func (s *Store) ListCustomSchemas(ctx context.Context) ([]model.CustomSchema, error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT id, name, preference_domain, schema, created_by, created_at, updated_at FROM custom_schemas ORDER BY lower(name)`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []model.CustomSchema{}
+	for rows.Next() {
+		var c model.CustomSchema
+		var raw []byte
+		if err := rows.Scan(&c.ID, &c.Name, &c.PreferenceDomain, &raw, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			return nil, err
+		}
+		c.Schema = raw
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// GetCustomSchema loads one schema.
+func (s *Store) GetCustomSchema(ctx context.Context, id string) (*model.CustomSchema, error) {
+	var c model.CustomSchema
+	var raw []byte
+	err := s.DB.QueryRowContext(ctx, `SELECT id, name, preference_domain, schema, created_by, created_at, updated_at FROM custom_schemas WHERE id = $1`, id).
+		Scan(&c.ID, &c.Name, &c.PreferenceDomain, &raw, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt)
+	if err != nil {
+		return nil, wrapNotFound(err)
+	}
+	c.Schema = raw
+	return &c, nil
+}
+
+// SaveCustomSchema creates (empty ID) or updates a schema.
+func (s *Store) SaveCustomSchema(ctx context.Context, c model.CustomSchema) (*model.CustomSchema, error) {
+	var id string
+	var err error
+	if c.ID == "" {
+		err = s.DB.QueryRowContext(ctx, `INSERT INTO custom_schemas (name, preference_domain, schema, created_by) VALUES ($1,$2,$3::jsonb,$4) RETURNING id`,
+			c.Name, c.PreferenceDomain, string(c.Schema), c.CreatedBy).Scan(&id)
+	} else {
+		id = c.ID
+		var res sql.Result
+		res, err = s.DB.ExecContext(ctx, `UPDATE custom_schemas SET name=$2, preference_domain=$3, schema=$4::jsonb, updated_at=now() WHERE id=$1`,
+			c.ID, c.Name, c.PreferenceDomain, string(c.Schema))
+		if err == nil {
+			if n, _ := res.RowsAffected(); n == 0 {
+				return nil, ErrNotFound
+			}
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	return s.GetCustomSchema(ctx, id)
+}
+
+// DeleteCustomSchema removes a schema; profiles built from it keep their payload.
+func (s *Store) DeleteCustomSchema(ctx context.Context, id string) error {
+	if _, err := s.DB.ExecContext(ctx, `UPDATE config_profiles SET schema_source = '' WHERE schema_source = $1`, "custom:"+id); err != nil {
+		return err
+	}
+	_, err := s.DB.ExecContext(ctx, `DELETE FROM custom_schemas WHERE id = $1`, id)
+	return err
+}
+
+// ProfilesUsingSchema counts profiles built from a schema source.
+func (s *Store) ProfilesUsingSchema(ctx context.Context, source string) (int, error) {
+	var n int
+	err := s.DB.QueryRowContext(ctx, `SELECT count(*) FROM config_profiles WHERE schema_source = $1`, source).Scan(&n)
+	return n, err
 }
