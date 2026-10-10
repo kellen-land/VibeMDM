@@ -4,7 +4,7 @@ import { Download, RefreshCw, Save, Trash2, Upload, X } from 'lucide-react'
 import { qk, useInvalidate, useProfile, useProfileDeployments } from '../api/queries'
 import { api, errorMessage, saveText } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
-import { emptyScope, type ConfigProfile, type ProfileDeployment, type Scope } from '../api/types'
+import { emptyScope, normalizeScope, type ConfigProfile, type ProfileDeployment, type Scope } from '../api/types'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -75,7 +75,7 @@ export function ProfileEditorPage() {
       setDescription(profile.data.description)
       setCategory(profile.data.category)
       setPayload(profile.data.payload ?? '')
-      setScope({ ...emptyScope(), ...profile.data.scope })
+      setScope(normalizeScope(profile.data.scope))
     }
   }, [profile.data])
 

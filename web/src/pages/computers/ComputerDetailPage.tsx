@@ -18,12 +18,13 @@ import { ComputerStatusBadges } from './ComputersPage'
 import { latest } from '../DashboardPage'
 import { GeneralTab, HardwareTab, OSTab, SecurityTab, AppsTab, ProfilesTab, EATab, LocalUsersTab, GroupsTab } from './InventoryTabs'
 import { ComputerPolicyLogsTab, ComputerTasksTab, ComputerCommandsTab } from './ActivityTabs'
+import { AppInstallsTab, RestrictedEventsTab } from '../ActivityPage'
 import { ManagementTab } from './ManagementTab'
 import { ShellTerminal } from '../../components/shell/ShellTerminal'
 import { TerminalSquare } from 'lucide-react'
 import type { UpdateInventoryResponse } from '../../api/types'
 
-const tabKeys = ['general', 'hardware', 'os', 'security', 'applications', 'profiles', 'extension-attributes', 'local-users', 'groups', 'policy-logs', 'tasks', 'commands', 'management', 'shell'] as const
+const tabKeys = ['general', 'hardware', 'os', 'security', 'applications', 'profiles', 'extension-attributes', 'local-users', 'groups', 'policy-logs', 'app-installs', 'restricted-events', 'tasks', 'commands', 'management', 'shell'] as const
 type TabKey = (typeof tabKeys)[number]
 
 export function ComputerDetailPage() {
@@ -54,6 +55,8 @@ export function ComputerDetailPage() {
       { key: 'local-users' as TabKey, label: 'Local Users', count: c?.local_users?.length },
       { key: 'groups' as TabKey, label: 'Groups', count: c?.groups?.length },
       { key: 'policy-logs' as TabKey, label: 'Policy Logs' },
+      { key: 'app-installs' as TabKey, label: 'App Installs' },
+      { key: 'restricted-events' as TabKey, label: 'Restricted Events' },
       { key: 'tasks' as TabKey, label: 'Tasks' },
       { key: 'commands' as TabKey, label: 'MDM Commands' },
       { key: 'management' as TabKey, label: 'Management' },
@@ -143,6 +146,8 @@ export function ComputerDetailPage() {
         {active === 'local-users' && <LocalUsersTab c={c} />}
         {active === 'groups' && <GroupsTab c={c} />}
         {active === 'policy-logs' && <ComputerPolicyLogsTab id={c.id} />}
+        {active === 'app-installs' && <AppInstallsTab computerId={c.id} />}
+        {active === 'restricted-events' && <RestrictedEventsTab computerId={c.id} />}
         {active === 'tasks' && <ComputerTasksTab id={c.id} />}
         {active === 'commands' && <ComputerCommandsTab id={c.id} />}
         {active === 'management' && <ManagementTab c={c} />}

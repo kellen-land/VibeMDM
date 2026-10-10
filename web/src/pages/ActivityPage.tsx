@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { qk, useAllPolicyLogs, useCommands, useInvalidate, useTasks, useShellSessions, useShellSession } from '../api/queries'
+import { qk, useAllAppLogs, useAllPolicyLogs, useCommands, useInvalidate, useRestrictedEvents, useTasks, useShellSessions, useShellSession } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Link } from 'react-router-dom'
@@ -22,8 +22,10 @@ import { useToast } from '../components/ui/Toast'
 import { PolicyLogTable } from '../components/activity/PolicyLogTable'
 import { TaskTable } from '../components/activity/TaskTable'
 import { CommandTable } from '../components/activity/CommandTable'
+import { AppInstallLogTable } from '../components/activity/AppInstallLogTable'
+import { RestrictedEventTable } from '../components/activity/RestrictedEventTable'
 
-const tabs = ['policy-logs', 'commands', 'tasks', 'shell-sessions'] as const
+const tabs = ['policy-logs', 'app-installs', 'restricted-events', 'commands', 'tasks', 'shell-sessions'] as const
 type Tab = (typeof tabs)[number]
 
 export function ActivityPage() {
@@ -34,16 +36,20 @@ export function ActivityPage() {
   if (active === 'shell-sessions' && !isAdmin) active = 'policy-logs'
   const items = [
     { key: 'policy-logs' as Tab, label: 'Policy Logs' },
+    { key: 'app-installs' as Tab, label: 'App Installs' },
+    { key: 'restricted-events' as Tab, label: 'Restricted Software' },
     { key: 'commands' as Tab, label: 'MDM Commands' },
     { key: 'tasks' as Tab, label: 'Agent Tasks' },
     ...(isAdmin ? [{ key: 'shell-sessions' as Tab, label: 'Shell Sessions' }] : []),
   ]
   return (
     <>
-      <PageHeader title="Activity" description="Policy runs, MDM commands, agent tasks and recorded shell sessions across the fleet. Refreshes automatically." />
+      <PageHeader title="Activity" description="Policy runs, app installs, restricted software events, MDM commands, agent tasks and recorded shell sessions across the fleet. Refreshes automatically." />
       <Tabs className="mb-5" value={active} onChange={(t) => navigate(`/activity/${t}`, { replace: true })} items={items} />
       <Card>
         {active === 'policy-logs' && <PolicyLogsTab />}
+        {active === 'app-installs' && <AppInstallsTab />}
+        {active === 'restricted-events' && <RestrictedEventsTab />}
         {active === 'commands' && <CommandsTab />}
         {active === 'tasks' && <TasksTab />}
         {active === 'shell-sessions' && <ShellSessionsTab />}
@@ -153,6 +159,30 @@ function PolicyLogsTab() {
       {q.error && <p className="px-5 py-4 text-sm text-critical">{errorMessage(q.error)}</p>}
       <PolicyLogTable logs={q.data?.items} loading={q.isPending} />
       <Pagination total={q.data?.total ?? 0} limit={page.limit} offset={page.offset} onChange={setPage} />
+    </>
+  )
+}
+
+export function AppInstallsTab({ computerId }: { computerId?: string }) {
+  const [page, setPage] = useState({ limit: 50, offset: 0 })
+  const q = useAllAppLogs({ computer_id: computerId, ...page })
+  return (
+    <>
+      <CardHeader title="App installs" description="Installomator runs from the Mac Apps catalog. Expand a row for the full output." />
+      {q.error && <p className="px-5 py-4 text-sm text-critical">{errorMessage(q.error)}</p>}
+      <AppInstallLogTable logs={q.data?.items} loading={q.isPending} showComputer={!computerId} />
+      <Pagination total={q.data?.total ?? 0} limit={page.limit} offset={page.offset} onChange={setPage} />
+    </>
+  )
+}
+
+export function RestrictedEventsTab({ computerId }: { computerId?: string }) {
+  const [page, setPage] = useState({ limit: 50, offset: 0 })
+  const q = useRestrictedEvents({ computer_id: computerId, ...page })
+  return (
+    <>
+      <CardHeader title="Restricted software events" description="Every time a restricted process was seen on a scoped computer." />
+      <RestrictedEventTable events={q.data?.items} loading={q.isPending} error={q.error ? errorMessage(q.error) : null} showComputer={!computerId} footer={<Pagination total={q.data?.total ?? 0} limit={page.limit} offset={page.offset} onChange={setPage} />} />
     </>
   )
 }

@@ -4,7 +4,7 @@ import { Eraser, Play, Plus, Save, Trash2 } from 'lucide-react'
 import { qk, useInvalidate, usePackages, usePolicy, usePolicyLogs, useScripts } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
-import { emptyScope, type Policy, type PolicyFrequency, type PolicyPackage, type PolicyScript, type RunResult, type ScriptPriority } from '../api/types'
+import { emptyScope, normalizeScope, type Policy, type PolicyFrequency, type PolicyPackage, type PolicyScript, type RunResult, type ScriptPriority } from '../api/types'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { Button, IconButton } from '../components/ui/Button'
@@ -68,7 +68,7 @@ export function PolicyEditorPage() {
     if (policy.data) {
       const { status: _s, ...rest } = policy.data
       void _s
-      setP({ ...blank(), ...rest, scripts: rest.scripts ?? [], packages: rest.packages ?? [], scope: { ...emptyScope(), ...rest.scope } })
+      setP({ ...blank(), ...rest, scripts: rest.scripts ?? [], packages: rest.packages ?? [], scope: normalizeScope(rest.scope) })
     }
   }, [policy.data])
 
@@ -262,6 +262,9 @@ export function PolicyEditorPage() {
         <Card>
           <CardHeader title="Self Service" description="Let users run this policy themselves from the Self Service app." />
           <CardBody className="flex flex-col gap-5">
+            <p className="text-xs text-ink-muted">
+              Shown in the Self Service portal on the Mac (<span className="font-mono">http://127.0.0.1:8571</span>, opened with <span className="font-mono">vibemdm-agent selfservice</span>).
+            </p>
             <Toggle checked={p.self_service.enabled} onChange={(v) => set({ self_service: { ...p.self_service, enabled: v } })} disabled={ro} label="Make available in Self Service" />
             <FormGrid cols={2}>
               <Field label="Display name">

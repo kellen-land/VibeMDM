@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Laptop } from 'lucide-react'
+import { Download, Laptop } from 'lucide-react'
 import { useComputers, useGroups } from '../../api/queries'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Card } from '../../components/ui/Card'
@@ -11,7 +11,9 @@ import { Pagination } from '../../components/ui/Pagination'
 import { Badge } from '../../components/ui/Badge'
 import { RelativeTime } from '../../components/ui/RelativeTime'
 import { useDebounced } from '../../lib/hooks'
-import { errorMessage } from '../../api/client'
+import { buildQuery, downloadFile, errorMessage } from '../../api/client'
+import { Button } from '../../components/ui/Button'
+import { useToast } from '../../components/ui/Toast'
 import type { Computer } from '../../api/types'
 import { latest } from '../DashboardPage'
 
@@ -27,6 +29,9 @@ export function ComputerStatusBadges({ c, compact }: { c: Pick<Computer, 'mdm_en
     </span>
   )
 }
+
+/** Columns included in the Computers list CSV export (keys from GET /advanced-searches/fields). */
+const exportFields = ['name', 'serial_number', 'model_name', 'os_version', 'last_user', 'building', 'department', 'ip_address', 'mdm_enrolled', 'agent_enrolled', 'filevault_enabled', 'last_checkin']
 
 export function ComputersPage() {
   const [sp, setSp] = useSearchParams()
@@ -51,12 +56,32 @@ export function ComputersPage() {
   const params = useMemo(() => ({ q: dq, group_id: groupId, sort, order, limit, offset }), [dq, groupId, sort, order, limit, offset])
   const list = useComputers(params)
   const groups = useGroups()
+  const toast = useToast()
+  const [exporting, setExporting] = useState(false)
+  const exportCsv = async () => {
+    setExporting(true)
+    try {
+      await downloadFile(`/api/v1/computers-export.csv${buildQuery({ q: dq, group_id: groupId, sort, order, fields: exportFields })}`)
+    } catch (e) {
+      toast.error('Export failed', errorMessage(e))
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const sortState: SortState = { key: sort, dir: order }
 
   return (
     <>
-      <PageHeader title="Computers" description={list.data ? `${list.data.total.toLocaleString()} enrolled ${list.data.total === 1 ? 'computer' : 'computers'}` : undefined} />
+      <PageHeader
+        title="Computers"
+        description={list.data ? `${list.data.total.toLocaleString()} enrolled ${list.data.total === 1 ? 'computer' : 'computers'}` : undefined}
+        actions={
+          <Button icon={<Download />} loading={exporting} onClick={exportCsv} title="Download the filtered list as CSV">
+            Export CSV
+          </Button>
+        }
+      />
       <Card>
         <div className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3">
           <SearchInput value={q} onChange={(v) => set({ q: v, offset: 0 })} placeholder="Search name, serial, user, model, IP…" className="w-full sm:w-80" />

@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom'
 import { Pencil, Save, X } from 'lucide-react'
 import type { ComputerApp, ComputerDetail, ComputerEdit, ComputerProfile, EAValue, LocalUser, ProfileDeployment } from '../../api/types'
 import { api, errorMessage } from '../../api/client'
-import { qk, useExtensionAttributes, useInvalidate } from '../../api/queries'
+import { qk, useBuildings, useDepartments, useExtensionAttributes, useInvalidate } from '../../api/queries'
 import { useAuth } from '../../auth/AuthContext'
 import { CardBody, CardHeader } from '../../components/ui/Card'
 import { DescriptionList, KeyValueTable } from '../../components/ui/DescriptionList'
 import { Button } from '../../components/ui/Button'
 import { Field, FormGrid } from '../../components/ui/Field'
-import { Input, Textarea } from '../../components/ui/Input'
+import { Input, Select, Textarea } from '../../components/ui/Input'
 import { Badge, BoolBadge, StatusBadge } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
 import { SearchInput } from '../../components/ui/SearchInput'
@@ -17,12 +17,12 @@ import { RelativeTime } from '../../components/ui/RelativeTime'
 import { useToast } from '../../components/ui/Toast'
 import { absoluteTime, dash, formatDuration, formatMB } from '../../lib/format'
 
-const editableFields: { key: keyof ComputerEdit; label: string; textarea?: boolean }[] = [
+const editableFields: { key: keyof ComputerEdit; label: string; textarea?: boolean; list?: 'building' | 'department' }[] = [
   { key: 'name', label: 'Computer name' },
   { key: 'asset_tag', label: 'Asset tag' },
   { key: 'site', label: 'Site' },
-  { key: 'department', label: 'Department' },
-  { key: 'building', label: 'Building' },
+  { key: 'department', label: 'Department', list: 'department' },
+  { key: 'building', label: 'Building', list: 'building' },
   { key: 'room', label: 'Room' },
   { key: 'assigned_user', label: 'Assigned username' },
   { key: 'assigned_real_name', label: 'Assigned full name' },
@@ -39,6 +39,14 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<ComputerEdit>({})
   const [saving, setSaving] = useState(false)
+  const buildings = useBuildings({ enabled: editing })
+  const departments = useDepartments({ enabled: editing })
+  /** Options from Settings → Network Organization, always including the computer's current value so nothing is lost. */
+  const listOptions = (list: 'building' | 'department', current: string) => {
+    const names = ((list === 'building' ? buildings.data : departments.data)?.items ?? []).map((i) => i.name)
+    if (current && !names.includes(current)) names.unshift(current)
+    return [{ value: '', label: '— None —' }, ...names.map((n) => ({ value: n, label: n }))]
+  }
   useEffect(() => {
     const f: ComputerEdit = {}
     for (const e of editableFields) f[e.key] = c[e.key] ?? ''
@@ -124,9 +132,11 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
         {editing ? (
           <FormGrid cols={3}>
             {editableFields.map((e) => (
-              <Field key={e.key} label={e.label} className={e.textarea ? 'md:col-span-3' : undefined}>
+              <Field key={e.key} label={e.label} className={e.textarea ? 'md:col-span-3' : undefined} hint={e.list ? 'Managed under Settings → Network Organization.' : undefined}>
                 {e.textarea ? (
                   <Textarea value={form[e.key] ?? ''} onChange={(ev) => setForm({ ...form, [e.key]: ev.target.value })} rows={3} />
+                ) : e.list ? (
+                  <Select value={form[e.key] ?? ''} onChange={(ev) => setForm({ ...form, [e.key]: ev.target.value })} options={listOptions(e.list, form[e.key] ?? '')} />
                 ) : (
                   <Input value={form[e.key] ?? ''} onChange={(ev) => setForm({ ...form, [e.key]: ev.target.value })} />
                 )}

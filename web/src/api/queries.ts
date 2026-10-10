@@ -2,11 +2,14 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@ta
 import { api } from './client'
 import type {
   AdminUser,
-
+  AdvancedSearch,
   AgentTask,
   APIToken,
   APNsStatus,
+  AppInstallLog,
+  AppLabels,
   AuditEntry,
+  Building,
   ComputerDetail,
   Computer,
   ComputerGroup,
@@ -14,20 +17,30 @@ import type {
   ConfigProfileWithStatus,
   CriterionField,
   DashboardStats,
+  Department,
   EnrollmentInvitation,
   EnrollmentStatus,
   ExtensionAttribute,
   ListResponse,
+  MacAppWithStatus,
+  MacApp,
   MDMCommand,
+  NetworkSegment,
   Package,
   PolicyLog,
   PolicyWithStatus,
   ProfileDeployment,
+  RestrictedEvent,
+  RestrictedSoftware,
   SCEPStatus,
   Script,
+  SearchField,
+  SearchRunResult,
   SettingsView,
   ShellSession,
   ShellSessionDetail,
+  WebhookDelivery,
+  WebhookList,
 } from './types'
 
 export const qk = {
@@ -66,6 +79,23 @@ export const qk = {
   audit: (p?: object) => ['audit', p ?? {}] as const,
   shellSessions: (p?: object) => ['shell-sessions', p ?? {}] as const,
   shellSession: (id: string) => ['shell-session', id] as const,
+  buildings: ['buildings'] as const,
+  departments: ['departments'] as const,
+  networkSegments: ['network-segments'] as const,
+  restricted: ['restricted-software'] as const,
+  restrictedItem: (id: string) => ['restricted-software', id] as const,
+  restrictedEvents: (p?: object) => ['restricted-events', p ?? {}] as const,
+  searches: ['advanced-searches'] as const,
+  search: (id: string) => ['advanced-search', id] as const,
+  searchRun: (id: string, p?: object) => ['advanced-search', id, 'run', p ?? {}] as const,
+  searchFields: ['advanced-searches', 'fields'] as const,
+  apps: ['apps'] as const,
+  app: (id: string) => ['app', id] as const,
+  appLabels: ['apps', 'labels'] as const,
+  appLogs: (id: string, p?: object) => ['app', id, 'logs', p ?? {}] as const,
+  allAppLogs: (p?: object) => ['app-logs', p ?? {}] as const,
+  webhooks: ['webhooks'] as const,
+  webhookDeliveries: ['webhooks', 'deliveries'] as const,
 }
 
 type Opts<T> = Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'>
@@ -201,6 +231,84 @@ export function useShellSessions(p: { computer_id?: string; limit?: number; offs
 
 export function useShellSession(id: string | undefined) {
   return useQuery({ queryKey: qk.shellSession(id ?? ''), queryFn: () => api.get<ShellSessionDetail>(`/api/v1/shell-sessions/${id}`), enabled: !!id })
+}
+
+// ---- network organization ----
+
+export function useBuildings(opts?: Opts<ListResponse<Building>>) {
+  return useQuery({ queryKey: qk.buildings, queryFn: () => api.get<ListResponse<Building>>('/api/v1/buildings'), staleTime: 30_000, ...opts })
+}
+
+export function useDepartments(opts?: Opts<ListResponse<Department>>) {
+  return useQuery({ queryKey: qk.departments, queryFn: () => api.get<ListResponse<Department>>('/api/v1/departments'), staleTime: 30_000, ...opts })
+}
+
+export function useNetworkSegments(opts?: Opts<ListResponse<NetworkSegment>>) {
+  return useQuery({ queryKey: qk.networkSegments, queryFn: () => api.get<ListResponse<NetworkSegment>>('/api/v1/network-segments'), staleTime: 30_000, ...opts })
+}
+
+// ---- restricted software ----
+
+export function useRestrictedSoftware(opts?: Opts<ListResponse<RestrictedSoftware>>) {
+  return useQuery({ queryKey: qk.restricted, queryFn: () => api.get<ListResponse<RestrictedSoftware>>('/api/v1/restricted-software'), ...opts })
+}
+
+export function useRestrictedSoftwareItem(id: string | undefined) {
+  return useQuery({ queryKey: qk.restrictedItem(id ?? ''), queryFn: () => api.get<RestrictedSoftware>(`/api/v1/restricted-software/${id}`), enabled: !!id && id !== 'new' })
+}
+
+export function useRestrictedEvents(p: { computer_id?: string; limit?: number; offset?: number }) {
+  return useQuery({ queryKey: qk.restrictedEvents(p), queryFn: () => api.get<ListResponse<RestrictedEvent>>('/api/v1/restricted-software/events', { query: p }), placeholderData: (prev) => prev, refetchInterval: 15_000 })
+}
+
+// ---- advanced searches ----
+
+export function useAdvancedSearches(opts?: Opts<ListResponse<AdvancedSearch>>) {
+  return useQuery({ queryKey: qk.searches, queryFn: () => api.get<ListResponse<AdvancedSearch>>('/api/v1/advanced-searches'), ...opts })
+}
+
+export function useAdvancedSearch(id: string | undefined) {
+  return useQuery({ queryKey: qk.search(id ?? ''), queryFn: () => api.get<AdvancedSearch>(`/api/v1/advanced-searches/${id}`), enabled: !!id && id !== 'new' })
+}
+
+export function useAdvancedSearchRun(id: string | undefined, p: { limit?: number } = {}, enabled = true) {
+  return useQuery({ queryKey: qk.searchRun(id ?? '', p), queryFn: () => api.get<SearchRunResult>(`/api/v1/advanced-searches/${id}/run`, { query: p }), enabled: enabled && !!id && id !== 'new', placeholderData: (prev) => prev })
+}
+
+export function useSearchFields() {
+  return useQuery({ queryKey: qk.searchFields, queryFn: () => api.get<SearchField[]>('/api/v1/advanced-searches/fields'), staleTime: 300_000 })
+}
+
+// ---- mac apps ----
+
+export function useApps(opts?: Opts<ListResponse<MacAppWithStatus>>) {
+  return useQuery({ queryKey: qk.apps, queryFn: () => api.get<ListResponse<MacAppWithStatus>>('/api/v1/apps'), ...opts })
+}
+
+export function useApp(id: string | undefined) {
+  return useQuery({ queryKey: qk.app(id ?? ''), queryFn: () => api.get<MacApp>(`/api/v1/apps/${id}`), enabled: !!id && id !== 'new' })
+}
+
+export function useAppLabels() {
+  return useQuery({ queryKey: qk.appLabels, queryFn: () => api.get<AppLabels>('/api/v1/apps/labels'), staleTime: 600_000 })
+}
+
+export function useAppLogs(id: string, p: { computer_id?: string; limit?: number; offset?: number }) {
+  return useQuery({ queryKey: qk.appLogs(id, p), queryFn: () => api.get<ListResponse<AppInstallLog>>(`/api/v1/apps/${id}/logs`, { query: p }), placeholderData: (prev) => prev, refetchInterval: 15_000 })
+}
+
+export function useAllAppLogs(p: { computer_id?: string; limit?: number; offset?: number }) {
+  return useQuery({ queryKey: qk.allAppLogs(p), queryFn: () => api.get<ListResponse<AppInstallLog>>('/api/v1/apps/logs', { query: p }), placeholderData: (prev) => prev, refetchInterval: 15_000 })
+}
+
+// ---- webhooks ----
+
+export function useWebhooks(enabled = true) {
+  return useQuery({ queryKey: qk.webhooks, queryFn: () => api.get<WebhookList>('/api/v1/webhooks'), enabled })
+}
+
+export function useWebhookDeliveries(enabled = true) {
+  return useQuery({ queryKey: qk.webhookDeliveries, queryFn: () => api.get<ListResponse<WebhookDelivery>>('/api/v1/webhooks/deliveries'), enabled, refetchInterval: 15_000 })
 }
 
 /** Convenience: a mutation that invalidates the given keys on success. */

@@ -33,21 +33,81 @@ export interface PublicStatus {
   time: string
 }
 
-export interface Scope {
-  all_computers: boolean
+/** One side of a scope (targets or exclusions). Buildings/departments are names; network segments are IDs; users are usernames. */
+export interface ScopeSelection {
   computer_ids: string[]
   group_ids: string[]
-  excluded_computer_ids: string[]
-  excluded_group_ids: string[]
+  buildings: string[]
+  departments: string[]
+  network_segments: string[]
+  users: string[]
 }
+
+export interface ScopeLimitations {
+  users: string[]
+  network_segments: string[]
+}
+
+/** Jamf-style scope: in scope = target AND passes every limitation AND NOT excluded. */
+export interface Scope {
+  all_computers: boolean
+  targets: ScopeSelection
+  limitations: ScopeLimitations
+  exclusions: ScopeSelection
+}
+
+export const emptySelection = (): ScopeSelection => ({ computer_ids: [], group_ids: [], buildings: [], departments: [], network_segments: [], users: [] })
 
 export const emptyScope = (): Scope => ({
   all_computers: false,
-  computer_ids: [],
-  group_ids: [],
-  excluded_computer_ids: [],
-  excluded_group_ids: [],
+  targets: emptySelection(),
+  limitations: { users: [], network_segments: [] },
+  exclusions: emptySelection(),
 })
+
+/** Fill in any missing arrays so older/partial server payloads are safe to render and send. */
+export function normalizeScope(s: Partial<Scope> | null | undefined): Scope {
+  const sel = (v: Partial<ScopeSelection> | undefined): ScopeSelection => ({ ...emptySelection(), ...(v ?? {}) })
+  return {
+    all_computers: !!s?.all_computers,
+    targets: sel(s?.targets),
+    limitations: { users: s?.limitations?.users ?? [], network_segments: s?.limitations?.network_segments ?? [] },
+    exclusions: sel(s?.exclusions),
+  }
+}
+
+export interface ScopePreview {
+  count: number
+  computers: Computer[]
+}
+
+export interface Building {
+  id: string
+  name: string
+  computers: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Department {
+  id: string
+  name: string
+  computers: number
+  created_at: string
+  updated_at: string
+}
+
+export interface NetworkSegment {
+  id: string
+  name: string
+  starting_address: string
+  ending_address: string
+  assign_building: string
+  assign_department: string
+  computers: number
+  created_at: string
+  updated_at: string
+}
 
 export interface Computer {
   id: string
@@ -674,4 +734,131 @@ export interface ShellSession {
 export interface ShellSessionDetail {
   session: ShellSession
   transcript: string
+}
+
+export type RestrictedMatchType = 'exact' | 'contains' | 'regex'
+
+export interface RestrictedSoftware {
+  id: string
+  name: string
+  process_name: string
+  match_type: RestrictedMatchType
+  kill_process: boolean
+  notify_user: boolean
+  display_message: string
+  enabled: boolean
+  scope: Scope
+  created_at: string
+  updated_at: string
+}
+
+export interface RestrictedEvent {
+  id: number
+  restricted_id: string
+  computer_id: string
+  computer_name?: string
+  rule_name: string
+  process: string
+  username: string
+  killed: boolean
+  at: string
+}
+
+export interface AdvancedSearch {
+  id: string
+  name: string
+  criteria: Criterion[] | null
+  display_fields: string[] | null
+  created_at: string
+  updated_at: string
+}
+
+/** Display/export field option from GET /advanced-searches/fields (note the capitalized keys). */
+export interface SearchField {
+  Key: string
+  Label: string
+}
+
+export interface SearchRunResult {
+  search: AdvancedSearch
+  count: number
+  computers: Computer[]
+}
+
+export type AppUpdateBehavior = 'install_once' | 'keep_updated'
+
+export interface MacApp {
+  id: string
+  name: string
+  label: string
+  category: string
+  description: string
+  update_behavior: AppUpdateBehavior
+  enabled: boolean
+  scope: Scope
+  self_service: PolicySelfService
+  created_at: string
+  updated_at: string
+}
+
+export interface MacAppWithStatus extends MacApp {
+  status: Record<string, number>
+}
+
+export interface AppLabels {
+  labels: string[]
+  source: string
+  license_url: string
+}
+
+export type AppInstallStatus = 'pending' | 'running' | 'completed' | 'failed' | string
+
+export interface AppInstallLog {
+  id: string
+  app_id: string
+  app_name?: string
+  computer_id: string
+  computer_name?: string
+  status: AppInstallStatus
+  trigger: string
+  log: string
+  created_at: string
+  completed_at: string | null
+}
+
+export interface Webhook {
+  id: string
+  name: string
+  url: string
+  secret?: string
+  enabled: boolean
+  events: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface WebhookList {
+  items: Webhook[]
+  total: number
+  available_events: string[]
+}
+
+export interface WebhookRequest {
+  name: string
+  url: string
+  /** Omit the key entirely on update to keep the existing secret. */
+  secret?: string
+  enabled: boolean
+  events: string[]
+}
+
+export interface WebhookDelivery {
+  id: number
+  webhook_id: string
+  webhook_name: string
+  event: string
+  status: number
+  error: string
+  attempts: number
+  at: string
 }

@@ -20,6 +20,12 @@ import { ExtensionAttributeEditorPage } from './pages/ExtensionAttributeEditorPa
 import { ActivityPage } from './pages/ActivityPage'
 import { EnrollmentPage } from './pages/EnrollmentPage'
 import { SettingsPage } from './pages/settings/SettingsPage'
+import { RestrictedSoftwarePage } from './pages/RestrictedSoftwarePage'
+import { RestrictedSoftwareEditorPage } from './pages/RestrictedSoftwareEditorPage'
+import { SearchesPage } from './pages/SearchesPage'
+import { SearchEditorPage } from './pages/SearchEditorPage'
+import { AppsPage } from './pages/AppsPage'
+import { AppEditorPage } from './pages/AppEditorPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -48,6 +54,9 @@ export function App() {
         <Route path="/groups" element={<GroupsPage />} />
         <Route path="/groups/new" element={<GroupEditorPage />} />
         <Route path="/groups/:id" element={<GroupEditorPage />} />
+        <Route path="/searches" element={<SearchesPage />} />
+        <Route path="/searches/new" element={<SearchEditorPage />} />
+        <Route path="/searches/:id" element={<SearchEditorPage />} />
         <Route path="/policies" element={<PoliciesPage />} />
         <Route path="/policies/new" element={<PolicyEditorPage />} />
         <Route path="/policies/:id" element={<PolicyEditorPage />} />
@@ -61,6 +70,13 @@ export function App() {
         <Route path="/extension-attributes" element={<ExtensionAttributesPage />} />
         <Route path="/extension-attributes/new" element={<ExtensionAttributeEditorPage />} />
         <Route path="/extension-attributes/:id" element={<ExtensionAttributeEditorPage />} />
+        <Route path="/restricted-software" element={<RestrictedSoftwarePage />} />
+        <Route path="/restricted-software/events" element={<RestrictedSoftwarePage />} />
+        <Route path="/restricted-software/new" element={<RestrictedSoftwareEditorPage />} />
+        <Route path="/restricted-software/:id" element={<RestrictedSoftwareEditorPage />} />
+        <Route path="/apps" element={<AppsPage />} />
+        <Route path="/apps/new" element={<AppEditorPage />} />
+        <Route path="/apps/:id" element={<AppEditorPage />} />
         <Route path="/activity" element={<ActivityPage />} />
         <Route path="/activity/:tab" element={<ActivityPage />} />
         <Route path="/enrollment" element={<EnrollmentPage />} />

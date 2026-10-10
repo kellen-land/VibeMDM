@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Activity,
+  AppWindow,
+  Ban,
   ChevronUp,
   FileCode,
   KeyRound,
@@ -14,6 +16,7 @@ import {
   Package,
   Puzzle,
   QrCode,
+  Search,
   Settings,
   ShieldCheck,
   Sun,
@@ -44,6 +47,7 @@ const navGroups: { heading: string; items: NavItem[] }[] = [
     items: [
       { to: '/computers', label: 'Computers', icon: Laptop },
       { to: '/groups', label: 'Computer Groups', icon: Users },
+      { to: '/searches', label: 'Searches', icon: Search },
     ],
   },
   {
@@ -53,6 +57,8 @@ const navGroups: { heading: string; items: NavItem[] }[] = [
       { to: '/scripts', label: 'Scripts', icon: Terminal },
       { to: '/profiles', label: 'Configuration Profiles', icon: ShieldCheck },
       { to: '/packages', label: 'Packages', icon: Package },
+      { to: '/apps', label: 'Mac Apps', icon: AppWindow },
+      { to: '/restricted-software', label: 'Restricted Software', icon: Ban },
       { to: '/extension-attributes', label: 'Extension Attributes', icon: Puzzle },
     ],
   },
