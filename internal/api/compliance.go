@@ -96,6 +96,9 @@ func viewRule(cat *compliance.Catalog, rule *compliance.Rule, benchmark string, 
 		}
 		def, _ := rule.ODVValue(parent, nil)
 		v.ODV = &odvView{Hint: rule.ODV.Hint, Default: def}
+		// Titles read "…to $ODV Minutes": show the value that applies.
+		v.Title = compliance.Substitute(v.Title, def)
+		v.Discussion = compliance.Substitute(v.Discussion, def)
 	}
 	if withScripts {
 		v.Check, v.Fix = rule.Check, rule.Fix

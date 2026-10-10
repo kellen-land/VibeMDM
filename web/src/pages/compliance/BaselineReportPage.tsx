@@ -383,7 +383,10 @@ function RulesTab({ rules, scanned, onOpen }: { rules: ComplianceReportRule[]; s
             ),
           },
           { key: 'section', header: 'Section', render: (r) => <span className="whitespace-nowrap text-ink-muted">{sectionLabel(r.section)}</span> },
-          { key: 'severity', header: 'Severity', render: (r) => (r.severity ? <RuleSeverityBadge severity={r.severity} /> : <span className="text-ink-faint">—</span>) },
+          // mSCP assigns severities only for some benchmarks (e.g. DISA STIG); hide an all-empty column.
+          ...(rules.some((r) => r.severity)
+            ? [{ key: 'severity', header: 'Severity', render: (r: ComplianceReportRule) => (r.severity ? <RuleSeverityBadge severity={r.severity} /> : <span className="text-ink-faint">—</span>) }]
+            : []),
           { key: 'results', header: 'Results', render: (r) => <ResultMiniBar passed={r.passed} remediated={r.remediated} errors={r.errors} failed={r.failed} /> },
           {
             key: 'failed',
