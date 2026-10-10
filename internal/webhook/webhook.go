@@ -33,12 +33,14 @@ const (
 	ShellSessionOpened          = "ShellSessionOpened"
 	FileVaultKeyEscrowed        = "FileVaultKeyEscrowed"
 	FileVaultKeyViewed          = "FileVaultKeyViewed"
+	HealthIssueOpened           = "HealthIssueOpened"   // a warning/critical health finding opened or escalated
+	HealthIssueResolved         = "HealthIssueResolved" // a previously announced finding cleared
 )
 
 // AllEvents lists every event name for the UI.
 var AllEvents = []string{ComputerEnrolled, ComputerUnenrolled, AgentEnrolled, ComputerCheckIn,
 	ComputerInventoryCompleted, PolicyCompleted, PolicyFailed, MDMCommandCompleted, RestrictedSoftwareViolation, ShellSessionOpened,
-	FileVaultKeyEscrowed, FileVaultKeyViewed}
+	FileVaultKeyEscrowed, FileVaultKeyViewed, HealthIssueOpened, HealthIssueResolved}
 
 // Hook is a configured endpoint.
 type Hook struct {

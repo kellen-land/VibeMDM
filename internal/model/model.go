@@ -757,3 +757,58 @@ type Settings struct {
 	LogRetentionDays            int    `json:"log_retention_days"`
 	LogArchiveEnabled           bool   `json:"log_archive_enabled"`
 }
+
+// HealthRemediation describes a fix offered for a health finding.
+type HealthRemediation struct {
+	ID          string `json:"id"`
+	Label       string `json:"label"`
+	Description string `json:"description"`
+	Safe        bool   `json:"safe"`     // may run automatically (self-healing)
+	Runnable    bool   `json:"runnable"` // the server can perform it; otherwise follow URL
+	URL         string `json:"url,omitempty"`
+}
+
+// HealthFinding is one detected misconfiguration or problem with one object.
+type HealthFinding struct {
+	ID             string              `json:"id"`
+	CheckID        string              `json:"check_id"`
+	CheckTitle     string              `json:"check_title,omitempty"`
+	Category       string              `json:"category,omitempty"`
+	ObjectType     string              `json:"object_type"`
+	ObjectID       string              `json:"object_id"`
+	ObjectName     string              `json:"object_name"`
+	Severity       string              `json:"severity"`
+	Summary        string              `json:"summary"`
+	Detail         string              `json:"detail"`
+	Facts          map[string]any      `json:"facts"`
+	Remediations   []HealthRemediation `json:"remediations"`
+	State          string              `json:"state"` // pending | open | acknowledged | snoozed | resolved
+	SnoozedUntil   *time.Time          `json:"snoozed_until"`
+	AcknowledgedBy string              `json:"acknowledged_by"`
+	FirstSeen      time.Time           `json:"first_seen"`
+	LastSeen       time.Time           `json:"last_seen"`
+	ResolvedAt     *time.Time          `json:"resolved_at"`
+	Occurrences    int                 `json:"occurrences"`
+	Misses         int                 `json:"-"`
+	Notified       bool                `json:"-"`
+	HealAttempts   int                 `json:"heal_attempts"`
+	LastHealAt     *time.Time          `json:"last_heal_at"`
+	LastHealError  string              `json:"last_heal_error"`
+}
+
+// HealthEvent is a lifecycle entry for a finding.
+type HealthEvent struct {
+	ID        int64     `json:"id"`
+	FindingID string    `json:"finding_id"`
+	CheckID   string    `json:"check_id"`
+	Event     string    `json:"event"`
+	Actor     string    `json:"actor"`
+	Message   string    `json:"message"`
+	At        time.Time `json:"at"`
+}
+
+// HealthCheckSetting is an admin override for a check.
+type HealthCheckSetting struct {
+	Enabled  bool  `json:"enabled"`
+	AutoHeal *bool `json:"auto_heal"` // nil = the check's default
+}

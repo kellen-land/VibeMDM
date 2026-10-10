@@ -267,3 +267,20 @@ func (c *Commander) ReconcileDDM(ctx context.Context) (int, error) {
 	}
 	return n, nil
 }
+
+// PushComputer sends a blank push and reports APNs errors for this device.
+func (c *Commander) PushComputer(ctx context.Context, comp *model.Computer) error {
+	res, err := c.Push(ctx, comp)
+	if err != nil {
+		return err
+	}
+	if res != nil {
+		if res.PushError != nil {
+			return res.PushError
+		}
+		if st, ok := res.Status[comp.UDID]; ok && st.PushError != nil {
+			return st.PushError
+		}
+	}
+	return nil
+}

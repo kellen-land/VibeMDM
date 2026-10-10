@@ -15,6 +15,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/auth"
 	"github.com/vibemdm/vibemdm/internal/config"
 	"github.com/vibemdm/vibemdm/internal/escrow"
+	"github.com/vibemdm/vibemdm/internal/health"
 	"github.com/vibemdm/vibemdm/internal/mdmsvc"
 	"github.com/vibemdm/vibemdm/internal/policy"
 	"github.com/vibemdm/vibemdm/internal/scepsrv"
@@ -42,6 +43,7 @@ type Handler struct {
 	shellHub *shell.Hub
 	hooks    *webhook.Dispatcher
 	escrow   *escrow.Identity
+	health   *health.Engine
 	log      *slog.Logger
 }
 
@@ -62,12 +64,13 @@ type Deps struct {
 	ShellHub *shell.Hub
 	Hooks    *webhook.Dispatcher
 	Escrow   *escrow.Identity
+	Health   *health.Engine
 	Log      *slog.Logger
 }
 
 // New creates the handler.
 func New(d Deps) *Handler {
-	return &Handler{cfg: d.Cfg, st: d.Store, auth: d.Auth, cmdr: d.Commander, engine: d.Engine, notifier: d.Notifier, scep: d.SCEP, pushStore: d.PushStore, profile: d.Profile, shellHub: d.ShellHub, hooks: d.Hooks, escrow: d.Escrow, log: d.Log}
+	return &Handler{cfg: d.Cfg, st: d.Store, auth: d.Auth, cmdr: d.Commander, engine: d.Engine, notifier: d.Notifier, scep: d.SCEP, pushStore: d.PushStore, profile: d.Profile, shellHub: d.ShellHub, hooks: d.Hooks, escrow: d.Escrow, health: d.Health, log: d.Log}
 }
 
 // ---- helpers ----
@@ -188,6 +191,19 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("PUT /api/v1/network-segments/{id}", h.updateSegment)
 	r("DELETE /api/v1/network-segments/{id}", h.deleteSegment)
 	r("POST /api/v1/scope/preview", h.scopePreview)
+
+	// Health: misconfiguration detection and remediation
+	r("GET /api/v1/health/summary", h.healthSummary)
+	r("GET /api/v1/health/findings", h.listHealthFindings)
+	r("GET /api/v1/health/findings/{id}", h.getHealthFinding)
+	r("POST /api/v1/health/findings/{id}/state", h.healthFindingState)
+	r("POST /api/v1/health/findings/{id}/remediate", h.remediateHealthFinding)
+	r("POST /api/v1/health/findings/bulk", h.bulkHealth)
+	r("GET /api/v1/health/checks", h.listHealthChecks)
+	r("PUT /api/v1/health/checks/{id}", h.updateHealthCheck)
+	r("POST /api/v1/health/checks/{id}/run", h.runHealthCheck)
+	r("POST /api/v1/health/run", h.runHealthAll)
+	r("GET /api/v1/health/events", h.listHealthEvents)
 
 	// Software updates (Declarative Device Management)
 	r("GET /api/v1/updates/plans", h.listPlans)

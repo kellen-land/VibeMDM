@@ -34,6 +34,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/ddmsvc"
 	"github.com/vibemdm/vibemdm/internal/enroll"
 	"github.com/vibemdm/vibemdm/internal/escrow"
+	"github.com/vibemdm/vibemdm/internal/health"
 	"github.com/vibemdm/vibemdm/internal/logsink"
 	"github.com/vibemdm/vibemdm/internal/mdmsvc"
 	"github.com/vibemdm/vibemdm/internal/policy"
@@ -53,6 +54,7 @@ type Server struct {
 	st      *store.Store
 	scep    *scepsrv.Server
 	hooks   *webhook.Dispatcher
+	health  *health.Engine
 	escrow  *escrow.Identity
 	cmdr    *mdmsvc.Commander
 	sink    *logsink.Sink
@@ -194,12 +196,17 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	agentHandler := agentapi.New(st, engine, notifier, shellHub, hooks, cfg.DataDir, cfg.AgentDir, cfg.Version, s.enrollmentProfile, logger.With("component", "agent"))
 	agentHandler.Register(s.mux)
 
+	// Health: misconfiguration detection, remediation and self-healing.
+	s.health = health.NewEngine(health.Builtin(health.Deps{
+		St: st, Cmdr: commander, EncryptionEnabled: box.Enabled(), Wake: notifier.Notify,
+	}), st, hooks, logger.With("component", "health"))
+
 	// Admin API
 	secure := strings.HasPrefix(settings.ServerURL, "https://") || strings.HasPrefix(cfg.ServerURL, "https://")
 	authn := auth.New(st, secure, cfg.SessionTTL)
 	adminAPI := api.New(api.Deps{
 		Cfg: cfg, Store: st, Auth: authn, Commander: commander, Engine: engine, Notifier: notifier, SCEP: scepServer,
-		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Log: logger.With("component", "api"),
+		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Health: s.health, Log: logger.With("component", "api"),
 	})
 	adminAPI.Register(s.mux)
 
@@ -463,7 +470,12 @@ func (s *Server) housekeeping(ctx context.Context) {
 					s.log.Info("asked Macs to sync declarations", "count", n)
 				}
 			}
+			if tick%5 == 2 {
+				// Offset from the other jobs so the first run sees fresh state.
+				s.health.RunAll(ctx)
+			}
 			if tick%60 == 1 {
+				s.st.PruneHealth(ctx, 30)
 				s.st.PruneCommandEvents(ctx, 90)
 				s.logMaintenance(ctx)
 			}
