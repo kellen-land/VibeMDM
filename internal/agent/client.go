@@ -182,6 +182,11 @@ func (c *Client) EnrollmentProfile(ctx context.Context) ([]byte, error) {
 	return data, nil
 }
 
+// SubmitComplianceScan posts the results of an mSCP compliance scan.
+func (c *Client) SubmitComplianceScan(ctx context.Context, scanID string, sub model.AgentComplianceSubmit) error {
+	return c.do(ctx, "POST", "/agent/v1/compliance-scans/"+scanID, sub, nil, 2*time.Minute)
+}
+
 // SubmitAppInstallResult reports an app catalog install outcome.
 func (c *Client) SubmitAppInstallResult(ctx context.Context, logID, status, logText string) error {
 	return c.do(ctx, http.MethodPost, "/agent/v1/app-installs/"+logID+"/result", map[string]string{"status": status, "log": logText}, nil, 0)

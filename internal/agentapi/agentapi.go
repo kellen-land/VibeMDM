@@ -19,6 +19,7 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/vibemdm/vibemdm/internal/auth"
+	"github.com/vibemdm/vibemdm/internal/compliance"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/policy"
 	"github.com/vibemdm/vibemdm/internal/shell"
@@ -41,6 +42,14 @@ type Handler struct {
 	shellHub *shell.Hub
 	hooks    *webhook.Dispatcher
 	version  string
+
+	compliance *compliance.Service
+}
+
+// WithCompliance enables mSCP compliance result submission.
+func (h *Handler) WithCompliance(svc *compliance.Service) *Handler {
+	h.compliance = svc
+	return h
 }
 
 // New creates an agent API handler.
@@ -342,6 +351,10 @@ func (h *Handler) taskResult(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, "task not found")
 		return
 	}
+	if res.Status == "failed" {
+		// A compliance scan whose task failed before submitting results is closed here.
+		h.st.FailComplianceScanByTask(r.Context(), r.PathValue("id"), firstNonEmptyStr(res.Error, res.Stderr, "agent task failed"))
+	}
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 
@@ -519,4 +532,13 @@ func (h *Handler) autoRemediateFileVault(ctx context.Context, comp *model.Comput
 		h.log.Info("queued FileVault key remediation (Escrow Buddy)", "computer", comp.Name)
 		h.st.Audit(ctx, "system", "filevault.auto_remediate", "computer", comp.ID, nil)
 	}
+}
+
+func firstNonEmptyStr(vals ...string) string {
+	for _, v := range vals {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
 }

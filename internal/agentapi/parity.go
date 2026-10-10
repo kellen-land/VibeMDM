@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -73,6 +74,7 @@ func (h *Handler) registerParity(mux *http.ServeMux) {
 		w.Write(installomatorLicense)
 	})
 	mux.Handle("POST /agent/v1/app-installs/{id}/result", a(h.appInstallResult))
+	mux.Handle("POST /agent/v1/compliance-scans/{id}", a(h.complianceResult))
 	mux.Handle("POST /agent/v1/restricted-events", a(h.restrictedEvent))
 	mux.Handle("POST /agent/v1/logs", a(h.ingestLogs))
 	mux.Handle("PUT /agent/v1/diagnostics/{id}", a(h.uploadDiagnostics))
@@ -95,6 +97,31 @@ func (h *Handler) appInstallResult(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, "app install log not found")
 		return
 	}
+	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+func (h *Handler) complianceResult(w http.ResponseWriter, r *http.Request) {
+	comp := computerFrom(r.Context())
+	if h.compliance == nil {
+		writeErr(w, 503, "compliance is not available")
+		return
+	}
+	var sub model.AgentComplianceSubmit
+	if err := decode(r, &sub); err != nil {
+		writeErr(w, 400, "invalid JSON")
+		return
+	}
+	scan, err := h.compliance.Submit(r.Context(), r.PathValue("id"), comp, sub)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			writeErr(w, 404, "compliance scan not found or already completed")
+			return
+		}
+		h.log.Error("storing compliance results", "computer", comp.Name, "err", err)
+		writeErr(w, 500, "storing results failed")
+		return
+	}
+	h.log.Info("compliance scan stored", "computer", comp.Name, "passed", scan.Passed, "failed", scan.Failed, "remediated", scan.Remediated, "errors", scan.Errors)
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 

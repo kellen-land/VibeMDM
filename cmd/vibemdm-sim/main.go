@@ -11,6 +11,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -48,6 +49,7 @@ type device struct {
 	violated map[string]bool           // restricted rule IDs already reported
 	prkReady bool                      // a recovery key exists that macOS would escrow
 	prkGen   int                       // regeneration counter (new key each time)
+	scans    int                       // compliance scans run (drift appears on the 2nd)
 	server   string
 	topic    string
 	client   *http.Client
@@ -543,6 +545,15 @@ func (d *device) runPolicy(ctx context.Context, c *agent.Client, p model.AgentPo
 	return sub
 }
 
+func fnv32(s string) uint32 {
+	h := uint32(2166136261)
+	for i := 0; i < len(s); i++ {
+		h ^= uint32(s[i])
+		h *= 16777619
+	}
+	return h
+}
+
 func statusFor(exit int) string {
 	if exit == 0 {
 		return "completed"
@@ -593,6 +604,33 @@ func (d *device) runTask(ctx context.Context, c *agent.Client, t model.AgentTask
 			res.Stdout = "[simulator] diagnostics uploaded"
 		}
 		os.Remove(path)
+	case "compliance_scan":
+		var scan model.AgentComplianceScan
+		if b, err := json.Marshal(t.Payload["scan"]); err == nil {
+			json.Unmarshal(b, &scan)
+		}
+		d.scans++
+		sub := model.AgentComplianceSubmit{OSVersion: d.osVer, DurationMS: int64(40 * len(scan.Rules))}
+		counts := map[string]int{}
+		for i, r := range scan.Rules {
+			// Stable per-Mac failures (~12%), plus one rule that drifts on the second scan.
+			h := fnv32(d.name + r.ID)
+			fail := h%100 < 12 || (d.scans >= 2 && i == d.idx)
+			rr := model.AgentComplianceRuleResult{ID: r.ID, Status: "pass", Actual: r.Expected}
+			if fail {
+				rr.Status, rr.Actual = "fail", "simulated-noncompliant"
+				if scan.Remediate && r.Fix != "" && h%2 == 0 {
+					rr.Status, rr.Actual, rr.Detail = "remediated", r.Expected, "fixed by the mSCP fix script"
+				}
+			}
+			counts[rr.Status]++
+			sub.Results = append(sub.Results, rr)
+		}
+		if err := c.SubmitComplianceScan(ctx, scan.ScanID, sub); err != nil {
+			res.Status, res.Error = "failed", err.Error()
+			break
+		}
+		res.Stdout = fmt.Sprintf("[simulator] %s: %d passed, %d failed, %d remediated", scan.Baseline, counts["pass"], counts["fail"], counts["remediated"])
 	case "filevault_regenerate":
 		if d.idx%2 != 0 {
 			res.Status, res.ExitCode, res.Stdout = "failed", 1, "FileVault is not enabled on this Mac; nothing to escrow."

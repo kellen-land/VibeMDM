@@ -812,3 +812,92 @@ type HealthCheckSetting struct {
 	Enabled  bool  `json:"enabled"`
 	AutoHeal *bool `json:"auto_heal"` // nil = the check's default
 }
+
+// ComplianceBaseline is an mSCP benchmark tailored and scoped by an admin.
+type ComplianceBaseline struct {
+	ID                string            `json:"id"`
+	Name              string            `json:"name"`
+	Description       string            `json:"description"`
+	Benchmark         string            `json:"benchmark"`
+	Enabled           bool              `json:"enabled"`
+	Scope             Scope             `json:"scope"`
+	ExtraRules        []string          `json:"extra_rules"`
+	Exclusions        map[string]string `json:"exclusions"`
+	ODVOverrides      map[string]any    `json:"odv_overrides"`
+	ScanIntervalHours int               `json:"scan_interval_hours"`
+	AutoRemediate     bool              `json:"auto_remediate"`
+	DeployProfile     bool              `json:"deploy_profile"`
+	ProfileID         *string           `json:"profile_id"`
+	CreatedAt         time.Time         `json:"created_at"`
+	UpdatedAt         time.Time         `json:"updated_at"`
+}
+
+// ComplianceScan is one scan of a baseline on a computer.
+type ComplianceScan struct {
+	ID           string     `json:"id"`
+	BaselineID   string     `json:"baseline_id"`
+	ComputerID   string     `json:"computer_id"`
+	ComputerName string     `json:"computer_name,omitempty"`
+	TaskID       *string    `json:"task_id"`
+	Trigger      string     `json:"trigger"`
+	Remediate    bool       `json:"remediate"`
+	Status       string     `json:"status"`
+	OSVersion    string     `json:"os_version"`
+	Passed       int        `json:"passed"`
+	Failed       int        `json:"failed"`
+	Remediated   int        `json:"remediated"`
+	Errors       int        `json:"errors"`
+	Total        int        `json:"total"`
+	DurationMS   int64      `json:"duration_ms"`
+	Error        string     `json:"error"`
+	RequestedAt  time.Time  `json:"requested_at"`
+	CompletedAt  *time.Time `json:"completed_at"`
+}
+
+// ComplianceResult is the latest result of one rule on one computer.
+type ComplianceResult struct {
+	BaselineID     string    `json:"baseline_id"`
+	ComputerID     string    `json:"computer_id"`
+	ComputerName   string    `json:"computer_name,omitempty"`
+	RuleID         string    `json:"rule_id"`
+	Status         string    `json:"status"` // pass | fail | error | remediated
+	PreviousStatus string    `json:"previous_status"`
+	Actual         string    `json:"actual"`
+	Expected       string    `json:"expected"`
+	Detail         string    `json:"detail"`
+	CheckedAt      time.Time `json:"checked_at"`
+	ChangedAt      time.Time `json:"changed_at"`
+}
+
+// AgentComplianceRule is one check sent to the agent.
+type AgentComplianceRule struct {
+	ID           string `json:"id"`
+	Check        string `json:"check"`
+	ExpectedType string `json:"expected_type"` // string | integer | base64
+	Expected     string `json:"expected"`
+	Fix          string `json:"fix,omitempty"` // only when remediation is requested
+}
+
+// AgentComplianceScan is the payload of a compliance_scan agent task.
+type AgentComplianceScan struct {
+	ScanID    string                `json:"scan_id"`
+	Baseline  string                `json:"baseline"`
+	Remediate bool                  `json:"remediate"`
+	Rules     []AgentComplianceRule `json:"rules"`
+}
+
+// AgentComplianceRuleResult is the agent's outcome for one rule.
+type AgentComplianceRuleResult struct {
+	ID     string `json:"id"`
+	Status string `json:"status"` // pass | fail | error | remediated
+	Actual string `json:"actual"`
+	Detail string `json:"detail,omitempty"`
+}
+
+// AgentComplianceSubmit is posted by the agent when a scan finishes.
+type AgentComplianceSubmit struct {
+	OSVersion  string                      `json:"os_version"`
+	DurationMS int64                       `json:"duration_ms"`
+	Results    []AgentComplianceRuleResult `json:"results"`
+	Error      string                      `json:"error,omitempty"`
+}

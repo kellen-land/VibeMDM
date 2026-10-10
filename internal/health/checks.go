@@ -35,6 +35,8 @@ type Deps struct {
 	Wake func(computerID string)
 	// AgentDir holds the prebuilt agent binaries served to the installer.
 	AgentDir string
+	// Rescan queues a compliance scan of a baseline on a computer (optional).
+	Rescan func(ctx context.Context, baselineID, computerID string) error
 }
 
 const actor = "health"
@@ -64,6 +66,8 @@ const (
 	CheckAppFailures       = "configuration.app_install_failures"
 	CheckPolicyNeverRuns   = "configuration.policy_never_runs"
 	CheckStaleScope        = "configuration.stale_scope_references"
+	CheckComplianceDrift   = "security.compliance_drift"
+	CheckComplianceScans   = "security.compliance_scan_failures"
 )
 
 // Builtin returns the registry of built-in checks.
@@ -142,6 +146,12 @@ func Builtin(d Deps) *Registry {
 	r.Add(Check{ID: CheckStaleScope, Category: "configuration", Title: "Scope references deleted objects",
 		Description: "A policy, profile, app or update plan scope names a group, computer or network segment that no longer exists.",
 		Run:         c.staleScope})
+	r.Add(Check{ID: CheckComplianceDrift, Category: "security", Title: "Compliance drift",
+		Description:  "Rules that passed on a Mac's previous compliance scan now fail, so a setting was changed or a profile removed.",
+		SupportsHeal: true, Run: c.complianceDrift})
+	r.Add(Check{ID: CheckComplianceScans, Category: "security", Title: "Compliance scans failing",
+		Description: "At least 3 compliance scans of a baseline failed or never reported back in the last 2 days.",
+		Run:         c.complianceScanFailures})
 	return r
 }
 
@@ -926,6 +936,71 @@ func (c *checks) staleScope(ctx context.Context) ([]Finding, error) {
 		add("plan", p.ID, p.Name, "/updates/plans/"+p.ID, p.Scope)
 	}
 	return out, nil
+}
+
+func (c *checks) complianceDrift(ctx context.Context) ([]Finding, error) {
+	rows, err := c.db().QueryContext(ctx, `SELECT b.id, b.name, count(DISTINCT r.computer_id), count(*),
+		array_agg(DISTINCT r.computer_id::text), (array_agg(r.rule_id ORDER BY r.changed_at DESC))[1:5]
+		FROM compliance_results r JOIN compliance_baselines b ON b.id = r.baseline_id AND b.enabled
+		WHERE r.status = 'fail' AND r.previous_status IN ('pass','remediated') GROUP BY b.id, b.name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Finding
+	for rows.Next() {
+		var id, name, compsRaw, rulesRaw string
+		var macs, n int
+		if err := rows.Scan(&id, &name, &macs, &n, &compsRaw, &rulesRaw); err != nil {
+			return nil, err
+		}
+		compIDs := strings.Split(strings.Trim(compsRaw, "{}"), ",")
+		baselineID := id
+		rems := []Remediation{link("open", "Open compliance report", "", "/compliance/"+id)}
+		if c.d.Rescan != nil {
+			rems = append([]Remediation{{ID: "rescan", Label: "Rescan affected Macs",
+				Description: "Queues a fresh scan (with remediation if the baseline has auto-remediate on) to confirm the regression.", Safe: true,
+				Run: func(ctx context.Context) error {
+					var errs []error
+					for _, cid := range compIDs {
+						if err := c.d.Rescan(ctx, baselineID, cid); err != nil {
+							errs = append(errs, err)
+						}
+					}
+					if len(errs) == len(compIDs) && len(errs) > 0 {
+						return errs[0]
+					}
+					return nil
+				}}}, rems...)
+		}
+		out = append(out, Finding{ObjectType: "baseline", ObjectID: id, ObjectName: name, Severity: Warning,
+			Summary: fmt.Sprintf("%d rule result%s regressed on %d Mac%s", n, plural(n), macs, plural(macs)),
+			Detail:  "Recently regressed rules include: " + strings.Trim(rulesRaw, "{}") + ". Check whether the enforcement profile is still installed, or enable auto-remediate.",
+			Facts:   map[string]any{"computers": macs, "results": n}, Remediations: rems})
+	}
+	return out, rows.Err()
+}
+
+func (c *checks) complianceScanFailures(ctx context.Context) ([]Finding, error) {
+	rows, err := c.db().QueryContext(ctx, `SELECT b.id, b.name, count(*), (array_agg(s.error ORDER BY s.requested_at DESC))[1]
+		FROM compliance_scans s JOIN compliance_baselines b ON b.id = s.baseline_id AND b.enabled
+		WHERE s.status IN ('failed','expired') AND s.requested_at > now() - interval '48 hours' GROUP BY b.id, b.name HAVING count(*) >= 3`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Finding
+	for rows.Next() {
+		var id, name, lastErr string
+		var n int
+		if err := rows.Scan(&id, &name, &n, &lastErr); err != nil {
+			return nil, err
+		}
+		out = append(out, Finding{ObjectType: "baseline", ObjectID: id, ObjectName: name, Severity: Warning,
+			Summary: fmt.Sprintf("%d scans failed or timed out in 2 days", n), Detail: "Last error: " + firstLine(lastErr),
+			Facts: map[string]any{"failed": n}, Remediations: []Remediation{link("open", "Open compliance report", "", "/compliance/"+id)}})
+	}
+	return out, rows.Err()
 }
 
 func plural(n int) string {

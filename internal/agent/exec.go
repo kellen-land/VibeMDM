@@ -534,6 +534,16 @@ func (e *Executor) RunTask(ctx context.Context, t model.AgentTask) {
 		res.Stdout = fmt.Sprintf("trigger %q: executed %d policies", trig, n)
 	case "filevault_regenerate":
 		apply(e.RegenerateFileVaultKey(ctx))
+	case "compliance_scan":
+		var scan model.AgentComplianceScan
+		if b, err := jsonMarshal(t.Payload["scan"]); err == nil {
+			jsonUnmarshal(b, &scan)
+		}
+		if scan.ScanID == "" {
+			res.Status, res.Error = "failed", "task payload missing scan"
+			break
+		}
+		apply(e.RunComplianceScan(ctx, scan))
 	case "collect_diagnostics":
 		apply(e.CollectDiagnostics(ctx, str(t.Payload["bundle_id"])))
 	case "notify":

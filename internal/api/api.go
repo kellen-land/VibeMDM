@@ -13,6 +13,7 @@ import (
 
 	"github.com/vibemdm/vibemdm/internal/agentapi"
 	"github.com/vibemdm/vibemdm/internal/auth"
+	"github.com/vibemdm/vibemdm/internal/compliance"
 	"github.com/vibemdm/vibemdm/internal/config"
 	"github.com/vibemdm/vibemdm/internal/escrow"
 	"github.com/vibemdm/vibemdm/internal/health"
@@ -39,12 +40,13 @@ type Handler struct {
 		storage.PushCertStore
 		storage.PushCertStorer
 	}
-	profile  func(ctx context.Context) ([]byte, error)
-	shellHub *shell.Hub
-	hooks    *webhook.Dispatcher
-	escrow   *escrow.Identity
-	health   *health.Engine
-	log      *slog.Logger
+	profile    func(ctx context.Context) ([]byte, error)
+	shellHub   *shell.Hub
+	hooks      *webhook.Dispatcher
+	escrow     *escrow.Identity
+	health     *health.Engine
+	compliance *compliance.Service
+	log        *slog.Logger
 }
 
 // Deps are the handler dependencies.
@@ -60,17 +62,18 @@ type Deps struct {
 		storage.PushCertStore
 		storage.PushCertStorer
 	}
-	Profile  func(ctx context.Context) ([]byte, error)
-	ShellHub *shell.Hub
-	Hooks    *webhook.Dispatcher
-	Escrow   *escrow.Identity
-	Health   *health.Engine
-	Log      *slog.Logger
+	Profile    func(ctx context.Context) ([]byte, error)
+	ShellHub   *shell.Hub
+	Hooks      *webhook.Dispatcher
+	Escrow     *escrow.Identity
+	Health     *health.Engine
+	Compliance *compliance.Service
+	Log        *slog.Logger
 }
 
 // New creates the handler.
 func New(d Deps) *Handler {
-	return &Handler{cfg: d.Cfg, st: d.Store, auth: d.Auth, cmdr: d.Commander, engine: d.Engine, notifier: d.Notifier, scep: d.SCEP, pushStore: d.PushStore, profile: d.Profile, shellHub: d.ShellHub, hooks: d.Hooks, escrow: d.Escrow, health: d.Health, log: d.Log}
+	return &Handler{cfg: d.Cfg, st: d.Store, auth: d.Auth, cmdr: d.Commander, engine: d.Engine, notifier: d.Notifier, scep: d.SCEP, pushStore: d.PushStore, profile: d.Profile, shellHub: d.ShellHub, hooks: d.Hooks, escrow: d.Escrow, health: d.Health, compliance: d.Compliance, log: d.Log}
 }
 
 // ---- helpers ----
@@ -191,6 +194,23 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("PUT /api/v1/network-segments/{id}", h.updateSegment)
 	r("DELETE /api/v1/network-segments/{id}", h.deleteSegment)
 	r("POST /api/v1/scope/preview", h.scopePreview)
+
+	// Compliance (macOS Security Compliance Project)
+	r("GET /api/v1/compliance/catalog", h.complianceCatalog)
+	r("GET /api/v1/compliance/catalog/rules", h.complianceRules)
+	r("GET /api/v1/compliance/catalog/rules/{rule}", h.complianceRule)
+	r("GET /api/v1/compliance/baselines", h.listBaselines)
+	r("POST /api/v1/compliance/baselines", h.saveBaseline)
+	r("GET /api/v1/compliance/baselines/{id}", h.getBaseline)
+	r("PUT /api/v1/compliance/baselines/{id}", h.saveBaseline)
+	r("DELETE /api/v1/compliance/baselines/{id}", h.deleteBaseline)
+	r("GET /api/v1/compliance/baselines/{id}/report", h.baselineReport)
+	r("GET /api/v1/compliance/baselines/{id}/computers/{cid}", h.baselineComputer)
+	r("POST /api/v1/compliance/baselines/{id}/scan", h.scanBaseline)
+	r("GET /api/v1/compliance/baselines/{id}/scans", h.listBaselineScans)
+	r("GET /api/v1/compliance/baselines/{id}/profile", h.baselineProfilePreview)
+	r("GET /api/v1/compliance/baselines/{id}/export.csv", h.exportBaselineCSV)
+	r("GET /api/v1/computers/{id}/compliance", h.computerCompliance)
 
 	// Health: misconfiguration detection and remediation
 	r("GET /api/v1/health/summary", h.healthSummary)

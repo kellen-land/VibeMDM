@@ -29,6 +29,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/api"
 	"github.com/vibemdm/vibemdm/internal/auth"
 	"github.com/vibemdm/vibemdm/internal/commands"
+	"github.com/vibemdm/vibemdm/internal/compliance"
 	"github.com/vibemdm/vibemdm/internal/config"
 	"github.com/vibemdm/vibemdm/internal/db"
 	"github.com/vibemdm/vibemdm/internal/ddmsvc"
@@ -48,19 +49,20 @@ import (
 
 // Server is the assembled application.
 type Server struct {
-	cfg     *config.Config
-	log     *slog.Logger
-	sqlDB   *sql.DB
-	st      *store.Store
-	scep    *scepsrv.Server
-	hooks   *webhook.Dispatcher
-	health  *health.Engine
-	escrow  *escrow.Identity
-	cmdr    *mdmsvc.Commander
-	sink    *logsink.Sink
-	baseLog *slog.Logger
-	mux     *http.ServeMux
-	http    *http.Server
+	cfg        *config.Config
+	log        *slog.Logger
+	sqlDB      *sql.DB
+	st         *store.Store
+	scep       *scepsrv.Server
+	hooks      *webhook.Dispatcher
+	health     *health.Engine
+	compliance *compliance.Service
+	escrow     *escrow.Identity
+	cmdr       *mdmsvc.Commander
+	sink       *logsink.Sink
+	baseLog    *slog.Logger
+	mux        *http.ServeMux
+	http       *http.Server
 }
 
 // New builds the server (connects DB, migrates, wires services).
@@ -194,11 +196,13 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	shellHub := shell.NewHub()
 	engine := policy.New(st, logger.With("component", "policy"))
 	agentHandler := agentapi.New(st, engine, notifier, shellHub, hooks, cfg.DataDir, cfg.AgentDir, cfg.Version, s.enrollmentProfile, logger.With("component", "agent"))
+	s.compliance = compliance.NewService(st, notifier.Notify, logger.With("component", "compliance"))
+	agentHandler.WithCompliance(s.compliance)
 	agentHandler.Register(s.mux)
 
 	// Health: misconfiguration detection, remediation and self-healing.
 	s.health = health.NewEngine(health.Builtin(health.Deps{
-		St: st, Cmdr: commander, EncryptionEnabled: box.Enabled(), Wake: notifier.Notify, AgentDir: cfg.AgentDir,
+		St: st, Cmdr: commander, EncryptionEnabled: box.Enabled(), Wake: notifier.Notify, AgentDir: cfg.AgentDir, Rescan: s.compliance.Rescan,
 	}), st, hooks, logger.With("component", "health"))
 
 	// Admin API
@@ -206,7 +210,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	authn := auth.New(st, secure, cfg.SessionTTL)
 	adminAPI := api.New(api.Deps{
 		Cfg: cfg, Store: st, Auth: authn, Commander: commander, Engine: engine, Notifier: notifier, SCEP: scepServer,
-		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Health: s.health, Log: logger.With("component", "api"),
+		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Health: s.health, Compliance: s.compliance, Log: logger.With("component", "api"),
 	})
 	adminAPI.Register(s.mux)
 
@@ -478,6 +482,9 @@ func (s *Server) housekeeping(ctx context.Context) {
 					s.log.Info("asked Macs to sync declarations", "count", n)
 				}
 			}
+			if tick%10 == 3 {
+				s.compliance.Schedule(ctx)
+			}
 			if tick%5 == 2 {
 				// Offset from the other jobs so the first run sees fresh state.
 				s.health.RunAll(ctx)
@@ -491,6 +498,9 @@ func (s *Server) housekeeping(ctx context.Context) {
 			s.st.ExpireStaleTasks(ctx)
 			s.st.ExpireStaleShellSessions(ctx)
 			s.st.ExpireStaleAppInstalls(ctx)
+			if tick%60 == 1 {
+				s.st.ExpireComplianceScans(ctx)
+			}
 			s.st.DeleteExpiredSessions(ctx)
 		}
 	}
