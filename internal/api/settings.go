@@ -37,6 +37,8 @@ type settingsView struct {
 	EncryptionAtRest            bool   `json:"encryption_at_rest"`
 	LogRetentionDays            int    `json:"log_retention_days"`
 	LogArchiveEnabled           bool   `json:"log_archive_enabled"`
+	MCPEnabled                  bool   `json:"mcp_enabled"`
+	MCPAllowWrites              bool   `json:"mcp_allow_writes"`
 	Version                     string `json:"version"`
 }
 
@@ -49,6 +51,7 @@ func (h *Handler) view(s model.Settings, admin bool) settingsView {
 		RemoteShellEnabled: s.RemoteShellEnabled, RemoteShellIdleTimeoutSecs: s.RemoteShellIdleTimeoutSecs,
 		FileVaultAutoRemediate: s.FileVaultAutoRemediate, EncryptionAtRest: h.st.Box.Enabled(),
 		LogRetentionDays: s.LogRetentionDays, LogArchiveEnabled: s.LogArchiveEnabled,
+		MCPEnabled: s.MCPEnabled, MCPAllowWrites: s.MCPAllowWrites,
 	}
 	if admin {
 		v.AgentEnrollmentSecret = s.AgentEnrollmentSecret
@@ -88,6 +91,8 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request) {
 		RemoteShellIdleTimeoutSecs  *int    `json:"remote_shell_idle_timeout_secs"`
 		LogRetentionDays            *int    `json:"log_retention_days"`
 		LogArchiveEnabled           *bool   `json:"log_archive_enabled"`
+		MCPEnabled                  *bool   `json:"mcp_enabled"`
+		MCPAllowWrites              *bool   `json:"mcp_allow_writes"`
 	}
 	if err := decode(r, &req); err != nil {
 		writeErr(w, 400, err.Error())
@@ -150,6 +155,14 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.LogArchiveEnabled != nil {
 		s.LogArchiveEnabled = *req.LogArchiveEnabled
+	}
+	if req.MCPEnabled != nil && *req.MCPEnabled != s.MCPEnabled {
+		s.MCPEnabled = *req.MCPEnabled
+		h.st.Audit(r.Context(), actor(r), "settings.mcp", "settings", "", map[string]any{"enabled": s.MCPEnabled})
+	}
+	if req.MCPAllowWrites != nil && *req.MCPAllowWrites != s.MCPAllowWrites {
+		s.MCPAllowWrites = *req.MCPAllowWrites
+		h.st.Audit(r.Context(), actor(r), "settings.mcp_writes", "settings", "", map[string]any{"allow_writes": s.MCPAllowWrites})
 	}
 	if req.ClearSigning {
 		s.SigningCertPEM, s.SigningKeyPEM = "", ""

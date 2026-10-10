@@ -23,6 +23,7 @@ Lists return `{"items": [...], "total": n}` and accept `limit`/`offset`. Errors 
 | Settings | `GET/PUT /settings`, `GET/PUT /settings/apns`, `POST /settings/apns/{request,decrypt}`, `PUT /settings/apns/certificate`, `GET /settings/scep`, `POST /settings/scep/regenerate` |
 | Remote shell | `GET /computers/{id}/shell` (WebSocket, admin, gated by `remote_shell_enabled`), `GET /shell-sessions`, `GET /shell-sessions/{id}` (transcript) |
 | Health | `GET /health/summary`, `GET /health/findings`, `GET /health/findings/{id}`, `POST /health/findings/{id}/{state,remediate}`, `POST /health/findings/bulk`, `GET /health/checks`, `PUT /health/checks/{id}`, `POST /health/checks/{id}/run`, `POST /health/run`, `GET /health/events` — see [health.md](health.md) |
+| MCP | `POST /mcp` (Model Context Protocol, API tokens only, off by default) — see [mcp.md](mcp.md) |
 | Admin | `GET/POST /users`, `PUT/DELETE /users/{id}`, `POST /users/{id}/password`, `GET/POST/DELETE /api-tokens`, `GET /audit` |
 
 Command types for `POST /computers/{id}/commands`: `DeviceInformation`, `SecurityInfo`, `ProfileList`,

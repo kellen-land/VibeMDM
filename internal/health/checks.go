@@ -52,6 +52,7 @@ const (
 	CheckWebhooks          = "platform.webhook_failures"
 	CheckRemoteShellHTTP   = "security.remote_shell_transport"
 	CheckAgentBinaries     = "platform.agent_binaries"
+	CheckMCPTransport      = "security.mcp_transport"
 	CheckMDMUnresponsive   = "fleet.mdm_unresponsive"
 	CheckAgentSilent       = "fleet.agent_silent"
 	CheckAgentMissing      = "fleet.agent_missing"
@@ -101,6 +102,9 @@ func Builtin(d Deps) *Registry {
 	r.Add(Check{ID: CheckAgentBinaries, Category: "platform", Title: "Agent binaries",
 		Description: "No prebuilt agent binaries are on the server, so the curl installer and Apple Configurator enrollment cannot install the agent.",
 		Run:         c.agentBinaries})
+	r.Add(Check{ID: CheckMCPTransport, Category: "security", Title: "MCP server over plain HTTP",
+		Description: "The MCP server for AI agents is enabled while the server URL is not HTTPS, so API tokens travel unencrypted.",
+		Run:         c.mcpTransport})
 	r.Add(Check{ID: CheckRemoteShellHTTP, Category: "security", Title: "Remote shell over plain HTTP",
 		Description: "Remote shell is enabled while the server URL is not HTTPS, so sessions could be intercepted.",
 		Run:         c.remoteShell})
@@ -364,6 +368,37 @@ func (c *checks) agentBinaries(ctx context.Context) ([]Finding, error) {
 		Detail:       "Build them with `make agent` (or use the release image) so " + c.d.AgentDir + " contains vibemdm-agent-darwin-arm64 / -amd64.",
 		Facts:        map[string]any{"agent_dir": c.d.AgentDir},
 		Remediations: []Remediation{link("enroll", "Enrollment setup", "", "/enrollment")}}}, nil
+}
+
+func (c *checks) mcpTransport(ctx context.Context) ([]Finding, error) {
+	s, err := c.d.St.GetSettings(ctx)
+	if err != nil || !s.MCPEnabled || strings.HasPrefix(s.ServerURL, "https://") {
+		return nil, err
+	}
+	sev := Warning
+	if s.MCPAllowWrites {
+		sev = Critical
+	}
+	return []Finding{{ObjectType: "server", ObjectID: "mcp", ObjectName: "MCP server", Severity: sev,
+		Summary: "MCP server enabled without HTTPS",
+		Detail:  "AI agents send VibeMDM API tokens with every request. Put the server behind TLS, or turn the MCP server off.",
+		Facts:   map[string]any{"allow_writes": s.MCPAllowWrites},
+		Remediations: []Remediation{
+			link("settings", "Open settings", "", "/settings/general"),
+			{ID: "disable", Label: "Turn the MCP server off", Description: "Stops serving /mcp until it is re-enabled.",
+				Run: func(ctx context.Context) error {
+					s, err := c.d.St.GetSettings(ctx)
+					if err != nil {
+						return err
+					}
+					s.MCPEnabled = false
+					if err := c.d.St.SaveSettings(ctx, s); err != nil {
+						return err
+					}
+					c.d.St.Audit(ctx, actor, "settings.mcp", "settings", "core", map[string]any{"enabled": false})
+					return nil
+				}},
+		}}}, nil
 }
 
 func (c *checks) remoteShell(ctx context.Context) ([]Finding, error) {

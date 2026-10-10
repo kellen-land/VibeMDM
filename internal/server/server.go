@@ -38,6 +38,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/escrow"
 	"github.com/vibemdm/vibemdm/internal/health"
 	"github.com/vibemdm/vibemdm/internal/logsink"
+	"github.com/vibemdm/vibemdm/internal/mcp"
 	"github.com/vibemdm/vibemdm/internal/mdmsvc"
 	"github.com/vibemdm/vibemdm/internal/onboarding"
 	"github.com/vibemdm/vibemdm/internal/policy"
@@ -229,6 +230,11 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Health: s.health, Compliance: s.compliance, Super: s.superSvc, Onboarding: s.onboarding, Log: logger.With("component", "api"),
 	})
 	adminAPI.Register(s.mux)
+
+	// MCP server for AI agents (off unless enabled in settings; API tokens only).
+	s.mux.Handle("/mcp", mcp.New(st, authn, cfg.Version, logger.With("component", "mcp"), mcp.Tools(mcp.Deps{
+		St: st, Cmdr: commander, Health: s.health, Compliance: s.compliance, Engine: engine, Notify: notifier.Notify,
+	})))
 
 	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		if err := sqlDB.PingContext(r.Context()); err != nil {

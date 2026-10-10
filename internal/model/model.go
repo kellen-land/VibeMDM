@@ -772,6 +772,8 @@ type Settings struct {
 	FileVaultAutoRemediate      bool   `json:"filevault_auto_remediate"`
 	LogRetentionDays            int    `json:"log_retention_days"`
 	LogArchiveEnabled           bool   `json:"log_archive_enabled"`
+	MCPEnabled                  bool   `json:"mcp_enabled"`      // expose the MCP server at /mcp
+	MCPAllowWrites              bool   `json:"mcp_allow_writes"` // allow admin tokens to call write tools
 }
 
 // HealthRemediation describes a fix offered for a health finding.
