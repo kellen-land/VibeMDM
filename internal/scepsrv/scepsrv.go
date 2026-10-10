@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"math/big"
 	"net/http"
@@ -26,10 +27,13 @@ import (
 	"github.com/smallstep/scep"
 )
 
-// Depot persists the CA and issued certificates.
+// Depot persists the CA and issued certificates. GetSCEPCA must return an
+// error matching fs.ErrNotExist when no CA is stored; any other error is fatal.
+// CreateSCEPCA must never overwrite an existing CA.
 type Depot interface {
 	GetSCEPCA(ctx context.Context) (certPEM, keyPEM string, err error)
 	SaveSCEPCA(ctx context.Context, certPEM, keyPEM string) error
+	CreateSCEPCA(ctx context.Context, certPEM, keyPEM string) error
 	NextSCEPSerial(ctx context.Context) (int64, error)
 	PutSCEPCert(ctx context.Context, serial string, cn, certPEM string, notBefore, notAfter time.Time) error
 }
@@ -55,12 +59,19 @@ func New(ctx context.Context, depot Depot, challenge ChallengeFunc, orgName stri
 	s := &Server{depot: depot, challenge: challenge, log: logger, validity: 3 * 365 * 24 * time.Hour}
 	if err := s.load(ctx); err != nil {
 		if !errors.Is(err, errNoCA) {
-			return nil, err
+			// Never replace a CA we merely failed to read (e.g. wrong
+			// encryption key): that would invalidate every enrolled device.
+			return nil, fmt.Errorf("loading SCEP CA: %w", err)
 		}
 		logger.Info("no SCEP CA found, generating a new one")
-		if err := s.Regenerate(ctx, orgName); err != nil {
+		certPEM, keyPEM, cert, key, err := generateCA(orgName)
+		if err != nil {
 			return nil, err
 		}
+		if err := s.depot.CreateSCEPCA(ctx, certPEM, keyPEM); err != nil {
+			return nil, fmt.Errorf("storing new SCEP CA: %w", err)
+		}
+		s.set(cert, key)
 	}
 	return s, nil
 }
@@ -70,7 +81,10 @@ var errNoCA = errors.New("no CA")
 func (s *Server) load(ctx context.Context) error {
 	certPEM, keyPEM, err := s.depot.GetSCEPCA(ctx)
 	if err != nil {
-		return errNoCA
+		if errors.Is(err, fs.ErrNotExist) {
+			return errNoCA
+		}
+		return err
 	}
 	cert, key, err := ParseCA(certPEM, keyPEM)
 	if err != nil {
@@ -117,11 +131,25 @@ func ParseCA(certPEM, keyPEM string) (*x509.Certificate, *rsa.PrivateKey, error)
 	return cert, key, nil
 }
 
-// Regenerate creates a brand new CA (existing device identities become invalid).
+// Regenerate replaces the CA with a brand new one. This is an explicit admin
+// action: every existing device identity becomes invalid.
 func (s *Server) Regenerate(ctx context.Context, orgName string) error {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	certPEM, keyPEM, cert, key, err := generateCA(orgName)
 	if err != nil {
 		return err
+	}
+	if err := s.depot.SaveSCEPCA(ctx, certPEM, keyPEM); err != nil {
+		return err
+	}
+	s.set(cert, key)
+	return nil
+}
+
+// generateCA creates a new self-signed CA keypair.
+func generateCA(orgName string) (certPEM, keyPEM string, cert *x509.Certificate, key *rsa.PrivateKey, err error) {
+	key, err = rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return
 	}
 	if orgName == "" {
 		orgName = "VibeMDM"
@@ -141,19 +169,15 @@ func (s *Server) Regenerate(ctx context.Context, orgName string) error {
 	}
 	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
 	if err != nil {
-		return err
+		return
 	}
-	cert, err := x509.ParseCertificate(der)
+	cert, err = x509.ParseCertificate(der)
 	if err != nil {
-		return err
+		return
 	}
-	certPEM := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
-	keyPEM := string(pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}))
-	if err := s.depot.SaveSCEPCA(ctx, certPEM, keyPEM); err != nil {
-		return err
-	}
-	s.set(cert, key)
-	return nil
+	certPEM = string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
+	keyPEM = string(pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}))
+	return
 }
 
 // CACert returns the CA certificate.

@@ -20,6 +20,7 @@ type Config struct {
 	Debug         bool
 	DumpMDM       bool
 	APNsURL       string // override APNs server URL (testing)
+	EncryptionKey string // passphrase for at-rest encryption of secrets
 	SessionTTL    time.Duration
 	Version       string
 }
@@ -54,6 +55,7 @@ func FromEnv(version string) (*Config, error) {
 		Debug:         envBool("VIBEMDM_DEBUG", false),
 		DumpMDM:       envBool("VIBEMDM_DUMP_MDM", false),
 		APNsURL:       env("VIBEMDM_APNS_URL", ""),
+		EncryptionKey: env("VIBEMDM_ENCRYPTION_KEY", ""),
 		Version:       version,
 	}
 	ttlHours, err := strconv.Atoi(env("VIBEMDM_SESSION_TTL_HOURS", "168"))

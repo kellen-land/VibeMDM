@@ -9,19 +9,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"strings"
 	"time"
 
 	"github.com/vibemdm/vibemdm/internal/db"
 	"github.com/vibemdm/vibemdm/internal/model"
+	"github.com/vibemdm/vibemdm/internal/secrets"
 )
 
-// ErrNotFound is returned when a row does not exist.
-var ErrNotFound = errors.New("not found")
+// ErrNotFound is returned when a row does not exist. It wraps fs.ErrNotExist so
+// packages that don't import store (e.g. scepsrv) can still recognise it.
+var ErrNotFound = fmt.Errorf("not found: %w", fs.ErrNotExist)
 
-// Store wraps the database.
+// Store wraps the database. Box (optional) encrypts sensitive values at rest.
 type Store struct {
-	DB *sql.DB
+	DB  *sql.DB
+	Box *secrets.Box
 }
 
 // New creates a Store.
@@ -94,11 +98,25 @@ func (s *Store) GetSettings(ctx context.Context) (model.Settings, error) {
 	if v.RemoteShellIdleTimeoutSecs == 0 {
 		v.RemoteShellIdleTimeoutSecs = st.RemoteShellIdleTimeoutSecs
 	}
+	if v.SigningKeyPEM != "" {
+		k, err := s.Box.Open(v.SigningKeyPEM)
+		if err != nil {
+			return v, fmt.Errorf("profile signing key: %w", err)
+		}
+		v.SigningKeyPEM = k
+	}
 	return v, nil
 }
 
-// SaveSettings stores settings.
+// SaveSettings stores settings (the profile signing key is sealed at rest).
 func (s *Store) SaveSettings(ctx context.Context, st model.Settings) error {
+	if st.SigningKeyPEM != "" && !secrets.IsEncrypted(st.SigningKeyPEM) {
+		sealed, err := s.Box.Seal(st.SigningKeyPEM)
+		if err != nil {
+			return err
+		}
+		st.SigningKeyPEM = sealed
+	}
 	_, err := s.DB.ExecContext(ctx, `INSERT INTO settings (key, value) VALUES ($1, $2::jsonb)
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, settingsKey, jsonArg(st))
 	return err
@@ -405,15 +423,43 @@ func (s *Store) ListAudit(ctx context.Context, limit, offset int) ([]model.Audit
 // GetSCEPCA returns the CA cert and key PEM.
 func (s *Store) GetSCEPCA(ctx context.Context) (certPEM, keyPEM string, err error) {
 	err = s.DB.QueryRowContext(ctx, `SELECT cert_pem, key_pem FROM scep_ca WHERE id = 1`).Scan(&certPEM, &keyPEM)
-	return certPEM, keyPEM, wrapNotFound(err)
+	if err != nil {
+		return "", "", wrapNotFound(err)
+	}
+	keyPEM, err = s.Box.Open(keyPEM)
+	return certPEM, keyPEM, err
 }
 
 // SaveSCEPCA stores (replaces) the CA.
 func (s *Store) SaveSCEPCA(ctx context.Context, certPEM, keyPEM string) error {
-	_, err := s.DB.ExecContext(ctx, `INSERT INTO scep_ca (id, cert_pem, key_pem) VALUES (1, $1, $2)
+	keyPEM, err := s.Box.Seal(keyPEM)
+	if err != nil {
+		return err
+	}
+	_, err = s.DB.ExecContext(ctx, `INSERT INTO scep_ca (id, cert_pem, key_pem) VALUES (1, $1, $2)
 		ON CONFLICT (id) DO UPDATE SET cert_pem = EXCLUDED.cert_pem, key_pem = EXCLUDED.key_pem, created_at = now()`, certPEM, keyPEM)
 	return err
 }
+
+// CreateSCEPCA stores the CA only if none exists (first boot). It never
+// overwrites: ErrCAExists is returned when a CA is already stored.
+func (s *Store) CreateSCEPCA(ctx context.Context, certPEM, keyPEM string) error {
+	keyPEM, err := s.Box.Seal(keyPEM)
+	if err != nil {
+		return err
+	}
+	res, err := s.DB.ExecContext(ctx, `INSERT INTO scep_ca (id, cert_pem, key_pem) VALUES (1, $1, $2) ON CONFLICT (id) DO NOTHING`, certPEM, keyPEM)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrCAExists
+	}
+	return nil
+}
+
+// ErrCAExists is returned by CreateSCEPCA when a CA is already stored.
+var ErrCAExists = errors.New("a SCEP CA already exists")
 
 // NextSCEPSerial returns a new serial number.
 func (s *Store) NextSCEPSerial(ctx context.Context) (int64, error) {
@@ -439,7 +485,11 @@ func (s *Store) SCEPStats(ctx context.Context) (issued int, active int, err erro
 
 // SavePushCertRequest stores the APNs CSR key material.
 func (s *Store) SavePushCertRequest(ctx context.Context, keyPEM, csrPEM, certPEM string) error {
-	_, err := s.DB.ExecContext(ctx, `INSERT INTO push_cert_requests (id, key_pem, csr_pem, cert_pem) VALUES (1, $1, $2, $3)
+	keyPEM, err := s.Box.Seal(keyPEM)
+	if err != nil {
+		return err
+	}
+	_, err = s.DB.ExecContext(ctx, `INSERT INTO push_cert_requests (id, key_pem, csr_pem, cert_pem) VALUES (1, $1, $2, $3)
 		ON CONFLICT (id) DO UPDATE SET key_pem = EXCLUDED.key_pem, csr_pem = EXCLUDED.csr_pem, cert_pem = EXCLUDED.cert_pem, created_at = now()`, keyPEM, csrPEM, certPEM)
 	return err
 }
@@ -447,7 +497,11 @@ func (s *Store) SavePushCertRequest(ctx context.Context, keyPEM, csrPEM, certPEM
 // GetPushCertRequest returns the stored APNs CSR key material.
 func (s *Store) GetPushCertRequest(ctx context.Context) (keyPEM, csrPEM, certPEM string, createdAt time.Time, err error) {
 	err = s.DB.QueryRowContext(ctx, `SELECT key_pem, csr_pem, cert_pem, created_at FROM push_cert_requests WHERE id = 1`).Scan(&keyPEM, &csrPEM, &certPEM, &createdAt)
-	return keyPEM, csrPEM, certPEM, createdAt, wrapNotFound(err)
+	if err != nil {
+		return "", "", "", createdAt, wrapNotFound(err)
+	}
+	keyPEM, err = s.Box.Open(keyPEM)
+	return keyPEM, csrPEM, certPEM, createdAt, err
 }
 
 // GetPushCertTopics lists push cert topics with expiry (from the NanoMDM table).

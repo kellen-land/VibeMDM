@@ -137,9 +137,9 @@ func (id *Identity) EscrowProfile(orgName string) ([]byte, error) {
 			map[string]any{
 				"PayloadType": "com.apple.security.FDERecoveryKeyEscrow", "PayloadVersion": 1, "PayloadIdentifier": EscrowProfileIdentifier + ".fde",
 				"PayloadUUID": escrowPayloadUUID, "PayloadDisplayName": "FileVault Recovery Key Escrow", "PayloadOrganization": orgName,
-				"Location":                   orgName,
-				"EncryptCertPayloadUUID":     escrowCertPayloadUUID,
-				"DeviceKey":                  "",
+				"Location":               orgName,
+				"EncryptCertPayloadUUID": escrowCertPayloadUUID,
+				"DeviceKey":              "",
 			},
 		},
 		"PayloadDescription": "Escrows the FileVault personal recovery key to " + orgName + " device management.",

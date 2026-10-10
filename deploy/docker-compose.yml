@@ -36,6 +36,7 @@ services:
       VIBEMDM_DATABASE_URL: postgres://vibemdm:${POSTGRES_PASSWORD}@db:5432/vibemdm?sslmode=disable
       VIBEMDM_SERVER_URL: ${VIBEMDM_SERVER_URL:?set VIBEMDM_SERVER_URL in .env (https://mdm.example.com)}
       VIBEMDM_ADMIN_PASSWORD: ${VIBEMDM_ADMIN_PASSWORD:-}
+      VIBEMDM_ENCRYPTION_KEY: ${VIBEMDM_ENCRYPTION_KEY:-}
       VIBEMDM_DEBUG: ${VIBEMDM_DEBUG:-false}
       VIBEMDM_LOG_FORMAT: ${VIBEMDM_LOG_FORMAT:-text}
     volumes:

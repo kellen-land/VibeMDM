@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"log/slog"
 	"math/big"
 	"os"
@@ -28,6 +29,13 @@ func (m *memDepot) GetSCEPCA(context.Context) (string, string, error) {
 	return m.cert, m.key, nil
 }
 func (m *memDepot) SaveSCEPCA(_ context.Context, c, k string) error { m.cert, m.key = c, k; return nil }
+func (m *memDepot) CreateSCEPCA(_ context.Context, c, k string) error {
+	if m.cert != "" {
+		return errors.New("exists")
+	}
+	m.cert, m.key = c, k
+	return nil
+}
 func (m *memDepot) NextSCEPSerial(context.Context) (int64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -69,5 +77,23 @@ func TestGenerateAndVerify(t *testing.T) {
 	self, _ := x509.ParseCertificate(selfDER)
 	if err := s.Verify(context.Background(), self); err == nil {
 		t.Fatal("self-signed cert should not verify")
+	}
+}
+
+// failDepot simulates a CA that exists but cannot be read (wrong encryption key).
+type failDepot struct{ memDepot }
+
+func (f *failDepot) GetSCEPCA(context.Context) (string, string, error) {
+	return "", "", errors.New("decrypting stored secret: cipher: message authentication failed")
+}
+
+func TestUnreadableCAIsFatalNotRegenerated(t *testing.T) {
+	d := &failDepot{memDepot: memDepot{cert: "EXISTING", key: "EXISTING"}}
+	_, err := New(context.Background(), d, nil, "Test", slog.Default())
+	if err == nil {
+		t.Fatal("expected startup failure when the CA cannot be read")
+	}
+	if d.cert != "EXISTING" {
+		t.Fatal("existing CA was overwritten")
 	}
 }

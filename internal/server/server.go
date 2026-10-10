@@ -34,6 +34,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/mdmsvc"
 	"github.com/vibemdm/vibemdm/internal/policy"
 	"github.com/vibemdm/vibemdm/internal/scepsrv"
+	"github.com/vibemdm/vibemdm/internal/secrets"
 	"github.com/vibemdm/vibemdm/internal/shell"
 	"github.com/vibemdm/vibemdm/internal/store"
 	"github.com/vibemdm/vibemdm/internal/webhook"
@@ -66,6 +67,26 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 		logger.Info("applied database migrations", "versions", ran)
 	}
 	st := store.New(sqlDB)
+	box, err := secrets.New(cfg.EncryptionKey)
+	if err != nil {
+		return nil, err
+	}
+	st.Box = box
+	// Fail fast before anything reads (or could regenerate) a secret.
+	if err := st.VerifyEncryptionKey(ctx); err != nil {
+		return nil, err
+	}
+	if box.Enabled() {
+		n, err := st.ResealSecrets(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("sealing stored secrets: %w", err)
+		}
+		if n > 0 {
+			logger.Info("encrypted previously plaintext secrets at rest", "count", n)
+		}
+	} else {
+		logger.Warn("VIBEMDM_ENCRYPTION_KEY is not set; private keys and FileVault recovery keys are stored unencrypted. Set a long random value to enable at-rest encryption.")
+	}
 	s := &Server{cfg: cfg, log: logger, sqlDB: sqlDB, st: st, mux: http.NewServeMux()}
 
 	if err := s.bootstrap(ctx); err != nil {
@@ -91,10 +112,12 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 
 	// NanoMDM storage sharing our database.
 	nlog := newNanoLogger(logger.With("component", "nanomdm"))
-	mdmStorage, err := pgsql.New(pgsql.WithDB(sqlDB), pgsql.WithLogger(nlog.With("storage", "pgsql")))
+	pgStorage, err := pgsql.New(pgsql.WithDB(sqlDB), pgsql.WithLogger(nlog.With("storage", "pgsql")))
 	if err != nil {
 		return nil, fmt.Errorf("nanomdm storage: %w", err)
 	}
+	// APNs keys are sealed at rest; everything else is NanoMDM's own storage.
+	mdmStorage := &sealedPushStore{PgSQLStorage: pgStorage, st: st}
 
 	// Push
 	// APNs provider. nanopush v0.9 has no URL override, so an alternate push
@@ -113,7 +136,6 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 
 	hooks := webhook.New(sqlDB, logger.With("component", "webhook"))
 	s.hooks = hooks
-
 
 	// Core MDM service chain: certauth -> vibemdm hooks -> nanomdm core.
 	core := nanomdmsvc.New(mdmStorage,

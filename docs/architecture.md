@@ -32,7 +32,15 @@
 - Agent: per-device bearer tokens (hashed at rest), enrollment tokens are consumable invitations or a rotatable secret.
 - MDM: identity certificates are verified against the SCEP CA; NanoMDM's `certauth` binds each enrollment to its
   certificate so devices cannot impersonate one another.
-- The SCEP CA key and APNs key are stored in PostgreSQL; protect database backups accordingly.
+- **Secrets at rest.** With `VIBEMDM_ENCRYPTION_KEY` set, the SCEP CA key, APNs key, APNs request key, FileVault
+  escrow key, profile-signing key and FileVault recovery keys are encrypted with AES-256-GCM before they reach
+  PostgreSQL. Existing plaintext values are sealed automatically at start-up.
+- **Fail-safe start-up.** The server opens every stored ciphertext before doing anything else and refuses to start if
+  the key is wrong or missing. A CA that exists but cannot be read is never replaced; first-boot CA creation is
+  insert-only. Back up the key: without it, stored secrets are unrecoverable.
+- **Key rotation.** Stop the server, then run
+  `VIBEMDM_ENCRYPTION_KEY_OLD=… VIBEMDM_ENCRYPTION_KEY=… vibemdm rotate-encryption-key`. It re-encrypts everything in
+  one transaction and changes nothing if the old key is wrong.
 - TLS is terminated by Caddy (or your proxy). Apple requires a publicly trusted certificate.
 
 ## Not (yet) included
