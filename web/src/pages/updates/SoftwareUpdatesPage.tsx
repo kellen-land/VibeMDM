@@ -33,23 +33,25 @@ import {
   updateStates,
 } from '../../components/updates/updateState'
 import { compactNumber } from '../../lib/format'
+import { SuperTab } from './SuperTab'
 import { cn } from '../../lib/cn'
 
-type TabKey = 'overview' | 'plans'
+type TabKey = 'overview' | 'plans' | 'super'
 
 export function SoftwareUpdatesPage() {
   const { tab } = useParams()
   const navigate = useNavigate()
   const { isAdmin } = useAuth()
-  const active: TabKey = tab === 'plans' ? 'plans' : 'overview'
+  const active: TabKey = tab === 'plans' || tab === 'super' ? tab : 'overview'
   const plans = useUpdatePlans()
   return (
     <>
       <PageHeader
         title="Software Updates"
-        description="Enforce macOS versions and control update behavior with Declarative Device Management."
+        description="Enforce macOS versions and control update behavior with Declarative Device Management, or run the super workflow for friendlier deferrals."
         actions={
-          isAdmin && (
+          isAdmin &&
+          active !== 'super' && (
             <Link to="/updates/plans/new">
               <Button variant="primary" icon={<Plus />}>
                 New plan
@@ -58,17 +60,18 @@ export function SoftwareUpdatesPage() {
           )
         }
       />
-      <SupervisionCallout className="mb-5" />
+      {active !== 'super' && <SupervisionCallout className="mb-5" />}
       <Tabs<TabKey>
         items={[
           { key: 'overview', label: 'Overview' },
           { key: 'plans', label: 'Plans', count: plans.data?.items.length },
+          { key: 'super', label: 'super' },
         ]}
         value={active}
         onChange={(k) => navigate(k === 'overview' ? '/updates' : `/updates/${k}`, { replace: true })}
         className="mb-5"
       />
-      {active === 'overview' ? <OverviewTab /> : <PlansTab />}
+      {active === 'overview' ? <OverviewTab /> : active === 'plans' ? <PlansTab /> : <SuperTab />}
     </>
   )
 }

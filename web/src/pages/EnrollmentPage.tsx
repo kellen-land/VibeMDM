@@ -86,9 +86,11 @@ export function EnrollmentPage() {
         title="Enrollment"
         description="Enroll Macs in MDM with a profile, and install the agent with a one-line command."
         actions={
-          <Button variant="primary" icon={<Download />} loading={downloading} onClick={downloadProfile} disabled={!s?.apns_configured}>
-            Download enrollment profile
-          </Button>
+          isAdmin && (
+            <Button variant="primary" icon={<Download />} loading={downloading} onClick={downloadProfile} disabled={!s?.apns_configured}>
+              Download enrollment profile
+            </Button>
+          )
         }
       />
       {status.isPending && <LoadingBlock />}
@@ -128,7 +130,10 @@ export function EnrollmentPage() {
               <CardBody className="flex flex-col gap-5">
                 <div>
                   <p className="text-sm font-medium text-ink">1. MDM enrollment profile</p>
-                  <p className="mt-0.5 text-xs text-ink-muted">Download the profile and open it on the Mac, or share the enrollment URL. The user approves it in System Settings → Profiles.</p>
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    {isAdmin ? 'Download the profile and open it on the Mac, or share the enrollment URL.' : 'Share the enrollment URL, or ask an administrator for the profile.'} The user approves it in System Settings → Profiles.
+                  </p>
+                  {isAdmin && <p className="mt-1 text-xs text-ink-muted">Each download contains a one-time SCEP challenge valid for 7 days.</p>}
                   <div className="mt-2 flex items-center gap-2">
                     <Input readOnly mono value={s.enroll_url} className="flex-1" />
                     <CopyButton text={s.enroll_url} />

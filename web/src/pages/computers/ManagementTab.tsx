@@ -19,6 +19,7 @@ import {
   Zap,
   ListChecks,
   FileCode,
+  KeyRound,
 } from 'lucide-react'
 import type { CheckinResponse, ComputerDetail, CreateTaskRequest, SendCommandRequest, SendCommandResponse } from '../../api/types'
 import { api, errorMessage } from '../../api/client'
@@ -51,6 +52,7 @@ type DialogKind =
   | 'logout'
   | 'agent-restart'
   | 'agent-shutdown'
+  | 'reset-agent'
   | 'raw'
   | null
 
@@ -129,6 +131,20 @@ export function ManagementTab({ c }: { c: ComputerDetail }) {
     }
   }
 
+  const resetAgent = async () => {
+    setBusy('reset-agent')
+    try {
+      await api.post(`/api/v1/computers/${c.id}/reset-agent`)
+      toast.success('Agent token revoked', 'Reinstall the agent on this Mac to enroll it again.')
+      await invalidate(qk.computer(c.id), ['computers'], qk.dashboard)
+      close()
+    } catch (e) {
+      toast.error('Reset agent failed', errorMessage(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
   if (!isAdmin) {
     return (
       <CardBody>
@@ -186,9 +202,20 @@ export function ManagementTab({ c }: { c: ComputerDetail }) {
           <Action icon={<LogOut />} label="Log out user" description="Log out the current console user." onClick={() => setDialog('logout')} disabled={agentOff} />
           <Action icon={<RotateCcw />} label="Restart (agent)" description="Ask the agent to restart the Mac, with an optional message." onClick={() => setDialog('agent-restart')} disabled={agentOff} />
           <Action icon={<Power />} label="Shut down (agent)" description="Ask the agent to shut the Mac down." onClick={() => setDialog('agent-shutdown')} disabled={agentOff} />
+          <Action icon={<KeyRound />} label="Reset agent" description="Revoke the agent token before reinstalling the agent." onClick={() => setDialog('reset-agent')} loading={busy === 'reset-agent'} disabled={agentOff} danger />
         </Section>
       </CardBody>
 
+      <ConfirmDialog
+        open={dialog === 'reset-agent'}
+        onClose={close}
+        destructive
+        title="Reset this Mac's agent?"
+        description="Revokes this Mac's agent token. Use it before reinstalling the agent (for example after erasing the Mac). The current agent stops working immediately."
+        confirmLabel="Reset agent"
+        onConfirm={resetAgent}
+        loading={busy === 'reset-agent'}
+      />
       <LockDialog open={dialog === 'lock'} onClose={close} busy={busy === 'DeviceLock'} onSubmit={(pin, message, phone) => sendCommand({ type: 'DeviceLock', pin, message, phone }, 'Lock')} />
       <ConfirmDialog open={dialog === 'restart'} onClose={close} title="Restart this computer?" description="The device will restart immediately when it receives the command. Unsaved work may be lost." confirmLabel="Restart" onConfirm={() => sendCommand({ type: 'RestartDevice' }, 'Restart')} loading={busy === 'RestartDevice'} />
       <ConfirmDialog open={dialog === 'shutdown'} onClose={close} title="Shut down this computer?" description="The device will shut down immediately when it receives the command." confirmLabel="Shut down" onConfirm={() => sendCommand({ type: 'ShutDownDevice' }, 'Shut down')} loading={busy === 'ShutDownDevice'} />

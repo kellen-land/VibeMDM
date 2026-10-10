@@ -1,10 +1,35 @@
 export class ApiError extends Error {
   status: number
-  constructor(status: number, message: string) {
+  /** Parsed JSON error body, when the server sent one (e.g. {error, errors:[{path,message}]}). */
+  body?: unknown
+  constructor(status: number, message: string, body?: unknown) {
     super(message)
     this.status = status
     this.name = 'ApiError'
+    this.body = body
   }
+}
+
+/** Field-level validation errors carried by a 400 response, if any. */
+export function fieldErrors(err: unknown): { path: string; message: string }[] {
+  if (!(err instanceof ApiError)) return []
+  const b = err.body as { errors?: unknown } | undefined
+  if (!b || !Array.isArray(b.errors)) return []
+  return b.errors.filter((e): e is { path: string; message: string } => !!e && typeof e === 'object' && typeof (e as { path?: unknown }).path === 'string')
+}
+
+export const PASSWORD_CHANGE_REQUIRED = 'password change required'
+
+let passwordChangeHandler: (() => void) | null = null
+
+/** Called whenever any request fails with 403 "password change required". */
+export function setPasswordChangeHandler(fn: (() => void) | null) {
+  passwordChangeHandler = fn
+}
+
+/** True for the 403 the server returns while the signed-in account must choose a new password. */
+export function isPasswordChangeRequired(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 403 && err.message === PASSWORD_CHANGE_REQUIRED
 }
 
 type Query = Record<string, string | number | boolean | undefined | null | string[]>
@@ -33,14 +58,19 @@ function handleUnauthorized(path: string) {
   window.location.assign(`/login?next=${encodeURIComponent(next)}`)
 }
 
-async function parseError(res: Response): Promise<string> {
+async function parseErrorBody(res: Response): Promise<{ message: string; body?: unknown }> {
   try {
     const body = (await res.json()) as { error?: string }
-    if (body && typeof body.error === 'string') return body.error
+    if (body && typeof body.error === 'string') return { message: body.error, body }
+    return { message: res.statusText || `Request failed (${res.status})`, body }
   } catch {
     /* ignore */
   }
-  return res.statusText || `Request failed (${res.status})`
+  return { message: res.statusText || `Request failed (${res.status})` }
+}
+
+async function parseError(res: Response): Promise<string> {
+  return (await parseErrorBody(res)).message
 }
 
 export interface RequestOptions {
@@ -68,7 +98,9 @@ async function request<T>(method: string, path: string, body?: unknown, opts?: R
     throw new ApiError(401, 'Not authenticated')
   }
   if (!res.ok) {
-    throw new ApiError(res.status, await parseError(res))
+    const { message, body: errBody } = await parseErrorBody(res)
+    if (res.status === 403 && message === PASSWORD_CHANGE_REQUIRED) passwordChangeHandler?.()
+    throw new ApiError(res.status, message, errBody)
   }
   if (res.status === 204) return undefined as T
   const text = await res.text()

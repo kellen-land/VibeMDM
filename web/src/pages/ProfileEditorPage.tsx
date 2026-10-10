@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Download, RefreshCw, Save, Trash2, Upload, X } from 'lucide-react'
-import { qk, useInvalidate, useProfile, useProfileDeployments } from '../api/queries'
+import { Download, FileCode2, RefreshCw, Save, Trash2, Upload, X } from 'lucide-react'
+import { qk, useCustomSchema, useInvalidate, useProfile, useProfileDeployments } from '../api/queries'
 import { api, errorMessage, saveText } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { emptyScope, normalizeScope, type ConfigProfile, type ProfileDeployment, type Scope } from '../api/types'
@@ -22,6 +22,7 @@ import { useToast } from '../components/ui/Toast'
 import { CodeEditor } from '../components/CodeEditor'
 import { ScopeEditor } from '../components/pickers/ScopeEditor'
 import { DeploymentCounts } from './ProfilesPage'
+import { managedProfiles, schemaIdFromSource } from '../components/schema/schema'
 import { Link } from 'react-router-dom'
 
 type Tab = 'general' | 'scope' | 'deployments'
@@ -79,6 +80,8 @@ export function ProfileEditorPage() {
     }
   }, [profile.data])
 
+  const schemaId = schemaIdFromSource(profile.data?.schema_source)
+  const schemaInfo = useCustomSchema(schemaId)
   const meta = useMemo(() => parsePayloadMeta(payload), [payload])
   const payloadLooksValid = payload.trim() === '' || (meta.type === 'Configuration' && !!meta.identifier)
 
@@ -126,6 +129,10 @@ export function ProfileEditorPage() {
   if (!isNew && profile.error) return <Alert tone="critical">{errorMessage(profile.error)}</Alert>
   const ro = !isAdmin
   const p = profile.data
+  const managed = p ? managedProfiles[p.identifier] : undefined
+  const fromSchema = !!p?.schema_source
+  const detaches = fromSchema && payload !== (p?.payload ?? '') && payload.trim() !== ''
+  const schemaName = schemaInfo.data?.name ?? (schemaInfo.isError ? 'a deleted schema' : schemaId ?? '')
 
   return (
     <>
@@ -142,16 +149,23 @@ export function ProfileEditorPage() {
           ) : undefined
         }
         actions={
-          isAdmin && (
+          (isAdmin || fromSchema) && (
             <>
-              {!isNew && (
+              {fromSchema && p && (
+                <Link to={managed ? managed.to : `/profiles/${p.id}/schema`}>
+                  <Button icon={<FileCode2 />}>{managed ? `Open ${managed.label.split(' → ')[1]}` : isAdmin ? 'Edit with form' : 'View form'}</Button>
+                </Link>
+              )}
+              {isAdmin && !isNew && (
                 <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDel(true)}>
                   Delete
                 </Button>
               )}
-              <Button variant="primary" icon={<Save />} loading={saving} onClick={save} disabled={!payloadLooksValid && payload.trim() !== ''}>
-                {isNew ? 'Create profile' : 'Save changes'}
-              </Button>
+              {isAdmin && (
+                <Button variant="primary" icon={<Save />} loading={saving} onClick={save} disabled={!payloadLooksValid && payload.trim() !== ''}>
+                  {isNew ? 'Create profile' : 'Save changes'}
+                </Button>
+              )}
             </>
           )
         }
@@ -160,6 +174,13 @@ export function ProfileEditorPage() {
 
       {tab === 'general' && (
         <div className="flex flex-col gap-6">
+          {fromSchema && p && (
+            <Alert tone="info" title={managed ? `Managed by ${managed.label}` : `Built from schema: ${schemaName}`}>
+              {managed
+                ? 'This profile is generated from its own settings page. Change it there; editing the XML here would detach it from that page.'
+                : 'Use “Edit with form” to change its settings. You can still edit the XML below, but saving XML changes detaches the profile from the form.'}
+            </Alert>
+          )}
           <Card>
             <CardHeader title="General" />
             <CardBody>
@@ -210,6 +231,11 @@ export function ProfileEditorPage() {
                 </Alert>
               )}
               {!isNew && payload.trim() === '' && <Alert tone="info">Leave the payload empty to keep the existing one on save.</Alert>}
+              {detaches && (
+                <Alert tone="warning" title="Saving will detach the form">
+                  You changed the XML of a profile built from {managed ? managed.label : `the ${schemaName} schema`}. After saving, it can no longer be edited with the form.
+                </Alert>
+              )}
               <FormGrid cols={3}>
                 <Field label="Identifier">
                   <Input readOnly mono value={meta.identifier ?? p?.identifier ?? ''} placeholder="Parsed from payload" />

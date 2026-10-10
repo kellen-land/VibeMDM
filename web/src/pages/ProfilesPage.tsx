@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import { FileCode2, Plus, ShieldCheck, SlidersHorizontal, Trash2 } from 'lucide-react'
 import { qk, useInvalidate, useProfiles } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -65,13 +65,18 @@ export function ProfilesPage() {
         title="Configuration Profiles"
         description="Managed settings delivered to scoped computers through MDM."
         actions={
-          isAdmin && (
-            <Link to="/profiles/new">
-              <Button variant="primary" icon={<Plus />}>
-                New profile
-              </Button>
+          <>
+            <Link to="/profiles/custom-settings">
+              <Button icon={<SlidersHorizontal />}>Application &amp; Custom Settings</Button>
             </Link>
-          )
+            {isAdmin && (
+              <Link to="/profiles/new">
+                <Button variant="primary" icon={<Plus />}>
+                  New profile
+                </Button>
+              </Link>
+            )}
+          </>
         }
       />
       <Card>
@@ -103,7 +108,14 @@ export function ProfilesPage() {
                 <span className="flex items-center gap-2.5">
                   <ShieldCheck className="size-4 text-ink-faint" />
                   <span className="min-w-0">
-                    <span className="block font-medium text-ink">{p.name}</span>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-ink">{p.name}</span>
+                      {p.schema_source && (
+                        <Badge icon={<FileCode2 />} title="Built from a JSON schema form">
+                          Form
+                        </Badge>
+                      )}
+                    </span>
                     <span className="block text-xs text-ink-muted font-mono truncate max-w-xs">{p.identifier}</span>
                   </span>
                 </span>

@@ -1,18 +1,18 @@
 - [x] Escrow of PRK FileVault Keys
     - Potentially utilize a system similar to Escrow Buddy (Netflix's implementaton) for un-escrowed PRKs and auto detection and remediation.
     - Built native PRK escrow via a built-in FDERecoveryKeyEscrow profile that decrypts and seals each Mac's key from SecurityInfo, with Escrow Buddy auto-remediation (installed through Installomator) for Macs missing a key and an audited, admin-only key reveal.
-- [ ] Fork XCreds and integrate it as a native feature in the platform
-    - In progress: XCreds is integrated natively (Installomator install + settings profile from a bundled schema, license upload) via /api/v1/identity/xcreds; the Identity UI is next. Forking/rebuilding the Swift app itself isn't possible here (no macOS/Xcode).
+- [x] Fork XCreds and integrate it as a native feature in the platform
+    - Integrated XCreds (BSD-3-Clause) natively rather than forking it: an Identity page with Entra ID/Google/Okta presets installs XCreds through Installomator and configures it with a managed-preferences profile built from a bundled schema, including license upload and app install status.
 - [x] Installomator policies built-in
     - Vendored Installomator v10.8 and wired it into the Mac Apps catalog, policy "Apps" steps, and Self Service, with per-app options and server-built, single-quoted arguments that block eval injection.
     - [x] Tool or editor in the webUI for building custom labels?
         - Added a Custom Labels editor that defines labels through Installomator's valuesfromarguments mechanism, with strict validation, a required Team ID, and a live command preview.
 - [x] Seamlessly integrate the macOS Security Compliance project as a native feature with rich reporting and easy GUI configuration
     - Embedded the mSCP release_27.0 catalog (CC BY 4.0) and built tailorable, scoped compliance baselines that the agent scans on a schedule with optional fix-script remediation, an auto-generated enforcement profile, fleet/rule/computer reports with drift tracking and CSV export, and Health checks for drift and failing scans.
-- [ ] Accept Jamf custom application JSON schemas for configuration profile building in the web GUI
-    - In progress: schema engine, upload/preview/profile API and schema-linked profiles are done; the web form editor is next.
-- [ ] Option for DDM with integrated S.U.P.E.R.M.A.N. for macOS updates/end user notification and scheduling. Make this native to the platform.
-    - In progress: native DDM plans plus super 5.1.2 deployment (checksum-pinned install, sealed auth, settings profile, status in inventory) are done on the server; the Software Updates → super UI is next.
+- [x] Accept Jamf custom application JSON schemas for configuration profile building in the web GUI
+    - Built a JSON-schema engine for Jamf-style Application & Custom Settings schemas (json-editor subset, validation and plist coercion, deterministic MCX profiles), schema upload/preview APIs, a form renderer that reopens schema-built profiles for editing, and bundled schemas for super and XCreds.
+- [x] Option for DDM with integrated S.U.P.E.R.M.A.N. for macOS updates/end user notification and scheduling. Make this native to the platform.
+    - Added native DDM software update enforcement/settings plans and a super (Apache-2.0) deployment that installs a checksum-pinned super 5.1.2 through the agent with optional sealed local/service authentication, configures it with a schema-built settings profile, and reports its status per Mac in a Software Updates → super tab.
 - [x] Rich server logging and endpoint agent logging. Rock solid and reliable with options to collect logs for archiving but dyanmic and deeply searchable in a slick, native way.
     - Added non-blocking database logging for the server, offline-tolerant log shipping from agents, a Logs console with live tail and full-text search, gzipped exports and daily archives, and on-demand diagnostic bundles that include the Mac's mdmclient log.
 - [x] Check security/ensure hardening

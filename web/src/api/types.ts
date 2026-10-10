@@ -25,6 +25,8 @@ export interface AdminUser {
   created_at: string
   last_login_at: string | null
   via?: string
+  /** Bootstrap accounts must choose a new password; every other API call answers 403 until they do. */
+  must_change_password?: boolean
 }
 
 export interface PublicStatus {
@@ -294,6 +296,9 @@ export interface ConfigProfile {
   level: 'device' | 'user' | ''
   payload?: string
   scope: Scope
+  /** "" | "custom:<uuid>" | "builtin:<domain>" when the profile was built from a JSON schema form. */
+  schema_source?: string
+  schema_values?: Record<string, unknown> | null
   created_at: string
   updated_at: string
 }
@@ -1540,4 +1545,170 @@ export interface ComputerComplianceRow {
   baseline: ComplianceBaseline
   in_scope: boolean
   summary: Omit<ComplianceComputerSummary, 'computer_id' | 'computer_name' | 'serial_number' | 'os_version'> | null
+}
+
+// ---- Application & Custom Settings: JSON schema profiles (internal/api/schemas.go, internal/schema) ----
+
+/** One node of a Jamf-style "external application" schema (a json-editor subset of JSON Schema). */
+export interface SchemaNode {
+  title?: string
+  description?: string
+  type?: string | string[]
+  properties?: Record<string, SchemaNode>
+  items?: SchemaNode
+  enum?: unknown[]
+  default?: unknown
+  minimum?: number
+  maximum?: number
+  minLength?: number
+  maxLength?: number
+  minItems?: number
+  maxItems?: number
+  pattern?: string
+  /** VibeMDM extension: "data" marks a base64 string delivered as plist <data>. */
+  format?: string
+  required?: string[]
+  property_order?: number
+  propertyOrder?: number
+  anyOf?: SchemaNode[]
+  oneOf?: SchemaNode[]
+  links?: { rel?: string; href: string }[]
+  options?: {
+    enum_titles?: string[]
+    infoText?: string
+    inputAttributes?: { placeholder?: string; [k: string]: unknown }
+    remove_empty_properties?: boolean
+    [k: string]: unknown
+  }
+}
+
+export interface JSONSchemaDoc extends SchemaNode {
+  __preferencedomain?: string
+  __version?: string
+}
+
+/** api.schemaView. Built-in ids look like "builtin:com.macjutsu.super"; custom ids are UUIDs. */
+export interface CustomSchemaSummary {
+  id: string
+  name: string
+  preference_domain: string
+  builtin: boolean
+  title: string
+  description: string
+  properties: number
+  profiles: number
+  updated_at?: string
+}
+
+export interface CustomSchemaDetail extends CustomSchemaSummary {
+  schema: JSONSchemaDoc
+}
+
+/** Validation problem at a path like "key", "parent.child" or "list[0].key". */
+export interface SchemaFieldError {
+  path: string
+  message: string
+}
+
+export interface SchemaPreview {
+  values: Record<string, unknown>
+  errors: SchemaFieldError[]
+  payload: string
+}
+
+export type SchemaValues = Record<string, unknown>
+
+// ---- Software updates → super (internal/api/super.go) ----
+
+export type SuperAuthMode = 'none' | 'local' | 'service'
+
+export interface SuperConfig {
+  enabled: boolean
+  scope: Scope
+  auth_mode: SuperAuthMode
+  auth_account: string
+  has_password: boolean
+  profile_id: string | null
+  version: string
+  updated_at: string
+}
+
+export interface SuperView {
+  config: SuperConfig
+  values: SchemaValues
+  schema_id: string
+  version: string
+  script_url: string
+  sha256: string
+  license: string
+  project: string
+}
+
+export interface SuperSaveRequest {
+  enabled: boolean
+  scope: Scope
+  auth_mode: SuperAuthMode
+  auth_account: string
+  /** Omit to keep the stored password; "" clears it. */
+  auth_password?: string
+  values: SchemaValues
+}
+
+export type SuperState = 'current' | 'outdated' | 'missing'
+
+/** The super.plist keys the agent reports (all optional, strings as super writes them). */
+export interface SuperReport {
+  SuperVersion?: string
+  SuperStatus?: string
+  NextAutoLaunch?: string
+  DeadlineCounterSoft?: string | number
+  DeadlineCounterHard?: string | number
+  DeadlineCounterFocus?: string | number
+  WorkflowTarget?: string
+  LastSuccessfulCheckDate?: string
+  [k: string]: unknown
+}
+
+export interface SuperStatusRow {
+  computer_id: string
+  computer_name: string
+  os_version: string
+  agent_recent: boolean
+  super: SuperReport | null
+  last_inventory_at: string | null
+  state: SuperState
+}
+
+export interface SuperStatus {
+  summary: { targeted: number; current: number; outdated: number; missing: number }
+  computers: SuperStatusRow[]
+  version: string
+  enabled: boolean
+}
+
+export interface SuperInstallResult {
+  queued: number
+  skipped?: Record<string, string> | null
+}
+
+// ---- Identity → XCreds (internal/api/identity.go) ----
+
+export interface XCredsView {
+  enabled: boolean
+  scope: Scope
+  /** LicenseFile is always "" here; check has_license. */
+  values: SchemaValues
+  schema_id: string
+  profile_id: string | null
+  app: { id: string; enabled: boolean; status: Record<string, number> | null } | null
+  has_license?: boolean
+  license: string
+  project: string
+}
+
+export interface XCredsSaveRequest {
+  enabled: boolean
+  scope: Scope
+  values: SchemaValues
+  install_app: boolean
 }

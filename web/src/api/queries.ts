@@ -70,6 +70,13 @@ import type {
   ComplianceScan,
   ComplianceProfilePreview,
   ComputerComplianceRow,
+  CustomSchemaSummary,
+  CustomSchemaDetail,
+  SchemaPreview,
+  SchemaValues,
+  SuperView,
+  SuperStatus,
+  XCredsView,
 } from './types'
 
 export const qk = {
@@ -159,7 +166,19 @@ export const qk = {
   complianceScans: (id: string, p?: object) => ['compliance', 'baseline', id, 'scans', p ?? {}] as const,
   complianceProfile: (id: string) => ['compliance', 'baseline', id, 'profile'] as const,
   computerCompliance: (id: string) => ['computer', id, 'compliance'] as const,
+  /** Prefix for every custom-schema query. */
+  customSchemas: ['custom-schemas'] as const,
+  customSchema: (id: string) => ['custom-schemas', id] as const,
+  schemaPreview: (id: string, body: object) => ['custom-schemas', id, 'preview', body] as const,
+  /** Prefix for super config + status. */
+  superAll: ['super'] as const,
+  superConfig: ['super', 'config'] as const,
+  superStatus: ['super', 'status'] as const,
+  xcreds: ['identity', 'xcreds'] as const,
 }
+
+/** Path segment for a schema id; built-in ids contain a colon, so always encode. */
+export const schemaPath = (id: string) => `/api/v1/custom-schemas/${encodeURIComponent(id)}`
 
 type Opts<T> = Omit<UseQueryOptions<T>, 'queryKey' | 'queryFn'>
 
@@ -578,4 +597,43 @@ export function useComplianceProfile(id: string | undefined, enabled = true) {
 
 export function useComputerCompliance(id: string) {
   return useQuery({ queryKey: qk.computerCompliance(id), queryFn: () => api.get<ComputerComplianceRow[]>(`/api/v1/computers/${id}/compliance`), enabled: !!id, refetchInterval: 30_000 })
+}
+
+// ---- Application & Custom Settings (JSON schema profiles) ----
+
+export function useCustomSchemas() {
+  return useQuery({ queryKey: qk.customSchemas, queryFn: () => api.get<CustomSchemaSummary[]>('/api/v1/custom-schemas') })
+}
+
+/** Built-in schemas never change while the server runs; custom ones only change through this console. */
+export function useCustomSchema(id: string | undefined | null) {
+  return useQuery({ queryKey: qk.customSchema(id ?? ''), queryFn: () => api.get<CustomSchemaDetail>(schemaPath(id ?? '')), enabled: !!id, staleTime: 5 * 60_000 })
+}
+
+/** Live profile preview. Pass a debounced body; null disables. */
+export function useSchemaPreview(id: string | undefined | null, body: { name: string; values: SchemaValues } | null) {
+  return useQuery({
+    queryKey: qk.schemaPreview(id ?? '', body ?? {}),
+    queryFn: () => api.post<SchemaPreview>(`${schemaPath(id ?? '')}/preview`, body),
+    enabled: !!id && !!body,
+    retry: false,
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
+  })
+}
+
+// ---- Software updates → super ----
+
+export function useSuper() {
+  return useQuery({ queryKey: qk.superConfig, queryFn: () => api.get<SuperView>('/api/v1/updates/super') })
+}
+
+export function useSuperStatus() {
+  return useQuery({ queryKey: qk.superStatus, queryFn: () => api.get<SuperStatus>('/api/v1/updates/super/status'), refetchInterval: 30_000 })
+}
+
+// ---- Identity → XCreds ----
+
+export function useXCreds() {
+  return useQuery({ queryKey: qk.xcreds, queryFn: () => api.get<XCredsView>('/api/v1/identity/xcreds'), refetchInterval: 30_000 })
 }

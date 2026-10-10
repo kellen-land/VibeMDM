@@ -39,12 +39,18 @@ import { CompliancePage } from './pages/compliance/CompliancePage'
 import { BaselineEditorPage } from './pages/compliance/BaselineEditorPage'
 import { BaselineReportPage } from './pages/compliance/BaselineReportPage'
 import { BaselineComputerPage } from './pages/compliance/BaselineComputerPage'
+import { CustomSettingsPage } from './pages/profiles/CustomSettingsPage'
+import { SchemaProfileEditorPage } from './pages/profiles/SchemaProfileEditorPage'
+import { XCredsPage } from './pages/identity/XCredsPage'
+import { ForcePasswordChangePage } from './pages/ForcePasswordChangePage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const loc = useLocation()
   if (loading) return <LoadingBlock className="h-screen" />
   if (!user) return <Navigate to={`/login?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace />
+  // Bootstrap accounts must choose a new password before anything else works.
+  if (user.must_change_password) return <ForcePasswordChangePage />
   return <>{children}</>
 }
 
@@ -79,7 +85,10 @@ export function App() {
         <Route path="/scripts/:id" element={<ScriptEditorPage />} />
         <Route path="/profiles" element={<ProfilesPage />} />
         <Route path="/profiles/new" element={<ProfileEditorPage />} />
+        <Route path="/profiles/custom-settings" element={<CustomSettingsPage />} />
+        <Route path="/profiles/custom-settings/:schemaId/new" element={<SchemaProfileEditorPage />} />
         <Route path="/profiles/:id" element={<ProfileEditorPage />} />
+        <Route path="/profiles/:id/schema" element={<SchemaProfileEditorPage />} />
         <Route path="/packages" element={<PackagesPage />} />
         <Route path="/extension-attributes" element={<ExtensionAttributesPage />} />
         <Route path="/extension-attributes/new" element={<ExtensionAttributeEditorPage />} />
@@ -103,6 +112,8 @@ export function App() {
         <Route path="/updates/plans/new" element={<UpdatePlanEditorPage />} />
         <Route path="/updates/plans/:id" element={<UpdatePlanEditorPage />} />
         <Route path="/updates/:tab" element={<SoftwareUpdatesPage />} />
+        <Route path="/identity" element={<Navigate to="/identity/xcreds" replace />} />
+        <Route path="/identity/xcreds" element={<XCredsPage />} />
         <Route path="/compliance" element={<CompliancePage />} />
         <Route path="/compliance/new" element={<BaselineEditorPage />} />
         <Route path="/compliance/:id" element={<BaselineReportPage />} />
