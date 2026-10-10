@@ -24,29 +24,29 @@ import (
 
 // Node is one schema node.
 type Node struct {
-	Title         string           `json:"title,omitempty"`
-	Description   string           `json:"description,omitempty"`
-	Type          any              `json:"type,omitempty"` // string or []string
-	Properties    map[string]*Node `json:"properties,omitempty"`
-	Items         *Node            `json:"items,omitempty"`
-	Enum          []any            `json:"enum,omitempty"`
-	Default       any              `json:"default,omitempty"`
-	Minimum       *float64         `json:"minimum,omitempty"`
-	Maximum       *float64         `json:"maximum,omitempty"`
-	MinLength     *int             `json:"minLength,omitempty"`
-	MaxLength     *int             `json:"maxLength,omitempty"`
-	MinItems      *int             `json:"minItems,omitempty"`
-	MaxItems      *int             `json:"maxItems,omitempty"`
-	Pattern       string           `json:"pattern,omitempty"`
+	Title       string           `json:"title,omitempty"`
+	Description string           `json:"description,omitempty"`
+	Type        any              `json:"type,omitempty"` // string or []string
+	Properties  map[string]*Node `json:"properties,omitempty"`
+	Items       *Node            `json:"items,omitempty"`
+	Enum        []any            `json:"enum,omitempty"`
+	Default     any              `json:"default,omitempty"`
+	Minimum     *float64         `json:"minimum,omitempty"`
+	Maximum     *float64         `json:"maximum,omitempty"`
+	MinLength   *int             `json:"minLength,omitempty"`
+	MaxLength   *int             `json:"maxLength,omitempty"`
+	MinItems    *int             `json:"minItems,omitempty"`
+	MaxItems    *int             `json:"maxItems,omitempty"`
+	Pattern     string           `json:"pattern,omitempty"`
 	// Format "data" (VibeMDM extension): a base64 string emitted as plist <data>.
-	Format string `json:"format,omitempty"`
-	Required      []string         `json:"required,omitempty"`
-	PropertyOrder *int             `json:"property_order,omitempty"`
-	PropertyOrd2  *int             `json:"propertyOrder,omitempty"`
-	AnyOf         []*Node          `json:"anyOf,omitempty"`
-	OneOf         []*Node          `json:"oneOf,omitempty"`
-	Links         []Link           `json:"links,omitempty"`
-	Options       *Options         `json:"options,omitempty"`
+	Format        string   `json:"format,omitempty"`
+	Required      []string `json:"required,omitempty"`
+	PropertyOrder *int     `json:"property_order,omitempty"`
+	PropertyOrd2  *int     `json:"propertyOrder,omitempty"`
+	AnyOf         []*Node  `json:"anyOf,omitempty"`
+	OneOf         []*Node  `json:"oneOf,omitempty"`
+	Links         []Link   `json:"links,omitempty"`
+	Options       *Options `json:"options,omitempty"`
 
 	re *regexp.Regexp
 }
