@@ -375,6 +375,7 @@ func (h *Handler) enrollmentStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	if auth.FromContext(r.Context()).IsAdmin() {
 		out["install_command"] = fmt.Sprintf(`curl -fsSL "%s/agent/install.sh?token=%s" | sudo bash`, s.ServerURL, s.AgentEnrollmentSecret)
+		out["configurator_url"] = fmt.Sprintf("%s/enroll/configurator/%s", s.ServerURL, s.AgentEnrollmentSecret)
 	}
 	writeJSON(w, 200, out)
 }
@@ -424,8 +425,9 @@ func (h *Handler) createInvitation(w http.ResponseWriter, r *http.Request) {
 	h.st.Audit(r.Context(), actor(r), "enrollment.invitation_create", "invitation", inv.ID, map[string]any{"name": inv.Name})
 	writeJSON(w, 201, map[string]any{
 		"invitation": inv, "token": tok,
-		"enroll_url":      fmt.Sprintf("%s/enroll?token=%s", s.ServerURL, tok),
-		"install_command": fmt.Sprintf(`curl -fsSL "%s/agent/install.sh?token=%s" | sudo bash`, s.ServerURL, tok),
+		"enroll_url":       fmt.Sprintf("%s/enroll?token=%s", s.ServerURL, tok),
+		"install_command":  fmt.Sprintf(`curl -fsSL "%s/agent/install.sh?token=%s" | sudo bash`, s.ServerURL, tok),
+		"configurator_url": fmt.Sprintf("%s/enroll/configurator/%s", s.ServerURL, tok),
 	})
 }
 

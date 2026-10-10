@@ -110,3 +110,34 @@ func (s *Server) enrollProfileHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", `attachment; filename="`+settings.OrgName+` Enrollment.mobileconfig"`)
 	w.Write(b)
 }
+
+// configuratorProfileHandler serves the enrollment profile to Apple
+// Configurator's Prepare workflow ("Define a new MDM server" → enrollment URL).
+// The token is in the path because Configurator stores the URL verbatim.
+// Invitations are checked, not consumed: Configurator fetches once per batch.
+func (s *Server) configuratorProfileHandler(w http.ResponseWriter, r *http.Request) {
+	settings, err := s.st.GetSettings(r.Context())
+	if err != nil {
+		http.Error(w, "server error", 500)
+		return
+	}
+	token := r.PathValue("token")
+	ok := settings.OpenEnrollment
+	if !ok && token != "" {
+		if _, err := s.st.CheckInvitation(r.Context(), store.HashToken(token)); err == nil || (settings.AgentEnrollmentSecret != "" && token == settings.AgentEnrollmentSecret) {
+			ok = true
+		}
+	}
+	if !ok {
+		http.Error(w, "invalid or expired enrollment token", http.StatusForbidden)
+		return
+	}
+	b, err := s.enrollmentProfile(r.Context())
+	if err != nil {
+		http.Error(w, "enrollment is not fully configured: "+err.Error(), http.StatusServiceUnavailable)
+		return
+	}
+	s.st.Audit(r.Context(), "configurator", "enrollment.configurator_profile", "enrollment", "", map[string]any{"ip": r.RemoteAddr, "user_agent": r.UserAgent()})
+	w.Header().Set("Content-Type", "application/x-apple-aspen-config")
+	w.Write(b)
+}

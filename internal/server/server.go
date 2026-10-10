@@ -174,6 +174,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	// Enrollment page & profile
 	s.mux.HandleFunc("GET /enroll", s.enrollHandler)
 	s.mux.HandleFunc("GET /enroll/profile", s.enrollProfileHandler)
+	s.mux.HandleFunc("GET /enroll/configurator/{token}", s.configuratorProfileHandler)
 
 	// Agent API
 	notifier := agentapi.NewNotifier()
