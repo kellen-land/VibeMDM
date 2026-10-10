@@ -9,4 +9,6 @@
 - [ ] Rich server logging and endpoint agent logging. Rock solid and reliable with options to collect logs for archiving but dyanmic and deeply searchable in a slick, native way.
 - [ ] Check security/ensure hardening
 - [ ] A native white glove enrollment guide like Jamf Setup Manager utilizing Swift Dialog with native, easy to configure profiles in the GUI.
-- Enrollment via Apple Configurator being preferred due to not having access to an Apple Business account.
+- [ ] Enrollment via Apple Configurator being preferred due to not having access to an Apple Business account.
+- [ ] Build an MDM command inspector that traces each command end to end—queueing, APNs wake-up, device check-in, delivered plist, response, and follow-up—with a per-device timeline, readable summaries, searchable raw payloads, and sensitive data redacted by default.
+- [ ] Very detailed admin manual with all components explained and a CLI list, man page, and ensure the agent has a good help menu. This project is partially a tool to help me learn the Apple MDM protocol and get ready for both of the Apple IT certifications.

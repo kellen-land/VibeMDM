@@ -45,6 +45,7 @@ type device struct {
 	key      *rsa.PrivateKey
 	cert     *x509.Certificate
 	profiles map[string]map[string]any // identifier -> payload dict
+	violated map[string]bool           // restricted rule IDs already reported
 	server   string
 	topic    string
 	client   *http.Client
@@ -114,7 +115,7 @@ func newDevice(i int, prefix, server, topic string, logger *slog.Logger) *device
 	serial := fmt.Sprintf("SIM%07d", 1000000+i*7919%9000000)
 	udid := fmt.Sprintf("%08X-SIM0-4000-8000-%012d", 0x5A000000+i, i)
 	d := &device{idx: i, udid: udid, serial: serial, name: fmt.Sprintf("%s-Mac-%02d", prefix, i), model: m.id, osVer: o.v, build: o.b,
-		profiles: map[string]map[string]any{}, server: strings.TrimRight(server, "/"), topic: topic,
+		profiles: map[string]map[string]any{}, violated: map[string]bool{}, server: strings.TrimRight(server, "/"), topic: topic,
 		client: &http.Client{Timeout: 60 * time.Second}, log: logger.With("device", fmt.Sprintf("%s-Mac-%02d", prefix, i))}
 	return d
 }
@@ -440,6 +441,20 @@ func (d *device) agentLoop(ctx context.Context, interval time.Duration) {
 		}
 		for _, t := range resp.Tasks {
 			d.runTask(ctx, c, t)
+		}
+		for _, app := range resp.AppInstalls {
+			d.log.Info("simulating app install", "app", app.Name, "label", app.Label)
+			c.SubmitAppInstallResult(ctx, app.LogID, "completed", "[simulator] Installomator "+app.Label+": installed")
+		}
+		if n := len(resp.RestrictedSoftware); n > 0 && d.idx == 1 {
+			// First simulated Mac "violates" each rule once so the console has data.
+			for _, ru := range resp.RestrictedSoftware {
+				if _, done := d.violated[ru.ID]; done {
+					continue
+				}
+				d.violated[ru.ID] = true
+				c.ReportRestricted(ctx, model.AgentRestrictedReport{RuleID: ru.ID, RuleName: ru.Name, Process: ru.ProcessName, Username: user, Killed: ru.KillProcess})
+			}
 		}
 		if resp.InventoryRequested {
 			d.inventory(ctx, c, user)
