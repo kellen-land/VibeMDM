@@ -66,10 +66,14 @@ certificate that macOS trusts; self-signed certificates do not work for MDM.
 cmd/vibemdm         server binary        internal/mdmsvc    NanoMDM wrapper: inventory + command results
 cmd/vibemdm-agent   macOS agent          internal/scepsrv   SCEP server / CA
 cmd/vibemdm-sim     fake-Mac simulator   internal/policy    policy evaluation for the agent
-internal/api        admin REST API       internal/agentapi  agent API + long-poll notifier
-internal/store      SQL (PostgreSQL)     internal/enroll    enrollment profile generator
-internal/db         migrations           web/               React console (Vite, Tailwind)
-deploy/             Dockerfile, compose, Caddyfile
+cmd/mscp-import     mSCP catalog import  internal/agentapi  agent API + long-poll notifier
+internal/api        admin REST API       internal/enroll    enrollment profile generator
+internal/store      SQL (PostgreSQL)     internal/health    misconfiguration detection + self-healing
+internal/db         migrations           internal/compliance mSCP baselines, scans, enforcement profiles
+internal/ddm        declarative mgmt     internal/schema    JSON-schema (Application & Custom Settings) profiles
+internal/superwf    super deployment     internal/onboarding white-glove onboarding (swiftDialog)
+internal/mcp        MCP server for AI    web/               React console (Vite, Tailwind)
+deploy/             Dockerfile, compose, Caddyfile           docs/manual/  administrator manual
 ```
 
 ## Development
@@ -90,7 +94,9 @@ go run ./cmd/vibemdm-sim -server http://localhost:8080 -n 5 \
 ```
 
 Upload any certificate that has a `UID` attribute as the "push certificate" to unlock enrollment-profile generation
-locally (pushes will fail, the simulated devices poll instead).
+locally (pushes will fail, the simulated devices poll instead). Add `-no-mdm` for agent-only Macs. The simulator also
+fakes compliance scans (with drift on the second scan), super installs and onboarding runs, so every console page
+has data to show.
 
 ## Documentation
 

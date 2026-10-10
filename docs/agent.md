@@ -65,14 +65,35 @@ Output (stdout+stderr, 64 KB) and the exit code are recorded; non-zero marks the
 ## Commands
 
 ```
-vibemdm-agent enroll --server URL --token TOKEN [--mdm]
+vibemdm-agent enroll --server URL [--token TOKEN] [--mdm] [--allow-insecure-http]
+                                       # token can also come from VIBEMDM_ENROLL_TOKEN (keeps it out of ps)
+vibemdm-agent status                   # enrollment, connectivity, local components
 vibemdm-agent policy [--event NAME]    # run policies now
 vibemdm-agent trigger NAME             # fire a trigger through the daemon
 vibemdm-agent recon                    # submit inventory
 vibemdm-agent check-connection
+vibemdm-agent selfservice              # open the Self Service portal
 vibemdm-agent manage                   # reinstall launchd jobs
 vibemdm-agent remove-framework         # unenroll + remove
+vibemdm-agent help <command>           # detailed help for one command
 ```
+
+Man page: `man ./docs/man/vibemdm-agent.8`.
+
+## What else the agent does
+
+Beyond scripts, packages and inventory, the daemon also:
+
+- runs **compliance scans** (mSCP shell checks, optionally the fix scripts) and reports per-rule results;
+- shows **onboarding workflows** with swiftDialog, collects the welcome-form answers, renames the Mac and runs the
+  configured steps with a live progress list (needs a logged-in user; swiftDialog is installed via Installomator);
+- installs **super** (checksum-verified) when the Mac is in the super deployment's scope, and reads super's status
+  plist into inventory;
+- hosts the local **Self Service** portal and the audited **remote shell** (which a root-owned
+  `/Library/Application Support/VibeMDM/disable-remote-shell` file vetoes on the device).
+
+Only the built-in `login`, `checkin` and `network_change` triggers can be fired by unprivileged users; custom
+triggers go through a root-only socket (`sudo vibemdm-agent trigger NAME`).
 
 ## Uninstall
 
