@@ -14,6 +14,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/agentapi"
 	"github.com/vibemdm/vibemdm/internal/auth"
 	"github.com/vibemdm/vibemdm/internal/config"
+	"github.com/vibemdm/vibemdm/internal/escrow"
 	"github.com/vibemdm/vibemdm/internal/mdmsvc"
 	"github.com/vibemdm/vibemdm/internal/policy"
 	"github.com/vibemdm/vibemdm/internal/scepsrv"
@@ -40,6 +41,7 @@ type Handler struct {
 	profile  func(ctx context.Context) ([]byte, error)
 	shellHub *shell.Hub
 	hooks    *webhook.Dispatcher
+	escrow   *escrow.Identity
 	log      *slog.Logger
 }
 
@@ -59,12 +61,13 @@ type Deps struct {
 	Profile  func(ctx context.Context) ([]byte, error)
 	ShellHub *shell.Hub
 	Hooks    *webhook.Dispatcher
+	Escrow   *escrow.Identity
 	Log      *slog.Logger
 }
 
 // New creates the handler.
 func New(d Deps) *Handler {
-	return &Handler{cfg: d.Cfg, st: d.Store, auth: d.Auth, cmdr: d.Commander, engine: d.Engine, notifier: d.Notifier, scep: d.SCEP, pushStore: d.PushStore, profile: d.Profile, shellHub: d.ShellHub, hooks: d.Hooks, log: d.Log}
+	return &Handler{cfg: d.Cfg, st: d.Store, auth: d.Auth, cmdr: d.Commander, engine: d.Engine, notifier: d.Notifier, scep: d.SCEP, pushStore: d.PushStore, profile: d.Profile, shellHub: d.ShellHub, hooks: d.Hooks, escrow: d.Escrow, log: d.Log}
 }
 
 // ---- helpers ----
@@ -185,6 +188,14 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("PUT /api/v1/network-segments/{id}", h.updateSegment)
 	r("DELETE /api/v1/network-segments/{id}", h.deleteSegment)
 	r("POST /api/v1/scope/preview", h.scopePreview)
+
+	// FileVault recovery key escrow
+	r("GET /api/v1/filevault", h.filevaultOverview)
+	adm("PUT /api/v1/filevault", h.filevaultProfiles)
+	adm("POST /api/v1/filevault/check", h.checkMissingKeys)
+	r("GET /api/v1/computers/{id}/filevault", h.computerFileVault)
+	adm("POST /api/v1/computers/{id}/filevault/reveal", h.revealFileVaultKey)
+	adm("POST /api/v1/computers/{id}/filevault/remediate", h.remediateFileVault)
 
 	// Jamf-parity: restricted software, advanced searches, app catalog, webhooks
 	r("GET /api/v1/restricted-software", h.listRestricted)

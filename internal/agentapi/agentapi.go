@@ -267,6 +267,7 @@ func (h *Handler) checkin(w http.ResponseWriter, r *http.Request) {
 	}
 	h.hooks.Fire(webhook.ComputerCheckIn, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "serial": comp.SerialNumber,
 		"udid": comp.UDID, "trigger": req.Trigger, "user": req.ConsoleUser, "os_version": req.OSVersion, "ip": req.IPAddress})
+	h.autoRemediateFileVault(r.Context(), comp, settings)
 	tasks, err := h.st.ClaimQueuedTasks(r.Context(), comp.ID)
 	if err != nil {
 		h.log.Error("claim tasks", "err", err)
@@ -494,4 +495,23 @@ func (h *Handler) installScript(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/x-shellscript")
 	installTemplate.Execute(w, map[string]any{"ServerURL": serverURL, "Token": token, "MDM": r.URL.Query().Get("mdm") != "0"})
+}
+
+// autoRemediateFileVault queues Escrow Buddy when FileVault is on, the escrow
+// profile is installed, and no key has been escrowed (at most once a day).
+func (h *Handler) autoRemediateFileVault(ctx context.Context, comp *model.Computer, settings model.Settings) {
+	if !settings.FileVaultAutoRemediate || comp.FileVaultEnabled == nil || !*comp.FileVaultEnabled {
+		return
+	}
+	st, err := h.st.FileVaultStatusFor(ctx, comp.ID)
+	if err != nil || st.Escrowed || st.EscrowProfileStatus != "installed" {
+		return
+	}
+	if recent, err := h.st.HasRecentTask(ctx, comp.ID, "filevault_regenerate", 24*time.Hour); err != nil || recent {
+		return
+	}
+	if _, err := h.st.CreateTask(ctx, comp.ID, "filevault_regenerate", map[string]any{"reason": "auto-remediation: no escrowed FileVault recovery key"}, "system"); err == nil {
+		h.log.Info("queued FileVault key remediation (Escrow Buddy)", "computer", comp.Name)
+		h.st.Audit(ctx, "system", "filevault.auto_remediate", "computer", comp.ID, nil)
+	}
 }

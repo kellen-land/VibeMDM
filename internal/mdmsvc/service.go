@@ -12,6 +12,7 @@ import (
 	"github.com/micromdm/nanomdm/service"
 	"howett.net/plist"
 
+	"github.com/vibemdm/vibemdm/internal/escrow"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/store"
 	"github.com/vibemdm/vibemdm/internal/webhook"
@@ -19,11 +20,18 @@ import (
 
 // Service implements service.CheckinAndCommandService.
 type Service struct {
-	next  service.CheckinAndCommandService
-	st    *store.Store
-	cmdr  *Commander
-	hooks *webhook.Dispatcher
-	log   *slog.Logger
+	next   service.CheckinAndCommandService
+	st     *store.Store
+	cmdr   *Commander
+	hooks  *webhook.Dispatcher
+	escrow *escrow.Identity
+	log    *slog.Logger
+}
+
+// WithEscrow enables FileVault PRK decryption from SecurityInfo responses.
+func (s *Service) WithEscrow(id *escrow.Identity) *Service {
+	s.escrow = id
+	return s
 }
 
 // New wraps next.
@@ -206,8 +214,15 @@ func (s *Service) processResult(ctx context.Context, results *mdm.CommandResults
 		}
 	case "SecurityInfo":
 		if sec, ok := doc["SecurityInfo"].(map[string]any); ok {
+			// The escrowed recovery key arrives CMS-encrypted to our escrow
+			// certificate. Never store the blob in inventory JSON.
+			cms, hasKey := sec["FDE_PersonalRecoveryKeyCMS"].([]byte)
+			delete(sec, "FDE_PersonalRecoveryKeyCMS")
 			if err := s.st.ApplyMDMSecurityInfo(ctx, results.UDID, sec); err != nil {
 				s.log.Error("apply SecurityInfo", "err", err)
+			}
+			if hasKey && compErr == nil {
+				s.escrowKey(ctx, comp, cms)
 			}
 		}
 	case "ProfileList":
@@ -265,6 +280,29 @@ func (s *Service) processResult(ctx context.Context, results *mdm.CommandResults
 		s.log.Debug("mdm: command result", "type", requestType, "status", results.Status, "computer", comp.Name)
 		s.hooks.Fire(webhook.MDMCommandCompleted, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "request_type": requestType,
 			"command_uuid": results.CommandUUID, "status": results.Status})
+	}
+}
+
+// escrowKey decrypts and stores a FileVault personal recovery key.
+func (s *Service) escrowKey(ctx context.Context, comp *model.Computer, cms []byte) {
+	if s.escrow == nil {
+		s.log.Warn("received an escrowed FileVault key but no escrow identity is loaded", "computer", comp.Name)
+		return
+	}
+	prk, err := s.escrow.DecryptPRK(cms)
+	if err != nil {
+		s.log.Error("decrypting escrowed FileVault key", "computer", comp.Name, "err", err)
+		return
+	}
+	changed, err := s.st.SaveFileVaultKey(ctx, comp.ID, prk, "mdm")
+	if err != nil {
+		s.log.Error("storing FileVault key", "computer", comp.Name, "err", err)
+		return
+	}
+	if changed {
+		s.log.Info("FileVault recovery key escrowed", "computer", comp.Name, "fingerprint", escrow.Fingerprint(prk))
+		s.st.Audit(ctx, "system", "filevault.key_escrowed", "computer", comp.ID, map[string]any{"fingerprint": escrow.Fingerprint(prk)})
+		s.hooks.Fire(webhook.FileVaultKeyEscrowed, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "serial": comp.SerialNumber, "fingerprint": escrow.Fingerprint(prk)})
 	}
 }
 

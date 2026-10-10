@@ -40,6 +40,7 @@ type computerDetail struct {
 	Groups      []model.ComputerGroup     `json:"groups"`
 	Deployments []model.ProfileDeployment `json:"profile_deployments"`
 	AgentOnline bool                      `json:"agent_online"`
+	FileVault   *model.FileVaultStatus    `json:"filevault"`
 }
 
 func (h *Handler) getComputer(w http.ResponseWriter, r *http.Request) {
@@ -56,6 +57,7 @@ func (h *Handler) getComputer(w http.ResponseWriter, r *http.Request) {
 	d.Groups, _ = h.st.ComputerGroups(r.Context(), c.ID)
 	d.Deployments, _ = h.st.ListDeployments(r.Context(), "", c.ID)
 	d.AgentOnline = h.notifier.Waiting(c.ID)
+	d.FileVault, _ = h.st.FileVaultStatusFor(r.Context(), c.ID)
 	if d.Apps == nil {
 		d.Apps = []model.ComputerApp{}
 	}
@@ -338,6 +340,8 @@ func (h *Handler) queueTask(r *http.Request, c *model.Computer, typ, scriptID st
 			return nil, errors.New("trigger required")
 		}
 		payload = map[string]any{"trigger": trigger}
+	case "filevault_regenerate":
+		payload = map[string]any{"reason": "no escrowed FileVault recovery key"}
 	case "restart", "shutdown", "logout_user":
 		payload = map[string]any{"message": message}
 	case "notify":

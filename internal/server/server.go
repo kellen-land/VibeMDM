@@ -28,9 +28,11 @@ import (
 	"github.com/vibemdm/vibemdm/internal/agentapi"
 	"github.com/vibemdm/vibemdm/internal/api"
 	"github.com/vibemdm/vibemdm/internal/auth"
+	"github.com/vibemdm/vibemdm/internal/commands"
 	"github.com/vibemdm/vibemdm/internal/config"
 	"github.com/vibemdm/vibemdm/internal/db"
 	"github.com/vibemdm/vibemdm/internal/enroll"
+	"github.com/vibemdm/vibemdm/internal/escrow"
 	"github.com/vibemdm/vibemdm/internal/mdmsvc"
 	"github.com/vibemdm/vibemdm/internal/policy"
 	"github.com/vibemdm/vibemdm/internal/scepsrv"
@@ -43,14 +45,16 @@ import (
 
 // Server is the assembled application.
 type Server struct {
-	cfg   *config.Config
-	log   *slog.Logger
-	sqlDB *sql.DB
-	st    *store.Store
-	scep  *scepsrv.Server
-	hooks *webhook.Dispatcher
-	mux   *http.ServeMux
-	http  *http.Server
+	cfg    *config.Config
+	log    *slog.Logger
+	sqlDB  *sql.DB
+	st     *store.Store
+	scep   *scepsrv.Server
+	hooks  *webhook.Dispatcher
+	escrow *escrow.Identity
+	cmdr   *mdmsvc.Commander
+	mux    *http.ServeMux
+	http   *http.Server
 }
 
 // New builds the server (connects DB, migrates, wires services).
@@ -136,6 +140,14 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 
 	hooks := webhook.New(sqlDB, logger.With("component", "webhook"))
 	s.hooks = hooks
+	s.cmdr = commander
+
+	// FileVault escrow identity (load, or create on first boot; never replace on read errors).
+	escrowID, err := s.loadEscrowIdentity(ctx, settings.OrgName)
+	if err != nil {
+		return nil, fmt.Errorf("escrow identity: %w", err)
+	}
+	s.escrow = escrowID
 
 	// Core MDM service chain: certauth -> vibemdm hooks -> nanomdm core.
 	core := nanomdmsvc.New(mdmStorage,
@@ -143,7 +155,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 		nanomdmsvc.WithUserAuthenticate(nanomdmsvc.NewUAService(mdmStorage, false)),
 		nanomdmsvc.WithGetToken(nanomdmsvc.NewTokenMux()),
 	)
-	var mdmService service.CheckinAndCommandService = mdmsvc.New(st, core, commander, hooks, logger.With("component", "mdm"))
+	var mdmService service.CheckinAndCommandService = mdmsvc.New(st, core, commander, hooks, logger.With("component", "mdm")).WithEscrow(escrowID)
 	mdmService = certauth.New(mdmService, mdmStorage, certauth.WithLogger(nlog.With("service", "certauth")))
 	if cfg.DumpMDM {
 		mdmService = dump.New(mdmService, os.Stdout)
@@ -175,7 +187,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	authn := auth.New(st, secure, cfg.SessionTTL)
 	adminAPI := api.New(api.Deps{
 		Cfg: cfg, Store: st, Auth: authn, Commander: commander, Engine: engine, Notifier: notifier, SCEP: scepServer,
-		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Log: logger.With("component", "api"),
+		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Log: logger.With("component", "api"),
 	})
 	adminAPI.Register(s.mux)
 
@@ -252,6 +264,51 @@ func (s *Server) bootstrap(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// filevaultKeySweep asks Macs with FileVault on but no escrowed key for
+// SecurityInfo (at most every 4 hours each) so newly generated keys — e.g. after
+// Escrow Buddy runs at login — are collected promptly.
+func (s *Server) filevaultKeySweep(ctx context.Context) {
+	comps, err := s.st.ComputersNeedingKeyCheck(ctx, 4*time.Hour)
+	if err != nil {
+		s.log.Warn("filevault sweep", "err", err)
+		return
+	}
+	for i := range comps {
+		cmd, err := commands.SecurityInfo()
+		if err != nil {
+			return
+		}
+		if _, err := s.cmdr.Enqueue(ctx, &comps[i], cmd, "filevault_check", "", "system"); err != nil {
+			s.log.Debug("filevault sweep enqueue", "computer", comps[i].Name, "err", err)
+		}
+	}
+	if len(comps) > 0 {
+		s.log.Info("requested SecurityInfo from Macs missing an escrowed FileVault key", "count", len(comps))
+	}
+}
+
+// loadEscrowIdentity returns the FileVault escrow identity, creating it only
+// when none is stored. A stored identity that cannot be read is fatal: replacing
+// it would make every previously escrowed key undecryptable.
+func (s *Server) loadEscrowIdentity(ctx context.Context, orgName string) (*escrow.Identity, error) {
+	certPEM, keyPEM, err := s.st.GetEscrowIdentity(ctx)
+	if err == nil {
+		return escrow.ParseIdentity(certPEM, keyPEM)
+	}
+	if !errors.Is(err, store.ErrNotFound) {
+		return nil, err
+	}
+	id, certPEM, keyPEM, err := escrow.NewIdentity(orgName)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.st.CreateEscrowIdentity(ctx, certPEM, keyPEM); err != nil {
+		return nil, err
+	}
+	s.log.Info("created FileVault escrow identity")
+	return id, nil
 }
 
 // enrollmentProfile renders the current enrollment profile.
@@ -345,11 +402,16 @@ func (s *Server) Run(ctx context.Context) error {
 func (s *Server) housekeeping(ctx context.Context) {
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
+	tick := 0
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-t.C:
+			tick++
+			if tick%10 == 1 {
+				s.filevaultKeySweep(ctx)
+			}
 			s.st.ExpireStalePolicyLogs(ctx)
 			s.st.ExpireStaleTasks(ctx)
 			s.st.ExpireStaleShellSessions(ctx)

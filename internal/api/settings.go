@@ -29,6 +29,8 @@ type settingsView struct {
 	SigningCertSubject          string `json:"signing_cert_subject,omitempty"`
 	RemoteShellEnabled          bool   `json:"remote_shell_enabled"`
 	RemoteShellIdleTimeoutSecs  int    `json:"remote_shell_idle_timeout_secs"`
+	FileVaultAutoRemediate      bool   `json:"filevault_auto_remediate"`
+	EncryptionAtRest            bool   `json:"encryption_at_rest"`
 	Version                     string `json:"version"`
 }
 
@@ -39,6 +41,7 @@ func (h *Handler) view(s model.Settings, admin bool) settingsView {
 		OpenEnrollment: s.OpenEnrollment, InventoryIntervalHours: s.InventoryIntervalHours,
 		SigningConfigured: s.SigningCertPEM != "" && s.SigningKeyPEM != "", Version: h.cfg.Version,
 		RemoteShellEnabled: s.RemoteShellEnabled, RemoteShellIdleTimeoutSecs: s.RemoteShellIdleTimeoutSecs,
+		FileVaultAutoRemediate: s.FileVaultAutoRemediate, EncryptionAtRest: h.st.Box.Enabled(),
 	}
 	if admin {
 		v.AgentEnrollmentSecret = s.AgentEnrollmentSecret

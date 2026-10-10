@@ -594,6 +594,40 @@ type AppInstallLog struct {
 	CompletedAt  *time.Time `json:"completed_at"`
 }
 
+// FileVaultStatus is a computer's escrow state (never contains the key).
+type FileVaultStatus struct {
+	Escrowed            bool       `json:"escrowed"`
+	Fingerprint         string     `json:"fingerprint"`
+	EscrowedAt          *time.Time `json:"escrowed_at"`
+	RotatedCount        int        `json:"rotated_count"`
+	Source              string     `json:"source"`
+	EscrowProfileStatus string     `json:"escrow_profile_status"` // deployment status of the escrow profile on this Mac
+}
+
+// FileVaultRow is one computer in the fleet escrow overview.
+type FileVaultRow struct {
+	ComputerID          string     `json:"computer_id"`
+	ComputerName        string     `json:"computer_name"`
+	SerialNumber        string     `json:"serial_number"`
+	FileVaultEnabled    *bool      `json:"filevault_enabled"`
+	MDMEnrolled         bool       `json:"mdm_enrolled"`
+	AgentEnrolled       bool       `json:"agent_enrolled"`
+	Escrowed            bool       `json:"escrowed"`
+	Fingerprint         string     `json:"fingerprint"`
+	EscrowedAt          *time.Time `json:"escrowed_at"`
+	RotatedCount        int        `json:"rotated_count"`
+	EscrowProfileStatus string     `json:"escrow_profile_status"`
+}
+
+// FileVaultSummary counts fleet escrow states.
+type FileVaultSummary struct {
+	Total        int `json:"total"`
+	Escrowed     int `json:"escrowed"`      // FileVault on, key escrowed
+	MissingKey   int `json:"missing_key"`   // FileVault on, no escrowed key (needs remediation)
+	NotEncrypted int `json:"not_encrypted"` // FileVault off
+	Unknown      int `json:"unknown"`       // not yet reported
+}
+
 // Settings are the editable server settings.
 type Settings struct {
 	OrgName                     string `json:"org_name"`
@@ -610,4 +644,5 @@ type Settings struct {
 	SigningKeyPEM               string `json:"signing_key_pem"`
 	RemoteShellEnabled          bool   `json:"remote_shell_enabled"`
 	RemoteShellIdleTimeoutSecs  int    `json:"remote_shell_idle_timeout_secs"`
+	FileVaultAutoRemediate      bool   `json:"filevault_auto_remediate"`
 }

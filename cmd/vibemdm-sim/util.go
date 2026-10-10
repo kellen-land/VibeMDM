@@ -2,6 +2,8 @@ package main
 
 import (
 	"crypto"
+	"fmt"
+
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -9,6 +11,7 @@ import (
 	"encoding/asn1"
 	"encoding/json"
 	"errors"
+	"github.com/smallstep/pkcs7"
 
 	"github.com/vibemdm/vibemdm/internal/model"
 )
@@ -103,4 +106,34 @@ func addChallengePassword(csrDER []byte, key *rsa.PrivateKey, challenge string) 
 		return nil, err
 	}
 	return der, nil
+}
+
+// escrowedKeyCMS encrypts this device's recovery key to the certificate in an
+// installed FDERecoveryKeyEscrow profile, or returns nil if none is installed.
+func (d *device) escrowedKeyCMS() []byte {
+	for _, prof := range d.profiles {
+		payloads, _ := prof["PayloadContent"].([]any)
+		var cert *x509.Certificate
+		hasEscrow := false
+		for _, it := range payloads {
+			m, _ := it.(map[string]any)
+			switch m["PayloadType"] {
+			case "com.apple.security.FDERecoveryKeyEscrow":
+				hasEscrow = true
+			case "com.apple.security.pkcs1":
+				if der, ok := m["PayloadContent"].([]byte); ok {
+					cert, _ = x509.ParseCertificate(der)
+				}
+			}
+		}
+		if hasEscrow && cert != nil {
+			prk := fmt.Sprintf("SIM%d-%04d-%04d-%04d-%04d-%04d", d.idx, d.prkGen, d.idx*1111%10000, d.idx*7%10000, d.prkGen*13%10000, d.idx*97%10000)
+			cms, err := pkcs7.Encrypt([]byte(prk), []*x509.Certificate{cert})
+			if err != nil {
+				return nil
+			}
+			return cms
+		}
+	}
+	return nil
 }

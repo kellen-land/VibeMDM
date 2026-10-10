@@ -192,3 +192,57 @@ func (m *RestrictedMonitor) sweep(ctx context.Context) {
 }
 
 var _ = http.StatusOK
+
+// ---- FileVault key remediation (Escrow Buddy) ----
+
+// Escrow Buddy (github.com/macadmins/escrow-buddy, Apache-2.0) is an
+// authorization plugin that generates a new FileVault personal recovery key at
+// the next login by a FileVault-enabled user; the FDERecoveryKeyEscrow profile
+// then makes macOS escrow it to the MDM.
+const (
+	escrowBuddyBundle    = "/Library/Security/SecurityAgentPlugins/Escrow Buddy.bundle"
+	escrowBuddyPrefs     = "/Library/Preferences/com.netflix.Escrow-Buddy"
+	escrowBuddyMechanism = "Escrow Buddy:Invoke,privileged"
+)
+
+func escrowBuddyMechanismPresent(ctx context.Context) bool {
+	out := run(ctx, 10*time.Second, "/usr/bin/security", "authorizationdb", "read", "system.login.console")
+	return strings.Contains(out, escrowBuddyMechanism)
+}
+
+// RegenerateFileVaultKey installs/repairs Escrow Buddy and arms key generation.
+func (e *Executor) RegenerateFileVaultKey(ctx context.Context) ExecResult {
+	start := time.Now()
+	var out strings.Builder
+	if !strings.Contains(run(ctx, 15*time.Second, "/usr/bin/fdesetup", "status"), "FileVault is On") {
+		return ExecResult{ExitCode: 1, Combined: "FileVault is not enabled on this Mac; nothing to escrow.", Duration: time.Since(start)}
+	}
+	_, bundleErr := os.Stat(escrowBuddyBundle)
+	// macOS updates can reset the authorization database, deactivating the
+	// plugin, so a missing mechanism also triggers a (forced) reinstall.
+	if bundleErr != nil || !escrowBuddyMechanismPresent(ctx) {
+		script, err := e.ensureInstallomator(ctx)
+		if err != nil {
+			return ExecResult{ExitCode: -1, Err: err, Combined: err.Error(), Duration: time.Since(start)}
+		}
+		out.WriteString("Installing Escrow Buddy with Installomator…\n")
+		ictx, cancel := context.WithTimeout(ctx, 15*time.Minute)
+		r := runCmd(exec.CommandContext(ictx, "/bin/zsh", script, "escrowbuddy", "NOTIFY=silent", "INSTALL=force"))
+		cancel()
+		out.WriteString(r.Combined)
+		if r.ExitCode != 0 {
+			return ExecResult{ExitCode: r.ExitCode, Combined: out.String(), Duration: time.Since(start)}
+		}
+	}
+	if !escrowBuddyMechanismPresent(ctx) {
+		out.WriteString("\nEscrow Buddy is installed but its authorization mechanism is missing from system.login.console.")
+		return ExecResult{ExitCode: 1, Combined: out.String(), Duration: time.Since(start)}
+	}
+	r := runCmd(exec.CommandContext(ctx, "/usr/bin/defaults", "write", escrowBuddyPrefs, "GenerateNewKey", "-bool", "true"))
+	out.WriteString(r.Combined)
+	if r.ExitCode != 0 {
+		return ExecResult{ExitCode: r.ExitCode, Combined: out.String(), Duration: time.Since(start)}
+	}
+	out.WriteString("\nEscrow Buddy armed. A new FileVault recovery key will be generated at the next login by a FileVault-enabled user and escrowed to the server.")
+	return ExecResult{Combined: out.String(), Stdout: out.String(), Duration: time.Since(start)}
+}

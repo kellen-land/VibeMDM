@@ -147,3 +147,8 @@ func (s *Store) DeploymentStatusCounts(ctx context.Context, profileID string) (m
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
+
+// GetProfileByIdentifier returns a profile by its PayloadIdentifier.
+func (s *Store) GetProfileByIdentifier(ctx context.Context, identifier string) (*model.ConfigProfile, error) {
+	return scanProfile(s.DB.QueryRowContext(ctx, `SELECT `+profileCols+` FROM config_profiles WHERE identifier = $1`, identifier))
+}

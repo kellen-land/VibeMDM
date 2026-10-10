@@ -527,6 +527,8 @@ func (e *Executor) RunTask(ctx context.Context, t model.AgentTask) {
 			res.Status, res.Error = "failed", err.Error()
 		}
 		res.Stdout = fmt.Sprintf("trigger %q: executed %d policies", trig, n)
+	case "filevault_regenerate":
+		apply(e.RegenerateFileVaultKey(ctx))
 	case "notify":
 		Notify(ctx, e.cfg.OrgName, str(t.Payload["message"]))
 		res.Stdout = "notification shown"

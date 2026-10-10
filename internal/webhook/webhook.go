@@ -31,11 +31,14 @@ const (
 	MDMCommandCompleted         = "MDMCommandCompleted"
 	RestrictedSoftwareViolation = "RestrictedSoftwareViolation"
 	ShellSessionOpened          = "ShellSessionOpened"
+	FileVaultKeyEscrowed        = "FileVaultKeyEscrowed"
+	FileVaultKeyViewed          = "FileVaultKeyViewed"
 )
 
 // AllEvents lists every event name for the UI.
 var AllEvents = []string{ComputerEnrolled, ComputerUnenrolled, AgentEnrolled, ComputerCheckIn,
-	ComputerInventoryCompleted, PolicyCompleted, PolicyFailed, MDMCommandCompleted, RestrictedSoftwareViolation, ShellSessionOpened}
+	ComputerInventoryCompleted, PolicyCompleted, PolicyFailed, MDMCommandCompleted, RestrictedSoftwareViolation, ShellSessionOpened,
+	FileVaultKeyEscrowed, FileVaultKeyViewed}
 
 // Hook is a configured endpoint.
 type Hook struct {

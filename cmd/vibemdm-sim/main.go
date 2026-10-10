@@ -46,6 +46,8 @@ type device struct {
 	cert     *x509.Certificate
 	profiles map[string]map[string]any // identifier -> payload dict
 	violated map[string]bool           // restricted rule IDs already reported
+	prkReady bool                      // a recovery key exists that macOS would escrow
+	prkGen   int                       // regeneration counter (new key each time)
 	server   string
 	topic    string
 	client   *http.Client
@@ -114,7 +116,7 @@ func newDevice(i int, prefix, server, topic string, logger *slog.Logger) *device
 	o := osVersions[i%len(osVersions)]
 	serial := fmt.Sprintf("SIM%07d", 1000000+i*7919%9000000)
 	udid := fmt.Sprintf("%08X-SIM0-4000-8000-%012d", 0x5A000000+i, i)
-	d := &device{idx: i, udid: udid, serial: serial, name: fmt.Sprintf("%s-Mac-%02d", prefix, i), model: m.id, osVer: o.v, build: o.b,
+	d := &device{idx: i, prkReady: i%4 != 0, udid: udid, serial: serial, name: fmt.Sprintf("%s-Mac-%02d", prefix, i), model: m.id, osVer: o.v, build: o.b,
 		profiles: map[string]map[string]any{}, violated: map[string]bool{}, server: strings.TrimRight(server, "/"), topic: topic,
 		client: &http.Client{Timeout: 60 * time.Second}, log: logger.With("device", fmt.Sprintf("%s-Mac-%02d", prefix, i))}
 	return d
@@ -356,12 +358,20 @@ func (d *device) respond(uuid, rt string, cmd map[string]any) map[string]any {
 			"SystemIntegrityProtectionEnabled": true, "TimeZone": "America/New_York", "ManagementStatus": map[string]any{"EnrolledViaDEP": false, "UserApprovedEnrollment": true},
 		}
 	case "SecurityInfo":
-		r["SecurityInfo"] = map[string]any{
+		sec := map[string]any{
 			"FDE_Enabled": d.idx%2 == 0, "FDE_HasPersonalRecoveryKey": d.idx%2 == 0, "SystemIntegrityProtectionEnabled": true,
 			"FirewallSettings":                       map[string]any{"FirewallEnabled": d.idx%3 != 0, "BlockAllIncoming": false, "StealthMode": false},
 			"SecureBoot":                             map[string]any{"SecureBootLevel": "full", "ExternalBootLevel": "disallowed"},
 			"BootstrapTokenAllowedForAuthentication": "allowed", "BootstrapTokenRequiredForSoftwareUpdate": true,
 		}
+		// Like macOS: with an FDERecoveryKeyEscrow profile installed and a
+		// personal recovery key present, return it CMS-encrypted to the escrow cert.
+		if d.idx%2 == 0 && d.prkReady {
+			if cms := d.escrowedKeyCMS(); cms != nil {
+				sec["FDE_PersonalRecoveryKeyCMS"] = cms
+			}
+		}
+		r["SecurityInfo"] = sec
 	case "ProfileList":
 		list := []any{map[string]any{"PayloadIdentifier": "com.vibemdm.enrollment", "PayloadUUID": "1F2E3D4C-5B6A-4798-8A9B-0C1D2E3F4A5B", "PayloadDisplayName": "VibeMDM Enrollment", "PayloadOrganization": "VibeMDM", "IsManaged": true}}
 		for id, p := range d.profiles {
@@ -561,6 +571,13 @@ func (d *device) runTask(ctx context.Context, c *agent.Client, t model.AgentTask
 		res.Stdout = "inventory submitted"
 	case "custom_trigger":
 		res.Stdout = "[simulator] trigger " + str(t.Payload["trigger"])
+	case "filevault_regenerate":
+		if d.idx%2 != 0 {
+			res.Status, res.ExitCode, res.Stdout = "failed", 1, "FileVault is not enabled on this Mac; nothing to escrow."
+			break
+		}
+		d.prkReady, d.prkGen = true, d.prkGen+1 // simulate Escrow Buddy + next login
+		res.Stdout = "[simulator] Escrow Buddy armed; simulated login generated a new recovery key."
 	default:
 		res.Stdout = "[simulator] " + t.Type
 	}
