@@ -708,6 +708,35 @@ type DiagnosticBundle struct {
 	UploadedAt   *time.Time `json:"uploaded_at"`
 }
 
+// UpdatePlan is a declarative software update plan (enforcement or settings).
+type UpdatePlan struct {
+	ID                  string         `json:"id"`
+	Name                string         `json:"name"`
+	Enabled             bool           `json:"enabled"`
+	Kind                string         `json:"kind"` // enforcement | settings
+	TargetOSVersion     string         `json:"target_os_version"`
+	TargetBuildVersion  string         `json:"target_build_version"`
+	TargetLocalDateTime string         `json:"target_local_datetime"`
+	DetailsURL          string         `json:"details_url"`
+	Settings            map[string]any `json:"settings"`
+	Scope               Scope          `json:"scope"`
+	CreatedAt           time.Time      `json:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"`
+}
+
+// DDMState is a device's declarative management state.
+type DDMState struct {
+	ComputerID         string         `json:"computer_id"`
+	ServedToken        string         `json:"served_token"`
+	SyncSentToken      string         `json:"sync_sent_token"`
+	SyncSentAt         *time.Time     `json:"sync_sent_at"`
+	LastSyncAt         *time.Time     `json:"last_sync_at"`
+	LastStatusAt       *time.Time     `json:"last_status_at"`
+	Status             map[string]any `json:"status"`
+	DeclarationsStatus map[string]any `json:"declarations_status"`
+	Errors             []any          `json:"errors"`
+}
+
 // Settings are the editable server settings.
 type Settings struct {
 	OrgName                     string `json:"org_name"`

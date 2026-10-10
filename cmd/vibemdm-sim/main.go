@@ -409,6 +409,8 @@ func (d *device) respond(uuid, rt string, cmd map[string]any) map[string]any {
 		r["CertificateList"] = []any{map[string]any{"CommonName": "VibeMDM Device Identity", "IsIdentity": true, "Data": d.cert.Raw}}
 	case "DeviceLock", "EraseDevice", "RestartDevice", "ShutDownDevice", "EnableRemoteDesktop", "DisableRemoteDesktop", "DeviceConfigured":
 		// acknowledged
+	case "DeclarativeManagement":
+		go d.ddmSync()
 	case "AvailableOSUpdates":
 		r["AvailableOSUpdates"] = []any{map[string]any{"ProductKey": "MSU_UPDATE_26.0.1", "HumanReadableName": "macOS 26.0.1", "Version": "26.0.1", "IsCritical": false}}
 	default:

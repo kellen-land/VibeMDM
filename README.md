@@ -100,6 +100,7 @@ locally (pushes will fail, the simulated devices poll instead).
 - [docs/api.md](docs/api.md) – REST API overview and tokens
 - [docs/enrollment.md](docs/enrollment.md) – enrollment options without Apple Business Manager (Mac, iPhone, iPad)
 - [docs/inspector.md](docs/inspector.md) – MDM command inspector: timelines, summaries, redaction
+- [docs/software-updates.md](docs/software-updates.md) – native DDM, update enforcement and settings plans
 - [docs/logging.md](docs/logging.md) – searchable server/agent logs, live tail, archives, diagnostic bundles
 - [docs/installomator.md](docs/installomator.md) – Mac Apps catalog, Installomator policy steps, custom labels
 - [docs/filevault.md](docs/filevault.md) – FileVault recovery key escrow and Escrow Buddy remediation

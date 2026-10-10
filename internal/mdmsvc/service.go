@@ -110,6 +110,9 @@ func (s *Service) TokenUpdate(r *mdm.Request, m *mdm.TokenUpdate) error {
 			if err := s.cmdr.SyncProfilesForComputer(ctx, &c, "system"); err != nil {
 				s.log.Warn("initial profile sync", "err", err)
 			}
+			if err := s.cmdr.SyncDDM(ctx, &c, "system"); err != nil {
+				s.log.Warn("enabling declarative management", "err", err)
+			}
 		}(*comp)
 	}
 	return nil

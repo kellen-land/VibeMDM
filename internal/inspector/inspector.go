@@ -140,6 +140,8 @@ func Summary(requestType string, raw []byte) string {
 		return "Schedule macOS update(s) to download/install"
 	case "SetRecoveryLock":
 		return "Set the recovery lock password (Apple silicon) (passwords redacted)"
+	case "DeclarativeManagement":
+		return "Enable Declarative Device Management or ask the device to sync its declarations (the device then fetches tokens, the declaration manifest and any changed declarations)"
 	case "DeviceConfigured":
 		return "Tell an Automated Device Enrollment device that setup can continue"
 	}

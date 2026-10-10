@@ -191,3 +191,14 @@ func ParseResult(raw []byte) (map[string]any, error) {
 func DecodeBase64Payload(s string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(s)
 }
+
+// DeclarativeManagement enables DDM on a device or asks it to synchronize.
+// syncTokens is the TokensResponse JSON; the device fetches the declaration
+// manifest when the token differs from what it has.
+func DeclarativeManagement(syncTokens []byte) (*mdm.Command, error) {
+	f := map[string]any{}
+	if len(syncTokens) > 0 {
+		f["Data"] = syncTokens
+	}
+	return Build("DeclarativeManagement", f)
+}

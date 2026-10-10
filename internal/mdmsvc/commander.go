@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	nanoapi "github.com/micromdm/nanomdm/api"
 	"github.com/micromdm/nanomdm/mdm"
@@ -12,6 +13,7 @@ import (
 	"github.com/micromdm/nanomdm/storage"
 
 	"github.com/vibemdm/vibemdm/internal/commands"
+	"github.com/vibemdm/vibemdm/internal/ddm"
 	"github.com/vibemdm/vibemdm/internal/inspector"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/store"
@@ -206,4 +208,62 @@ func (c *Commander) SyncProfilesForComputer(ctx context.Context, comp *model.Com
 		}
 	}
 	return nil
+}
+
+// SyncDDM asks a device to synchronize its declarations (also enables DDM the
+// first time). It records the token it asked for so reconciliation doesn't spam.
+func (c *Commander) SyncDDM(ctx context.Context, comp *model.Computer, createdBy string) error {
+	decls, err := c.st.DeclarationsFor(ctx, comp)
+	if err != nil {
+		return err
+	}
+	token := ddm.DeclarationsToken(decls)
+	tokens, err := ddm.TokensResponse(token, time.Now())
+	if err != nil {
+		return err
+	}
+	cmd, err := commands.DeclarativeManagement(tokens)
+	if err != nil {
+		return err
+	}
+	if _, err := c.Enqueue(ctx, comp, cmd, "ddm_sync", "", createdBy); err != nil {
+		return err
+	}
+	c.st.MarkDDMSyncSent(ctx, comp.ID, token)
+	return nil
+}
+
+// ReconcileDDM sends a sync to every MDM-enrolled Mac whose declaration set
+// changed since it last fetched (re-asking at most every 6 hours).
+func (c *Commander) ReconcileDDM(ctx context.Context) (int, error) {
+	comps, _, err := c.st.ListComputers(ctx, store.ComputerFilter{Limit: 500})
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for i := range comps {
+		comp := &comps[i]
+		if !comp.MDMEnrolled {
+			continue
+		}
+		if comp.OSVersion != "" && ddm.CompareVersions(comp.OSVersion, "13.0") < 0 {
+			continue // DDM requires macOS 13+
+		}
+		decls, err := c.st.DeclarationsFor(ctx, comp)
+		if err != nil {
+			continue
+		}
+		token := ddm.DeclarationsToken(decls)
+		st, err := c.st.GetDDMState(ctx, comp.ID)
+		if err != nil || st.ServedToken == token {
+			continue
+		}
+		if st.SyncSentToken == token && st.SyncSentAt != nil && time.Since(*st.SyncSentAt) < 6*time.Hour {
+			continue
+		}
+		if err := c.SyncDDM(ctx, comp, "system"); err == nil {
+			n++
+		}
+	}
+	return n, nil
 }

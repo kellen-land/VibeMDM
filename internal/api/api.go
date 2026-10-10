@@ -189,6 +189,17 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("DELETE /api/v1/network-segments/{id}", h.deleteSegment)
 	r("POST /api/v1/scope/preview", h.scopePreview)
 
+	// Software updates (Declarative Device Management)
+	r("GET /api/v1/updates/plans", h.listPlans)
+	r("POST /api/v1/updates/plans", h.savePlan)
+	r("GET /api/v1/updates/plans/{id}", h.getPlan)
+	r("PUT /api/v1/updates/plans/{id}", h.savePlan)
+	r("DELETE /api/v1/updates/plans/{id}", h.deletePlan)
+	r("GET /api/v1/updates/overview", h.updatesOverview)
+	r("GET /api/v1/updates/catalog", h.updatesCatalog)
+	r("GET /api/v1/computers/{id}/ddm", h.computerDDM)
+	r("POST /api/v1/computers/{id}/ddm/sync", h.syncComputerDDM)
+
 	// Logs & diagnostics
 	r("GET /api/v1/logs", h.listLogs)
 	r("GET /api/v1/logs/components", h.logComponents)

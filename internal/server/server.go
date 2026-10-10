@@ -31,6 +31,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/commands"
 	"github.com/vibemdm/vibemdm/internal/config"
 	"github.com/vibemdm/vibemdm/internal/db"
+	"github.com/vibemdm/vibemdm/internal/ddmsvc"
 	"github.com/vibemdm/vibemdm/internal/enroll"
 	"github.com/vibemdm/vibemdm/internal/escrow"
 	"github.com/vibemdm/vibemdm/internal/logsink"
@@ -163,6 +164,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 		nanomdmsvc.WithLogger(nlog.With("service", "nanomdm")),
 		nanomdmsvc.WithUserAuthenticate(nanomdmsvc.NewUAService(mdmStorage, false)),
 		nanomdmsvc.WithGetToken(nanomdmsvc.NewTokenMux()),
+		nanomdmsvc.WithDeclarativeManagement(ddmsvc.New(st, logger.With("component", "ddm"))),
 	)
 	var mdmService service.CheckinAndCommandService = mdmsvc.New(st, core, commander, hooks, logger.With("component", "mdm")).WithEscrow(escrowID)
 	mdmService = certauth.New(mdmService, mdmStorage, certauth.WithLogger(nlog.With("service", "certauth")))
@@ -453,6 +455,13 @@ func (s *Server) housekeeping(ctx context.Context) {
 			tick++
 			if tick%10 == 1 {
 				s.filevaultKeySweep(ctx)
+			}
+			if tick%30 == 1 {
+				if n, err := s.cmdr.ReconcileDDM(ctx); err != nil {
+					s.log.Warn("DDM reconcile", "err", err)
+				} else if n > 0 {
+					s.log.Info("asked Macs to sync declarations", "count", n)
+				}
 			}
 			if tick%60 == 1 {
 				s.st.PruneCommandEvents(ctx, 90)
