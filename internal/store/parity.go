@@ -218,16 +218,17 @@ func (s *Store) RunAdvancedSearch(ctx context.Context, criteria []model.Criterio
 
 // ---- mac apps (Installomator catalog) ----
 
-const appCols = `id, name, label, category, description, update_behavior, enabled, scope, self_service, created_at, updated_at`
+const appCols = `id, name, label, category, description, update_behavior, options, enabled, scope, self_service, created_at, updated_at`
 
 func scanApp(row interface{ Scan(...any) error }) (*model.MacApp, error) {
 	var a model.MacApp
 	var sc db.JSON[model.Scope]
 	var ss db.JSON[model.PolicySelfService]
-	if err := row.Scan(&a.ID, &a.Name, &a.Label, &a.Category, &a.Description, &a.UpdateBehavior, &a.Enabled, &sc, &ss, &a.CreatedAt, &a.UpdatedAt); err != nil {
+	var opts db.JSON[model.InstallomatorOptions]
+	if err := row.Scan(&a.ID, &a.Name, &a.Label, &a.Category, &a.Description, &a.UpdateBehavior, &opts, &a.Enabled, &sc, &ss, &a.CreatedAt, &a.UpdatedAt); err != nil {
 		return nil, wrapNotFound(err)
 	}
-	a.Scope, a.SelfService = sc.V, ss.V
+	a.Scope, a.SelfService, a.Options = sc.V, ss.V, opts.V
 	a.Scope.Normalize()
 	return &a, nil
 }
@@ -269,17 +270,17 @@ func normApp(a *model.MacApp) {
 // CreateMacApp inserts a catalog entry.
 func (s *Store) CreateMacApp(ctx context.Context, a model.MacApp) (*model.MacApp, error) {
 	normApp(&a)
-	return scanApp(s.DB.QueryRowContext(ctx, `INSERT INTO mac_apps (name, label, category, description, update_behavior, enabled, scope, self_service)
-		VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb) RETURNING `+appCols,
-		a.Name, a.Label, a.Category, a.Description, a.UpdateBehavior, a.Enabled, jsonArg(a.Scope), jsonArg(a.SelfService)))
+	return scanApp(s.DB.QueryRowContext(ctx, `INSERT INTO mac_apps (name, label, category, description, update_behavior, enabled, scope, self_service, options)
+		VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9::jsonb) RETURNING `+appCols,
+		a.Name, a.Label, a.Category, a.Description, a.UpdateBehavior, a.Enabled, jsonArg(a.Scope), jsonArg(a.SelfService), jsonArg(a.Options)))
 }
 
 // UpdateMacApp updates a catalog entry.
 func (s *Store) UpdateMacApp(ctx context.Context, a model.MacApp) (*model.MacApp, error) {
 	normApp(&a)
 	return scanApp(s.DB.QueryRowContext(ctx, `UPDATE mac_apps SET name=$2, label=$3, category=$4, description=$5, update_behavior=$6, enabled=$7,
-		scope=$8::jsonb, self_service=$9::jsonb, updated_at=now() WHERE id=$1 RETURNING `+appCols,
-		a.ID, a.Name, a.Label, a.Category, a.Description, a.UpdateBehavior, a.Enabled, jsonArg(a.Scope), jsonArg(a.SelfService)))
+		scope=$8::jsonb, self_service=$9::jsonb, options=$10::jsonb, updated_at=now() WHERE id=$1 RETURNING `+appCols,
+		a.ID, a.Name, a.Label, a.Category, a.Description, a.UpdateBehavior, a.Enabled, jsonArg(a.Scope), jsonArg(a.SelfService), jsonArg(a.Options)))
 }
 
 // DeleteMacApp removes a catalog entry.

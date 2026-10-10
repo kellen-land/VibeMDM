@@ -398,6 +398,11 @@ func (e *Executor) RunPolicy(ctx context.Context, p model.AgentPolicy) model.Age
 		r := e.InstallPackage(ctx, pk)
 		addStep("package", pk.Name, r)
 	}
+	for _, app := range p.Apps {
+		logf("Installing %q with Installomator", app.Name)
+		r := e.RunAppStep(ctx, app)
+		addStep("app", app.Name, r)
+	}
 	if strings.TrimSpace(p.RunCommand) != "" {
 		logf("Running command")
 		r := e.RunCommand(ctx, p.RunCommand)

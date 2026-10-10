@@ -366,6 +366,42 @@ type PolicyPackage struct {
 	Action    string `json:"action"` // install
 }
 
+// InstallomatorOptions are runtime options for an Installomator run
+// (mirrors installomator.Options; kept here to avoid an import cycle).
+type InstallomatorOptions struct {
+	Notify                string `json:"notify"`
+	BlockingProcessAction string `json:"blocking_process_action"`
+	Reopen                string `json:"reopen"`
+	IgnoreAppStoreApps    string `json:"ignore_app_store_apps"`
+	ForceInstall          bool   `json:"force_install"`
+}
+
+// PolicyApp is an Installomator step inside a policy. Label is a shipped
+// Installomator label or "custom:<key>" for a custom label.
+type PolicyApp struct {
+	Label   string               `json:"label"`
+	Options InstallomatorOptions `json:"options"`
+}
+
+// CustomLabel is an admin-defined Installomator label.
+type CustomLabel struct {
+	ID                string    `json:"id"`
+	Key               string    `json:"key"`
+	Name              string    `json:"name"`
+	Type              string    `json:"type"`
+	DownloadURL       string    `json:"download_url"`
+	ExpectedTeamID    string    `json:"expected_team_id"`
+	PackageID         string    `json:"package_id"`
+	AppName           string    `json:"app_name"`
+	ArchiveName       string    `json:"archive_name"`
+	VersionKey        string    `json:"version_key"`
+	AppNewVersion     string    `json:"app_new_version"`
+	BlockingProcesses []string  `json:"blocking_processes"`
+	Description       string    `json:"description"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
 // PolicyReboot configures restart behavior.
 type PolicyReboot struct {
 	Enabled      bool   `json:"enabled"`
@@ -398,6 +434,7 @@ type Policy struct {
 	Scope           Scope                 `json:"scope"`
 	Scripts         []PolicyScript        `json:"scripts"`
 	Packages        []PolicyPackage       `json:"packages"`
+	Apps            []PolicyApp           `json:"apps"`
 	RunCommand      string                `json:"run_command"`
 	UpdateInventory bool                  `json:"update_inventory"`
 	Reboot          PolicyReboot          `json:"reboot"`
@@ -567,17 +604,18 @@ type AdvancedSearch struct {
 
 // MacApp is an app catalog entry installed via Installomator.
 type MacApp struct {
-	ID             string            `json:"id"`
-	Name           string            `json:"name"`
-	Label          string            `json:"label"`
-	Category       string            `json:"category"`
-	Description    string            `json:"description"`
-	UpdateBehavior string            `json:"update_behavior"` // install_once | keep_updated
-	Enabled        bool              `json:"enabled"`
-	Scope          Scope             `json:"scope"`
-	SelfService    PolicySelfService `json:"self_service"`
-	CreatedAt      time.Time         `json:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at"`
+	ID             string               `json:"id"`
+	Name           string               `json:"name"`
+	Label          string               `json:"label"`
+	Category       string               `json:"category"`
+	Description    string               `json:"description"`
+	UpdateBehavior string               `json:"update_behavior"` // install_once | keep_updated
+	Options        InstallomatorOptions `json:"options"`
+	Enabled        bool                 `json:"enabled"`
+	Scope          Scope                `json:"scope"`
+	SelfService    PolicySelfService    `json:"self_service"`
+	CreatedAt      time.Time            `json:"created_at"`
+	UpdatedAt      time.Time            `json:"updated_at"`
 }
 
 // AppInstallLog is one app install run on a computer.

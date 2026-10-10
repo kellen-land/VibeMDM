@@ -48,11 +48,7 @@ func (e *Executor) InstallApp(ctx context.Context, app model.AgentAppInstall) {
 	if err != nil {
 		status, logText = "failed", err.Error()
 	} else {
-		ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-		cmd := exec.CommandContext(ctx, "/bin/zsh", script, app.Label, "NOTIFY=silent", "BLOCKING_PROCESS_ACTION=prompt_user", "LOGO=appstore")
-		cmd.Dir = "/"
-		r := runCmd(cmd)
-		cancel()
+		r := e.runInstallomator(ctx, script, app.Label, app.Args)
 		logText = r.Combined
 		if r.ExitCode != 0 {
 			status = "failed"
@@ -245,4 +241,27 @@ func (e *Executor) RegenerateFileVaultKey(ctx context.Context) ExecResult {
 	}
 	out.WriteString("\nEscrow Buddy armed. A new FileVault recovery key will be generated at the next login by a FileVault-enabled user and escrowed to the server.")
 	return ExecResult{Combined: out.String(), Stdout: out.String(), Duration: time.Since(start)}
+}
+
+// runInstallomator runs Installomator with server-built arguments. Arguments
+// are passed as argv (no shell); the server single-quotes every value because
+// Installomator evaluates key=value arguments itself.
+func (e *Executor) runInstallomator(ctx context.Context, script, label string, args []string) ExecResult {
+	if len(args) == 0 { // older servers: label with defaults
+		args = []string{label, "NOTIFY=silent", "BLOCKING_PROCESS_ACTION=prompt_user"}
+	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "/bin/zsh", append([]string{script}, args...)...)
+	cmd.Dir = "/"
+	return runCmd(cmd)
+}
+
+// RunAppStep runs one Installomator step inside a policy.
+func (e *Executor) RunAppStep(ctx context.Context, step model.AgentAppStep) ExecResult {
+	script, err := e.ensureInstallomator(ctx)
+	if err != nil {
+		return ExecResult{ExitCode: -1, Err: err, Combined: err.Error()}
+	}
+	return e.runInstallomator(ctx, script, step.Label, step.Args)
 }

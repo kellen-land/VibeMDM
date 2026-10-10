@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -45,9 +46,26 @@ func (h *Handler) getPolicy(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, policyWithStatus{Policy: *p, Status: st})
 }
 
+// validPolicyApps checks Installomator steps.
+func (h *Handler) validPolicyApps(apps []model.PolicyApp) error {
+	for _, a := range apps {
+		if !h.validAppLabel(a.Label) {
+			return fmt.Errorf("unknown Installomator label %q", a.Label)
+		}
+		if err := validOptions(a.Options); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (h *Handler) createPolicy(w http.ResponseWriter, r *http.Request) {
 	var p model.Policy
 	if err := decode(r, &p); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	if err := h.validPolicyApps(p.Apps); err != nil {
 		writeErr(w, 400, err.Error())
 		return
 	}
@@ -72,6 +90,10 @@ func (h *Handler) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.ID = r.PathValue("id")
+	if err := h.validPolicyApps(p.Apps); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
 	out, err := h.st.UpdatePolicy(r.Context(), p)
 	if err != nil {
 		h.fail(w, err, "policy")

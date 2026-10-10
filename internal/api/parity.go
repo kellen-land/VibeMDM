@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/vibemdm/vibemdm/internal/agentapi"
 	"github.com/vibemdm/vibemdm/internal/db"
+	"github.com/vibemdm/vibemdm/internal/installomator"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/webhook"
 )
@@ -455,7 +457,140 @@ func (h *Handler) listApps(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) appLabels(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string]any{"labels": agentapi.InstallomatorLabels(), "source": "Installomator v10.8 (Apache-2.0)", "license_url": "/agent/installomator-license"})
+	custom, err := h.st.ListCustomLabels(r.Context())
+	if err != nil {
+		h.fail(w, err, "custom labels")
+		return
+	}
+	keys := make([]string, 0, len(custom))
+	for _, c := range custom {
+		keys = append(keys, "custom:"+c.Key)
+	}
+	writeJSON(w, 200, map[string]any{"labels": agentapi.InstallomatorLabels(), "custom_labels": keys, "choices": installomator.Choices(),
+		"source": "Installomator v10.8 (Apache-2.0)", "license_url": "/agent/installomator-license"})
+}
+
+func (h *Handler) listCustomLabels(w http.ResponseWriter, r *http.Request) {
+	items, err := h.st.ListCustomLabels(r.Context())
+	if err != nil {
+		h.fail(w, err, "custom labels")
+		return
+	}
+	writeJSON(w, 200, listResp[model.CustomLabel]{Items: items, Total: len(items)})
+}
+
+func (h *Handler) getCustomLabel(w http.ResponseWriter, r *http.Request) {
+	l, err := h.st.GetCustomLabel(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "custom label")
+		return
+	}
+	writeJSON(w, 200, l)
+}
+
+func (h *Handler) saveCustomLabel(w http.ResponseWriter, r *http.Request) {
+	var l model.CustomLabel
+	if err := decode(r, &l); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	l.ID = r.PathValue("id")
+	for _, builtin := range agentapi.InstallomatorLabels() {
+		if builtin == l.Key {
+			writeErr(w, 400, "that key is already a shipped Installomator label; use the shipped label or choose another key")
+			return
+		}
+	}
+	out, err := h.st.SaveCustomLabel(r.Context(), l)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key") {
+			writeErr(w, 409, "a custom label with that key already exists")
+			return
+		}
+		writeErr(w, 400, err.Error())
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "custom_label.save", "custom_label", out.ID, map[string]any{"key": out.Key, "download_url": out.DownloadURL, "team_id": out.ExpectedTeamID})
+	code := 200
+	if l.ID == "" {
+		code = 201
+	}
+	writeJSON(w, code, out)
+}
+
+func (h *Handler) deleteCustomLabel(w http.ResponseWriter, r *http.Request) {
+	l, err := h.st.GetCustomLabel(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "custom label")
+		return
+	}
+	if users, _ := h.labelUsers(r, "custom:"+l.Key); len(users) > 0 {
+		writeErr(w, 409, "in use by: "+strings.Join(users, ", "))
+		return
+	}
+	if err := h.st.DeleteCustomLabel(r.Context(), l.ID); err != nil {
+		h.fail(w, err, "custom label")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "custom_label.delete", "custom_label", l.ID, map[string]any{"key": l.Key})
+	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+// previewCustomLabel returns the exact Installomator arguments a label produces.
+func (h *Handler) previewInstallomatorArgs(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Label   string                     `json:"label"`
+		Custom  *model.CustomLabel         `json:"custom"`
+		Options model.InstallomatorOptions `json:"options"`
+	}
+	if err := decode(r, &req); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	opts := installomator.Options{Notify: req.Options.Notify, BlockingProcessAction: req.Options.BlockingProcessAction, Reopen: req.Options.Reopen,
+		IgnoreAppStoreApps: req.Options.IgnoreAppStoreApps, ForceInstall: req.Options.ForceInstall}
+	var args []string
+	var err error
+	if req.Custom != nil {
+		c := *req.Custom
+		args, err = installomator.CustomArgs(installomator.CustomLabel{Key: c.Key, Name: c.Name, Type: c.Type, DownloadURL: c.DownloadURL,
+			ExpectedTeamID: c.ExpectedTeamID, PackageID: c.PackageID, AppName: c.AppName, ArchiveName: c.ArchiveName, VersionKey: c.VersionKey,
+			AppNewVersion: c.AppNewVersion, BlockingProcesses: c.BlockingProcesses}, opts)
+	} else {
+		args, _, err = h.st.InstallomatorArgs(r.Context(), req.Label, req.Options)
+	}
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	writeJSON(w, 200, map[string]any{"args": args, "command": "Installomator.sh " + strings.Join(args, " ")})
+}
+
+// labelUsers lists apps and policies referencing a label.
+func (h *Handler) labelUsers(r *http.Request, label string) ([]string, error) {
+	var users []string
+	apps, err := h.st.ListMacApps(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range apps {
+		if a.Label == label {
+			users = append(users, "app "+a.Name)
+		}
+	}
+	pols, err := h.st.ListPolicies(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range pols {
+		for _, pa := range p.Apps {
+			if pa.Label == label {
+				users = append(users, "policy "+p.Name)
+				break
+			}
+		}
+	}
+	return users, nil
 }
 
 func (h *Handler) getApp(w http.ResponseWriter, r *http.Request) {
@@ -468,12 +603,20 @@ func (h *Handler) getApp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) validAppLabel(label string) bool {
+	if key, ok := strings.CutPrefix(label, "custom:"); ok {
+		_, err := h.st.GetCustomLabel(context.Background(), key)
+		return err == nil
+	}
 	for _, l := range agentapi.InstallomatorLabels() {
 		if l == label {
 			return true
 		}
 	}
 	return false
+}
+
+func validOptions(o model.InstallomatorOptions) error {
+	return installomator.Options{Notify: o.Notify, BlockingProcessAction: o.BlockingProcessAction, Reopen: o.Reopen, IgnoreAppStoreApps: o.IgnoreAppStoreApps}.Validate()
 }
 
 func (h *Handler) createApp(w http.ResponseWriter, r *http.Request) {
@@ -483,7 +626,11 @@ func (h *Handler) createApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.TrimSpace(m.Name) == "" || !h.validAppLabel(strings.TrimSpace(m.Label)) {
-		writeErr(w, 400, "name and a valid Installomator label are required")
+		writeErr(w, 400, "name and a valid Installomator label (or custom:<key>) are required")
+		return
+	}
+	if err := validOptions(m.Options); err != nil {
+		writeErr(w, 400, err.Error())
 		return
 	}
 	out, err := h.st.CreateMacApp(r.Context(), m)
@@ -505,6 +652,10 @@ func (h *Handler) updateApp(w http.ResponseWriter, r *http.Request) {
 	m.ID = r.PathValue("id")
 	if !h.validAppLabel(strings.TrimSpace(m.Label)) {
 		writeErr(w, 400, "unknown Installomator label")
+		return
+	}
+	if err := validOptions(m.Options); err != nil {
+		writeErr(w, 400, err.Error())
 		return
 	}
 	out, err := h.st.UpdateMacApp(r.Context(), m)

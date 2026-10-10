@@ -97,6 +97,15 @@ func (e *Engine) Prepare(ctx context.Context, p *model.Policy, trigger string) (
 		pkgs = append(pkgs, *pkg)
 	}
 	sort.SliceStable(pkgs, func(i, j int) bool { return pkgs[i].Priority < pkgs[j].Priority })
+	ap.Apps = []model.AgentAppStep{}
+	for _, pa := range p.Apps {
+		args, name, err := e.st.InstallomatorArgs(ctx, pa.Label, pa.Options)
+		if err != nil {
+			e.log.Warn("policy Installomator step skipped", "policy", p.Name, "label", pa.Label, "err", err)
+			continue
+		}
+		ap.Apps = append(ap.Apps, model.AgentAppStep{Name: name, Label: pa.Label, Args: args})
+	}
 	for _, pkg := range pkgs {
 		ap.Packages = append(ap.Packages, model.AgentPackageStep{
 			PackageID: pkg.ID, Name: pkg.Name, Filename: pkg.Filename, SHA256: pkg.SHA256, SizeBytes: pkg.SizeBytes,

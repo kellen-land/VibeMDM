@@ -58,6 +58,14 @@ type AgentPackageStep struct {
 	URL       string `json:"url"` // relative to server URL
 }
 
+// AgentAppStep is an Installomator run inside a policy. Args are built and
+// shell-quoted by the server; the agent passes them to Installomator verbatim.
+type AgentAppStep struct {
+	Name  string   `json:"name"`
+	Label string   `json:"label"`
+	Args  []string `json:"args"`
+}
+
 // AgentPolicy is a policy ready for execution.
 type AgentPolicy struct {
 	LogID           string                `json:"log_id"`
@@ -66,6 +74,7 @@ type AgentPolicy struct {
 	Trigger         string                `json:"trigger"`
 	Scripts         []AgentScriptStep     `json:"scripts"`
 	Packages        []AgentPackageStep    `json:"packages"`
+	Apps            []AgentAppStep        `json:"apps"`
 	RunCommand      string                `json:"run_command"`
 	UpdateInventory bool                  `json:"update_inventory"`
 	Reboot          PolicyReboot          `json:"reboot"`
@@ -85,10 +94,11 @@ type AgentRestrictedRule struct {
 
 // AgentAppInstall is an app-catalog install for the agent to run via Installomator.
 type AgentAppInstall struct {
-	LogID string `json:"log_id"`
-	AppID string `json:"app_id"`
-	Name  string `json:"name"`
-	Label string `json:"label"`
+	LogID string   `json:"log_id"`
+	AppID string   `json:"app_id"`
+	Name  string   `json:"name"`
+	Label string   `json:"label"`
+	Args  []string `json:"args"` // server-built Installomator arguments
 }
 
 // AgentCheckinResponse returns work for the agent.

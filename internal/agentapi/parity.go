@@ -206,12 +206,17 @@ func (h *Handler) selfServiceRun(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, 403, "not in scope")
 			return
 		}
+		args, _, err := h.st.InstallomatorArgs(r.Context(), a.Label, a.Options)
+		if err != nil {
+			writeErr(w, 500, err.Error())
+			return
+		}
 		logID, err := h.st.CreateAppInstallLog(r.Context(), a.ID, comp.ID, "self_service")
 		if err != nil {
 			writeErr(w, 500, err.Error())
 			return
 		}
-		writeJSON(w, 200, map[string]any{"app": model.AgentAppInstall{LogID: logID, AppID: a.ID, Name: a.Name, Label: a.Label}})
+		writeJSON(w, 200, map[string]any{"app": model.AgentAppInstall{LogID: logID, AppID: a.ID, Name: a.Name, Label: a.Label, Args: args}})
 	default:
 		writeErr(w, 400, "unknown kind")
 	}

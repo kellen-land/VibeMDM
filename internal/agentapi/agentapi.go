@@ -242,11 +242,16 @@ func (h *Handler) checkin(w http.ResponseWriter, r *http.Request) {
 				if err != nil || !due {
 					continue
 				}
+				args, _, err := h.st.InstallomatorArgs(r.Context(), a.Label, a.Options)
+				if err != nil {
+					h.log.Warn("app install skipped", "app", a.Name, "err", err)
+					continue
+				}
 				logID, err := h.st.CreateAppInstallLog(r.Context(), a.ID, comp.ID, req.Trigger)
 				if err != nil {
 					continue
 				}
-				resp.AppInstalls = append(resp.AppInstalls, model.AgentAppInstall{LogID: logID, AppID: a.ID, Name: a.Name, Label: a.Label})
+				resp.AppInstalls = append(resp.AppInstalls, model.AgentAppInstall{LogID: logID, AppID: a.ID, Name: a.Name, Label: a.Label, Args: args})
 			}
 		}
 		// Restricted software rules for this computer.

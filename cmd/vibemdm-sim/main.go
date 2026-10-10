@@ -456,7 +456,7 @@ func (d *device) agentLoop(ctx context.Context, interval time.Duration) {
 		}
 		for _, app := range resp.AppInstalls {
 			d.log.Info("simulating app install", "app", app.Name, "label", app.Label)
-			c.SubmitAppInstallResult(ctx, app.LogID, "completed", "[simulator] Installomator "+app.Label+": installed")
+			c.SubmitAppInstallResult(ctx, app.LogID, "completed", "[simulator] Installomator "+strings.Join(app.Args, " ")+": installed")
 		}
 		if n := len(resp.RestrictedSoftware); n > 0 && d.idx == 1 {
 			// First simulated Mac "violates" each rule once so the console has data.
@@ -519,6 +519,10 @@ func (d *device) runPolicy(ctx context.Context, c *agent.Client, p model.AgentPo
 	for _, pk := range p.Packages {
 		sub.Steps = append(sub.Steps, model.PolicyStep{Type: "package", Name: pk.Name, Status: "completed", Output: "[simulator] installer: The install was successful.", DurationMS: 2500})
 		fmt.Fprintf(&logb, "package %q installed\n", pk.Name)
+	}
+	for _, a := range p.Apps {
+		sub.Steps = append(sub.Steps, model.PolicyStep{Type: "app", Name: a.Name, Status: "completed", Output: "[simulator] Installomator " + strings.Join(a.Args, " "), DurationMS: 4100})
+		fmt.Fprintf(&logb, "Installomator %q installed\n", a.Name)
 	}
 	if p.RunCommand != "" {
 		sub.Steps = append(sub.Steps, model.PolicyStep{Type: "command", Name: "Execute Command", Status: "completed", Output: "[simulator] " + p.RunCommand, DurationMS: 40})

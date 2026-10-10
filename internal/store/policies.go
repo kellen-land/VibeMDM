@@ -11,7 +11,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/model"
 )
 
-const policyCols = `id, name, enabled, category, triggers, frequency, scope, scripts, packages, run_command, update_inventory, reboot, user_interaction, self_service, created_at, updated_at`
+const policyCols = `id, name, enabled, category, triggers, frequency, scope, scripts, packages, apps, run_command, update_inventory, reboot, user_interaction, self_service, created_at, updated_at`
 
 func scanPolicy(row interface{ Scan(...any) error }) (*model.Policy, error) {
 	var p model.Policy
@@ -19,10 +19,11 @@ func scanPolicy(row interface{ Scan(...any) error }) (*model.Policy, error) {
 	var scope db.JSON[model.Scope]
 	var scripts db.JSON[[]model.PolicyScript]
 	var pkgs db.JSON[[]model.PolicyPackage]
+	var apps db.JSON[[]model.PolicyApp]
 	var reboot db.JSON[model.PolicyReboot]
 	var ui db.JSON[model.PolicyUserInteraction]
 	var ss db.JSON[model.PolicySelfService]
-	if err := row.Scan(&p.ID, &p.Name, &p.Enabled, &p.Category, &trig, &p.Frequency, &scope, &scripts, &pkgs, &p.RunCommand, &p.UpdateInventory, &reboot, &ui, &ss, &p.CreatedAt, &p.UpdatedAt); err != nil {
+	if err := row.Scan(&p.ID, &p.Name, &p.Enabled, &p.Category, &trig, &p.Frequency, &scope, &scripts, &pkgs, &apps, &p.RunCommand, &p.UpdateInventory, &reboot, &ui, &ss, &p.CreatedAt, &p.UpdatedAt); err != nil {
 		return nil, wrapNotFound(err)
 	}
 	p.Triggers, p.Scope, p.Scripts, p.Packages, p.Reboot, p.UserInteraction, p.SelfService = trig.V, scope.V, scripts.V, pkgs.V, reboot.V, ui.V, ss.V
@@ -32,6 +33,10 @@ func scanPolicy(row interface{ Scan(...any) error }) (*model.Policy, error) {
 	}
 	if p.Packages == nil {
 		p.Packages = []model.PolicyPackage{}
+	}
+	p.Apps = apps.V
+	if p.Apps == nil {
+		p.Apps = []model.PolicyApp{}
 	}
 	return &p, nil
 }
@@ -65,6 +70,9 @@ func normPolicy(p *model.Policy) {
 	if p.SelfService.ButtonText == "" {
 		p.SelfService.ButtonText = "Install"
 	}
+	if p.Apps == nil {
+		p.Apps = []model.PolicyApp{}
+	}
 }
 
 // ListPolicies returns all policies.
@@ -93,19 +101,19 @@ func (s *Store) GetPolicy(ctx context.Context, id string) (*model.Policy, error)
 // CreatePolicy inserts a policy.
 func (s *Store) CreatePolicy(ctx context.Context, p model.Policy) (*model.Policy, error) {
 	normPolicy(&p)
-	return scanPolicy(s.DB.QueryRowContext(ctx, `INSERT INTO policies (name, enabled, category, triggers, frequency, scope, scripts, packages, run_command, update_inventory, reboot, user_interaction, self_service)
-		VALUES ($1,$2,$3,$4::jsonb,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb) RETURNING `+policyCols,
+	return scanPolicy(s.DB.QueryRowContext(ctx, `INSERT INTO policies (name, enabled, category, triggers, frequency, scope, scripts, packages, run_command, update_inventory, reboot, user_interaction, self_service, apps)
+		VALUES ($1,$2,$3,$4::jsonb,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb) RETURNING `+policyCols,
 		p.Name, p.Enabled, p.Category, jsonArg(p.Triggers), p.Frequency, jsonArg(p.Scope), jsonArg(p.Scripts), jsonArg(p.Packages), p.RunCommand, p.UpdateInventory,
-		jsonArg(p.Reboot), jsonArg(p.UserInteraction), jsonArg(p.SelfService)))
+		jsonArg(p.Reboot), jsonArg(p.UserInteraction), jsonArg(p.SelfService), jsonArg(p.Apps)))
 }
 
 // UpdatePolicy updates a policy.
 func (s *Store) UpdatePolicy(ctx context.Context, p model.Policy) (*model.Policy, error) {
 	normPolicy(&p)
 	return scanPolicy(s.DB.QueryRowContext(ctx, `UPDATE policies SET name=$2, enabled=$3, category=$4, triggers=$5::jsonb, frequency=$6, scope=$7::jsonb, scripts=$8::jsonb, packages=$9::jsonb,
-		run_command=$10, update_inventory=$11, reboot=$12::jsonb, user_interaction=$13::jsonb, self_service=$14::jsonb, updated_at=now() WHERE id=$1 RETURNING `+policyCols,
+		run_command=$10, update_inventory=$11, reboot=$12::jsonb, user_interaction=$13::jsonb, self_service=$14::jsonb, apps=$15::jsonb, updated_at=now() WHERE id=$1 RETURNING `+policyCols,
 		p.ID, p.Name, p.Enabled, p.Category, jsonArg(p.Triggers), p.Frequency, jsonArg(p.Scope), jsonArg(p.Scripts), jsonArg(p.Packages), p.RunCommand, p.UpdateInventory,
-		jsonArg(p.Reboot), jsonArg(p.UserInteraction), jsonArg(p.SelfService)))
+		jsonArg(p.Reboot), jsonArg(p.UserInteraction), jsonArg(p.SelfService), jsonArg(p.Apps)))
 }
 
 // DeletePolicy removes a policy.
