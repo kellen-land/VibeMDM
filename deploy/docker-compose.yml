@@ -3,8 +3,8 @@
 #   cp .env.example .env   # edit values
 #   docker compose up -d
 #
-# Add the "tls" profile to run Caddy with automatic Let's Encrypt certificates:
-#   docker compose --profile tls up -d
+# TLS is terminated by your own reverse proxy (for example Nginx Proxy Manager),
+# which forwards to the published port below. See docs/manual/02-installation.md.
 services:
   db:
     image: postgres:17-alpine
@@ -46,25 +46,6 @@ services:
     ports:
       - "13031:8080"
 
-  caddy:
-    image: caddy:2-alpine
-    profiles: ["tls"]
-    restart: unless-stopped
-    depends_on:
-      - vibemdm
-    environment:
-      DOMAIN: ${DOMAIN:?set DOMAIN in .env for the tls profile}
-      CADDY_EMAIL: ${CADDY_EMAIL:-}
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-
 volumes:
   db-data:
   vibemdm-data:
-  caddy-data:
-  caddy-config:

@@ -8,8 +8,8 @@ cover encryption at rest and key rotation.
 
 | Do this | Why |
 | --- | --- |
-| Put VibeMDM behind TLS (the Caddy `tls` profile) and set `VIBEMDM_SERVER_URL=https://…` | macOS requires HTTPS for MDM. The agent refuses plain-http servers unless told otherwise. |
-| Leave `VIBEMDM_BIND=127.0.0.1` (the default) | The plain-http container port is then reachable only through the proxy. |
+| Put VibeMDM behind a TLS-terminating reverse proxy (for example Nginx Proxy Manager) and set `VIBEMDM_SERVER_URL=https://…` | macOS requires HTTPS for MDM. The agent refuses plain-http servers unless told otherwise. |
+| Firewall the published plain-http port (`13031` in `docker-compose.yml`) so only the proxy can reach it | The port is published on every host interface; anyone who reaches it bypasses TLS. |
 | Set `VIBEMDM_ENCRYPTION_KEY` and back it up | Private keys and FileVault recovery keys are sealed at rest. |
 | Set `VIBEMDM_TRUSTED_PROXIES` to your proxy's address/CIDR | Client IPs (rate limiting, audit) come from `X-Forwarded-For` only when it is set by a trusted proxy. |
 | Change the bootstrap admin password at first login (enforced) | The generated password exists in `/data/initial-admin-password` until you change it. Delete the file afterwards. |

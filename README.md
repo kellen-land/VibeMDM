@@ -43,22 +43,25 @@ terminology). VibeMDM is an independent implementation and contains no Jamf code
 
 ## Quick start (Docker)
 
-Requirements: a public DNS name pointing at the host, ports 80/443 reachable (for Let's Encrypt), Docker.
+Requirements: Docker, a public DNS name, and a reverse proxy that terminates TLS with a publicly trusted certificate
+(for example Nginx Proxy Manager with Let's Encrypt).
 
 ```bash
 git clone https://github.com/YOUR-ORG/vibemdm.git && cd vibemdm/deploy
-cp .env.example .env            # set VIBEMDM_SERVER_URL, VIBEMDM_ADMIN_PASSWORD, POSTGRES_PASSWORD, DOMAIN, CADDY_EMAIL
-docker compose --profile tls up -d --build
+cp .env.example .env            # set VIBEMDM_SERVER_URL, VIBEMDM_ENCRYPTION_KEY, POSTGRES_PASSWORD, VIBEMDM_TRUSTED_PROXIES
+docker compose up -d --build     # serves plain HTTP on host port 13031 for the proxy
 ```
 
-Open `https://mdm.example.com`, sign in as `admin`, then:
+Configure the proxy host (below), open `https://mdm.example.com`, sign in as `admin`, then:
 
 1. **Settings → APNs** – obtain an Apple push certificate (see [docs/apns.md](docs/apns.md)). Without it Macs cannot enroll.
 2. **Enrollment** – create an invitation link, or copy the install command.
 3. On a Mac: open the enrollment link, install the profile, approve it in *System Settings → Device Management*, and run the agent install command in Terminal.
 
-Already have TLS termination (nginx, Traefik, Cloudflare Tunnel)? Skip the `tls` profile and proxy to port 8080. Apple requires a
-certificate that macOS trusts; self-signed certificates do not work for MDM.
+Point your proxy at host port 13031 with WebSockets on, an 8 GB body limit and 10-minute timeouts, and keep 13031
+firewalled from the internet. The Nginx Proxy Manager walkthrough is in
+[docs/manual/02-installation.md](docs/manual/02-installation.md#221-nginx-proxy-manager). Apple requires a certificate
+that macOS trusts; self-signed certificates do not work for MDM.
 
 ## Repository layout
 
@@ -73,7 +76,7 @@ internal/db         migrations           internal/compliance mSCP baselines, sca
 internal/ddm        declarative mgmt     internal/schema    JSON-schema (Application & Custom Settings) profiles
 internal/superwf    super deployment     internal/onboarding white-glove onboarding (swiftDialog)
 internal/mcp        MCP server for AI    web/               React console (Vite, Tailwind)
-deploy/             Dockerfile, compose, Caddyfile           docs/manual/  administrator manual
+deploy/             Dockerfile, compose                      docs/manual/  administrator manual
 ```
 
 ## Development

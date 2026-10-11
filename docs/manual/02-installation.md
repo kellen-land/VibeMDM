@@ -9,7 +9,7 @@ the at-rest encryption key and its rotation, backups and upgrades.
 | --- | --- |
 | A Linux host with Docker and Docker Compose v2 | VibeMDM ships as a container image built from `deploy/Dockerfile` |
 | A public DNS name (for example `mdm.example.com`) | Macs must reach the server from any network they use |
-| Ports 80 and 443 reachable from the internet | Let's Encrypt HTTP-01 validation (port 80) and HTTPS (443) for the Caddy `tls` profile |
+| A reverse proxy that terminates TLS, reachable on port 443 from the internet | Macs and browsers connect over HTTPS; the proxy forwards to VibeMDM over HTTP ([§2.2.1](#221-nginx-proxy-manager)) |
 | A TLS certificate that macOS trusts | Apple devices refuse MDM servers with self-signed or untrusted certificates |
 | Outbound HTTPS from the server to `api.push.apple.com` | Sending APNs pushes (HTTP/2 on 443) |
 | Optional outbound HTTPS to `mdmcert.download`, `sofafeed.macadmins.io`, `raw.githubusercontent.com` | Push certificate signing, the macOS version catalog, the super script download (the last one is fetched by Macs, not the server) |
@@ -21,15 +21,23 @@ the at-rest encryption key and its rotation, backups and upgrades.
 > HTTP/2 to `api.push.apple.com` on port 443 (2197 is an alternative). TLS-inspecting proxies that intercept
 > Apple traffic commonly break APNs and enrollment.
 
-## 2.2 Deploy with Docker Compose and Caddy
+## 2.2 Deploy with Docker Compose
 
-The compose file (`deploy/docker-compose.yml`) defines three services:
+The compose file (`deploy/docker-compose.yml`) defines two services. TLS is not part of the stack: a reverse
+proxy you already run (this chapter uses Nginx Proxy Manager) terminates HTTPS and forwards to VibeMDM over HTTP.
 
 | Service | Image | Notes |
 | --- | --- | --- |
 | `db` | `postgres:17-alpine` | Database `vibemdm`, user `vibemdm`, volume `db-data`, health-checked with `pg_isready` |
-| `vibemdm` | `${VIBEMDM_IMAGE:-vibemdm/vibemdm:latest}`, built from `deploy/Dockerfile` | Waits for a healthy `db`; volume `vibemdm-data` at `/data`; publishes `${VIBEMDM_BIND:-127.0.0.1}:${VIBEMDM_PORT:-8080}:8080` |
-| `caddy` | `caddy:2-alpine` | Profile `tls` only; ports 80 and 443; mounts `deploy/Caddyfile`; volumes `caddy-data`, `caddy-config` |
+| `vibemdm` | `${VIBEMDM_IMAGE:-vibemdm/vibemdm:latest}`, built from `deploy/Dockerfile` | Waits for a healthy `db`; volume `vibemdm-data` at `/data`; publishes host port `13031` to container port `8080` |
+
+The `13031:8080` mapping publishes plain HTTP on **every** host interface. Only the proxy should reach it: block
+13031 from the internet with the host firewall (or your router), or put the proxy on the same Docker network and
+forward to `vibemdm:8080` instead ([§2.2.1](#221-nginx-proxy-manager)).
+
+> **Caution:** Docker writes its own iptables rules for published ports, and they bypass `ufw` and `firewalld`
+> rules on the same host. Block 13031 in the `DOCKER-USER` chain or on your router, then check from outside with
+> `curl -m 5 http://<public-ip>:13031/healthz` (it should time out).
 
 ### Procedure
 
@@ -48,13 +56,13 @@ The compose file (`deploy/docker-compose.yml`) defines three services:
    openssl rand -base64 24   # POSTGRES_PASSWORD
    ```
 
-3. Edit `.env`. At minimum set `VIBEMDM_SERVER_URL`, `VIBEMDM_ENCRYPTION_KEY`, `POSTGRES_PASSWORD`, `DOMAIN`
-   and `CADDY_EMAIL`. Leave `VIBEMDM_ADMIN_PASSWORD` empty to have one generated, or set a unique value of at
-   least 12 characters.
-4. Start the stack with TLS:
+3. Edit `.env`. At minimum set `VIBEMDM_SERVER_URL` (the public `https://` name the proxy serves),
+   `VIBEMDM_ENCRYPTION_KEY` and `POSTGRES_PASSWORD`, and check `VIBEMDM_TRUSTED_PROXIES`. Leave
+   `VIBEMDM_ADMIN_PASSWORD` empty to have one generated, or set a unique value of at least 12 characters.
+4. Start the stack:
 
    ```bash
-   docker compose --profile tls up -d --build
+   docker compose up -d --build
    ```
 
 5. Watch the first start:
@@ -65,43 +73,77 @@ The compose file (`deploy/docker-compose.yml`) defines three services:
 
    You should see `applied database migrations`, then `VibeMDM listening`. If the admin password was generated,
    it is printed once to the container console (stderr) and saved to `/data/initial-admin-password`.
-6. Open `https://mdm.example.com` and sign in ([§2.5](#25-first-login-and-the-forced-password-change)).
-
-### What the Caddyfile does
-
-```caddyfile
-{$DOMAIN} {
-    encode zstd gzip
-    header Strict-Transport-Security "max-age=31536000; includeSubDomains"
-    request_body { max_size 8GB }          # package uploads
-    reverse_proxy vibemdm:8080 {
-        transport http { read_timeout 10m  write_timeout 10m }   # 55 s agent long-polls, uploads
-    }
-}
-```
-
-Caddy gets and renews a Let's Encrypt certificate for `DOMAIN` automatically. The `email` global option uses
-`CADDY_EMAIL` for ACME account notices.
-
-### Using your own reverse proxy instead
-
-If you already terminate TLS (nginx, Traefik, HAProxy, a Cloudflare Tunnel), skip the `tls` profile:
-
-1. `docker compose up -d --build` (without `--profile tls`).
-2. Set `VIBEMDM_BIND=0.0.0.0` only if the proxy runs on another host. Otherwise keep `127.0.0.1`.
-3. Configure the proxy to:
-   - forward to port 8080 over HTTP;
-   - allow request bodies up to your largest package;
-   - allow read/write timeouts of at least 60 s (agents long-poll for 55 s) and support WebSocket upgrades for
-     `/api/v1/computers/{id}/shell` and `/agent/v1/shell` (remote shell);
-   - set `X-Forwarded-For`, and add the proxy's address or CIDR to `VIBEMDM_TRUSTED_PROXIES`.
-4. Use a publicly trusted certificate.
+6. Configure the proxy host ([§2.2.1](#221-nginx-proxy-manager)).
+7. Open `https://mdm.example.com` and sign in ([§2.5](#25-first-login-and-the-forced-password-change)).
 
 TLS can terminate at the proxy because the MDM channel authenticates devices with the `Mdm-Signature` header,
 not with TLS client certificates, so the device identity survives a TLS-terminating proxy.
 
-> **Caution:** a Cloudflare-style proxy that inspects or rewrites traffic can break large uploads, long-polls or
-> WebSockets. Test enrollment, a remote shell and a package download after any proxy change.
+### 2.2.1 Nginx Proxy Manager
+
+[Nginx Proxy Manager](https://nginxproxymanager.com) (NPM) is an nginx front end with a web UI. These steps assume
+you already have a Let's Encrypt certificate for the host name, either requested by NPM or uploaded as a custom
+certificate.
+
+1. **Hosts → Proxy Hosts → Add Proxy Host**, tab **Details**:
+
+   | Field | Value |
+   | --- | --- |
+   | Domain Names | `mdm.example.com` (must match `VIBEMDM_SERVER_URL`) |
+   | Scheme | `http` |
+   | Forward Hostname / IP | The Docker host's LAN address; or `vibemdm` if NPM shares a Docker network with the stack |
+   | Forward Port | `13031`; or `8080` when forwarding to `vibemdm` over a shared network |
+   | Cache Assets | Off |
+   | Block Common Exploits | Off, or test enrollment and uploads with it on: its filters can reject legitimate MDM and API requests |
+   | Websockets Support | **On**. The remote shell upgrades `/api/v1/computers/{id}/shell` and `/agent/v1/shell` to WebSockets |
+
+2. Tab **SSL**: choose the certificate, turn on **Force SSL** and **HTTP/2 Support**. Leave **HSTS Enabled**
+   off: VibeMDM sends `Strict-Transport-Security` and the other security headers itself, and a second copy from
+   NPM would duplicate them.
+3. Tab **Advanced**, custom Nginx configuration:
+
+   ```nginx
+   # Package uploads go up to 8 GB (the server's own limit).
+   client_max_body_size 8g;
+   # Stream uploads to VibeMDM instead of spooling them to NPM's disk first.
+   proxy_request_buffering off;
+   # Agents long-poll for about 55 s, and large uploads and downloads take minutes.
+   # Match the server's own 10-minute read/write timeouts.
+   proxy_read_timeout 600s;
+   proxy_send_timeout 600s;
+   ```
+
+   Do not add `proxy_set_header` lines here. NPM's generated `location /` block already sends `Host`,
+   `X-Forwarded-For`, `X-Forwarded-Proto` and `X-Real-IP`, and nginx ignores server-level `proxy_set_header`
+   directives when the location sets its own. VibeMDM needs those headers as follows:
+   - `Host` must be the public host name, unchanged. The console's CSRF check compares the browser's `Origin`
+     with `Host`, and the MCP endpoint does the same, so a rewritten `Host` makes every console change fail with 403.
+   - `X-Forwarded-For` gives the real client IP for login rate limiting, lockout and the audit log, but only when
+     the proxy's address is in `VIBEMDM_TRUSTED_PROXIES` (below).
+   - `X-Forwarded-Proto` is sent by NPM; VibeMDM does not rely on it, because the scheme comes from
+     `VIBEMDM_SERVER_URL`.
+4. Set `VIBEMDM_TRUSTED_PROXIES` in `.env` to the address VibeMDM sees NPM connect from, then
+   `docker compose up -d` to apply it:
+   - NPM in Docker on the same host: the default `172.16.0.0/12` covers Docker's bridge networks. Narrow it to
+     NPM's network (`docker network inspect <network>` shows the subnet) if you can.
+   - NPM on another machine: its LAN IP, for example `192.168.1.20`.
+
+   VibeMDM reads `X-Forwarded-For` right to left and skips trusted addresses, so a client cannot spoof its IP by
+   sending its own header. With no trusted proxies configured, every request appears to come from NPM, and one
+   person's failed logins lock out everyone behind the proxy.
+5. Check it from outside your network: test an enrollment, a package upload, **Check in now** on a computer
+   (long-poll) and a remote shell (WebSockets). Then open **Activity → Shell Sessions** and confirm the **From**
+   column shows your public address, not NPM's.
+
+> **Caution:** proxies that inspect or rewrite traffic (some CDN and tunnel modes) can break large uploads,
+> long-polls or WebSockets. Repeat the checks in step 5 after any proxy change.
+
+### Other reverse proxies
+
+Traefik, HAProxy, plain nginx or a Cloudflare Tunnel work the same way: forward to port 13031 over HTTP with the
+`Host` header unchanged; allow request bodies up to your largest package (8 GB); allow read/write timeouts of at
+least 60 s (10 minutes recommended); support WebSocket upgrades; set `X-Forwarded-For`, and add the proxy's
+address or CIDR to `VIBEMDM_TRUSTED_PROXIES`. Use a publicly trusted certificate.
 
 ## 2.3 Environment variables
 
@@ -144,12 +186,8 @@ Booleans accept `1`, `true`, `yes`, `on` and `0`, `false`, `no`, `off`.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `POSTGRES_PASSWORD` | none (required) | Password for the `vibemdm` database user. Compose builds `VIBEMDM_DATABASE_URL` from it |
-| `VIBEMDM_BIND` | `127.0.0.1` | Host address the plain-HTTP port is published on. Keep `127.0.0.1` behind Caddy |
-| `VIBEMDM_PORT` | `8080` | Host port |
 | `VIBEMDM_IMAGE` | `vibemdm/vibemdm:latest` | Image name/tag |
 | `VIBEMDM_VERSION` | `dev` | Build argument stamped into the binaries (`vibemdm version`) |
-| `DOMAIN` | none (required for `tls`) | Host name Caddy serves and certifies |
-| `CADDY_EMAIL` | empty | ACME account e-mail |
 
 ### Agent-side variable
 
@@ -276,7 +314,7 @@ A complete backup has three parts:
 | `/data` volume | Uploaded packages, log archives | Volume tar |
 | `VIBEMDM_ENCRYPTION_KEY` (and `.env`) | The key to every sealed secret | Store in a password manager or vault, **not** next to the dumps |
 
-The Caddy volumes hold only certificates that Caddy can re-obtain; backing them up avoids Let's Encrypt rate limits.
+The TLS certificate lives in your reverse proxy; back it up there (Nginx Proxy Manager keeps it in its own `data` and `letsencrypt` volumes).
 
 ### Procedure
 
@@ -293,11 +331,11 @@ docker run --rm -v deploy_vibemdm-data:/data:ro -v "$PWD":/backup alpine \
 ### Restore
 
 ```bash
-docker compose --profile tls up -d db
+docker compose up -d db
 docker compose exec -T db pg_restore -U vibemdm -d vibemdm --clean --if-exists < vibemdm-2026-10-01.dump
 docker run --rm -v deploy_vibemdm-data:/data -v "$PWD":/backup alpine tar xzf /backup/vibemdm-data-2026-10-01.tgz -C /data
 # make sure .env has the same VIBEMDM_ENCRYPTION_KEY as when the dump was taken
-docker compose --profile tls up -d
+docker compose up -d
 ```
 
 After a restore, Macs reconnect by themselves: their identities are still signed by the restored CA, and the
@@ -321,7 +359,7 @@ two replicas cannot migrate at the same time. Migrations are forward-only; there
 
    ```bash
    cd vibemdm && git pull
-   cd deploy && docker compose --profile tls up -d --build
+   cd deploy && docker compose up -d --build
    ```
 
 3. Check the log for `applied database migrations` and `VibeMDM listening`, then open **Health**.

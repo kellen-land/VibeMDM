@@ -8,8 +8,8 @@ an operational checklist.
 
 | # | Do this | Why | How to verify |
 | --- | --- | --- | --- |
-| 1 | Put VibeMDM behind TLS (Caddy `tls` profile) and set `VIBEMDM_SERVER_URL=https://…` | macOS requires HTTPS for MDM; agents refuse plain-HTTP servers | Health: no *Server URL* finding |
-| 2 | Keep `VIBEMDM_BIND=127.0.0.1` | The plain-HTTP port is reachable only through the proxy | `ss -ltnp` on the host shows 8080 on 127.0.0.1 |
+| 1 | Put VibeMDM behind a TLS-terminating reverse proxy (Nginx Proxy Manager, [§2.2.1](02-installation.md#221-nginx-proxy-manager)) and set `VIBEMDM_SERVER_URL=https://…` | macOS requires HTTPS for MDM; agents refuse plain-HTTP servers | Health: no *Server URL* finding |
+| 2 | Firewall host port `13031` (the published plain-HTTP port) so only the proxy can reach it | Compose publishes it on every interface; a direct connection bypasses TLS | From outside your network, `curl http://<host>:13031/healthz` times out |
 | 3 | Set `VIBEMDM_ENCRYPTION_KEY` (48 random bytes) and back it up separately | Private keys and FileVault recovery keys are sealed at rest | Health: no *Encryption at rest* finding |
 | 4 | Set `VIBEMDM_TRUSTED_PROXIES` to your proxy's address/CIDR | Client IPs for rate limiting and audit come from `X-Forwarded-For` only from a trusted proxy | Audit entries show real client IPs |
 | 5 | Change the bootstrap admin password (enforced) and delete `/data/initial-admin-password` | The generated password sits in that file until removed | `docker compose exec vibemdm ls /data` |

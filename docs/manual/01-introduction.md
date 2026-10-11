@@ -55,7 +55,7 @@ VibeMDM is an independent implementation. It contains no Jamf code or assets.
 │  super reconcile, FileVault sweep,  │  │ NanoMDM +    │   │ packages, log         │
 │  log maintenance, webhooks          │  │ VibeMDM data │   │ archives, tmp         │
 └──────────────────▲──────────────────┘  └──────────────┘   └──────────────────────┘
-                   │ HTTPS (TLS terminated by Caddy or your proxy)
+                   │ HTTPS (TLS terminated by your reverse proxy)
            ┌───────┴────────┐
            │ Browser / API  │
            │ client / AI    │
@@ -69,7 +69,7 @@ VibeMDM is an independent implementation. It contains no Jamf code or assets.
 | `vibemdm` | The server: NanoMDM core, SCEP CA, enrollment profile generator, DDM server, agent API, admin API, MCP server, embedded console | `cmd/vibemdm`, `internal/*` |
 | PostgreSQL | All state: NanoMDM's tables (`devices`, `enrollments`, `commands`, `command_results`, `enrollment_queue`, `push_certs`, …) and VibeMDM's (`computers`, `policies`, `config_profiles`, `health_findings`, `compliance_*`, …) | `internal/db/migrations` |
 | `/data` volume | Uploaded packages, log archives, `initial-admin-password`, temporary files | Docker volume `vibemdm-data` |
-| Caddy (optional) | TLS termination with automatic Let's Encrypt certificates | `deploy/Caddyfile`, compose profile `tls` |
+| Reverse proxy (yours) | TLS termination, for example Nginx Proxy Manager with a Let's Encrypt certificate | Outside the compose stack; forwards to host port `13031` |
 | `vibemdm-agent` | Static Go binary for macOS (arm64 and amd64) | `/usr/local/bin/vibemdm-agent` on the Mac |
 | `vibemdm-sim` | A fake-Mac simulator that performs real SCEP and MDM enrollment and acts as an agent | `cmd/vibemdm-sim` |
 | `mscp-import` | Developer tool that converts an mSCP checkout into the embedded compliance catalog | `cmd/mscp-import` |

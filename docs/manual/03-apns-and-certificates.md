@@ -7,7 +7,7 @@ MDM rests on public-key infrastructure. Four certificates matter in VibeMDM:
 | **APNs MDM push certificate** | Apple (Apple Push Certificates Portal) | Authenticating the server to APNs; its topic identifies your MDM | 1 year | Settings → APNs |
 | **SCEP CA** | VibeMDM itself (generated on first boot) | Signing device identity certificates | 10 years | Settings → SCEP CA |
 | **Device identity certificate** | The SCEP CA | Authenticating each device on `/mdm` (`Mdm-Signature`) | 3 years | Issued at enrollment |
-| **TLS server certificate** | A public CA (e.g. Let's Encrypt via Caddy) | HTTPS for devices, browsers and agents | 90 days (Let's Encrypt, auto-renewed) | Caddy or your proxy |
+| **TLS server certificate** | A public CA (e.g. Let's Encrypt) | HTTPS for devices, browsers and agents | 90 days (Let's Encrypt) | Your reverse proxy (e.g. Nginx Proxy Manager) |
 
 Two optional ones:
 
@@ -177,8 +177,9 @@ within 30 days.
 
 ## 3.4 The TLS certificate
 
-Apple devices check the server's TLS certificate the same way Safari does. With the Caddy `tls` profile, Let's
-Encrypt certificates are obtained and renewed automatically. If you use your own CA for TLS, the CA must be
+Apple devices check the server's TLS certificate the same way Safari does. The certificate lives in your reverse proxy
+([§2.2.1](02-installation.md#221-nginx-proxy-manager)); a Let's Encrypt certificate works, as long as it is renewed
+before it expires. If you use your own CA for TLS, the CA must be
 trusted on the device **before** enrollment. With Apple Configurator you can add an anchor certificate during
 **Prepare**; on a Mac, the user would have to install and trust the CA manually first, which is why a public
 certificate is strongly recommended.

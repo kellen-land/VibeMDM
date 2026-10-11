@@ -25,7 +25,7 @@ prepare for the Apple certifications:
 | # | Chapter | What it covers |
 | --- | --- | --- |
 | 1 | [Introduction](01-introduction.md) | What VibeMDM is, the architecture, how the MDM, agent and DDM channels work, and a glossary |
-| 2 | [Installation](02-installation.md) | Docker Compose, TLS with Caddy, every environment variable, first login, the encryption key, backups, upgrades |
+| 2 | [Installation](02-installation.md) | Docker Compose, TLS with Nginx Proxy Manager, every environment variable, first login, the encryption key, backups, upgrades |
 | 3 | [APNs and certificates](03-apns-and-certificates.md) | Push certificate lifecycle, the SCEP CA, profile signing, one-time SCEP challenges |
 | 4 | [Enrollment](04-enrollment.md) | User-approved enrollment, invitations, the agent installer, Apple Configurator, supervision, takeover protection |
 | 5 | [Inventory and groups](05-inventory-and-groups.md) | Computers, inventory sources, extension attributes, smart and static groups, searches, network organization |
