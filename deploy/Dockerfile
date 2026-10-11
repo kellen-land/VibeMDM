@@ -17,7 +17,10 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY . .
 COPY --from=web /src/internal/webui/dist ./internal/webui/dist
 ENV CGO_ENABLED=0
+# Without an explicit VERSION (.git is not in the build context), stamp the build time so every
+# rebuild is distinguishable and the console can tell which agents are out of date.
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    if [ "$VERSION" = "dev" ]; then VERSION="dev-$(date -u +%Y%m%d.%H%M)"; fi && echo "version $VERSION" && \
     go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/vibemdm ./cmd/vibemdm && \
     go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/vibemdm-sim ./cmd/vibemdm-sim && \
     GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /out/agents/vibemdm-agent-darwin-arm64 ./cmd/vibemdm-agent && \
