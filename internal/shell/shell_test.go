@@ -131,3 +131,47 @@ func TestConnectTimeout(t *testing.T) {
 }
 
 var _ = base64.StdEncoding
+
+func TestExitCodeReachesTheAdminAndTheSessionClosesCleanly(t *testing.T) {
+	hub := NewHub()
+	adminSrv, adminCli := newPair()
+	agentSrv, agentCli := newPair()
+	done := make(chan struct{})
+	go func() {
+		hub.Run(context.Background(), "s2", "c1", "n", adminSrv, 2*time.Second, time.Minute, nil)
+		close(done)
+	}()
+	time.Sleep(50 * time.Millisecond)
+	if _, err := hub.Claim("s2", "c1", "n", agentSrv); err != nil {
+		t.Fatal(err)
+	}
+	agentCli.WriteFrame(context.Background(), Frame{T: "x", Code: 3})
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	f, err := adminCli.ReadFrame(ctx)
+	if err != nil || f.T != "x" || f.Code != 3 {
+		t.Fatalf("admin got %+v %v, want exit 3", f, err)
+	}
+	if _, err := adminCli.ReadFrame(ctx); err == nil || err == context.DeadlineExceeded {
+		t.Fatalf("admin connection should be closed by the server after the exit, got %v", err)
+	}
+	<-done
+}
+
+func TestAgentVanishingIsReported(t *testing.T) {
+	hub := NewHub()
+	adminSrv, adminCli := newPair()
+	agentSrv, agentCli := newPair()
+	go hub.Run(context.Background(), "s3", "c1", "n", adminSrv, 2*time.Second, time.Minute, nil)
+	time.Sleep(50 * time.Millisecond)
+	if _, err := hub.Claim("s3", "c1", "n", agentSrv); err != nil {
+		t.Fatal(err)
+	}
+	agentCli.Close("gone") // no exit frame
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	f, err := adminCli.ReadFrame(ctx)
+	if err != nil || f.T != "e" {
+		t.Fatalf("admin got %+v %v, want an error frame", f, err)
+	}
+}
