@@ -134,7 +134,7 @@ func (d *Daemon) serveSelfService(ctx context.Context) {
 				sub := d.exec.RunPolicy(ctx, *pol)
 				ok = sub.Status == "completed"
 			case app != nil:
-				d.exec.InstallApp(ctx, *app)
+				ok = d.exec.InstallApp(ctx, *app)
 			}
 		})
 		json.NewEncoder(w).Encode(map[string]any{"ok": ok})
