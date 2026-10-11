@@ -26,3 +26,5 @@ All SQL lives in `internal/store`. Admin routes are registered in `internal/api/
   anything that can only be proven on real hardware must be called out as untested.
 - Stage explicit paths when committing (no `git commit -a`); keep commits small and messages specific.
 - Keep Go and TypeScript API types in sync (`internal/model/model.go` ↔ `web/src/api/types.ts`).
+- UI must stay calm and simple (owner is ADHD-sensitive to clutter): group features under nested menus/tabs like Jamf
+  rather than adding top-level items, one primary action per screen, collapse advanced options.
