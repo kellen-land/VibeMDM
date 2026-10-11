@@ -41,27 +41,65 @@ func NewCommander(st *store.Store, enqueuer storage.CommandEnqueuer, pusher push
 
 // Enqueue queues a command for a computer and sends a push.
 func (c *Commander) Enqueue(ctx context.Context, comp *model.Computer, cmd *mdm.Command, kind, refID, createdBy string) (*nanoapi.APIResult, error) {
-	if comp == nil || comp.UDID == "" || !comp.MDMEnrolled {
+	if comp == nil {
 		return nil, ErrNotEnrolled
 	}
-	if err := c.st.InsertCommandMeta(ctx, cmd.CommandUUID, comp.ID, comp.UDID, cmd.Command.RequestType, kind, refID, createdBy); err != nil {
+	return c.enqueue(ctx, mdmTarget{computerID: comp.ID, udid: comp.UDID, name: comp.Name, enrolled: comp.MDMEnrolled}, cmd, kind, refID, createdBy)
+}
+
+// EnqueueMobile queues a command for a mobile device and sends a push.
+func (c *Commander) EnqueueMobile(ctx context.Context, d *model.MobileDevice, cmd *mdm.Command, kind, refID, createdBy string) (*nanoapi.APIResult, error) {
+	if d == nil {
+		return nil, ErrNotEnrolled
+	}
+	return c.enqueue(ctx, mdmTarget{mobileID: d.ID, udid: d.UDID, name: d.Name, enrolled: d.MDMEnrolled}, cmd, kind, refID, createdBy)
+}
+
+// RequestMobileInventory queues the inventory commands for an iPhone or iPad.
+func (c *Commander) RequestMobileInventory(ctx context.Context, d *model.MobileDevice, createdBy string) error {
+	builders := []func() (*mdm.Command, error){commands.MobileDeviceInformation, commands.SecurityInfo, commands.ProfileList,
+		commands.InstalledApplicationList, commands.ManagedApplicationList}
+	var firstErr error
+	for _, b := range builders {
+		cmd, err := b()
+		if err != nil {
+			return err
+		}
+		if _, err := c.EnqueueMobile(ctx, d, cmd, "inventory", "", createdBy); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
+}
+
+// mdmTarget is the device a command is for: a computer or a mobile device.
+type mdmTarget struct {
+	computerID, mobileID, udid, name string
+	enrolled                         bool
+}
+
+func (c *Commander) enqueue(ctx context.Context, t mdmTarget, cmd *mdm.Command, kind, refID, createdBy string) (*nanoapi.APIResult, error) {
+	if t.udid == "" || !t.enrolled {
+		return nil, ErrNotEnrolled
+	}
+	if err := c.st.InsertCommandMeta(ctx, cmd.CommandUUID, t.computerID, t.mobileID, t.udid, cmd.Command.RequestType, kind, refID, createdBy); err != nil {
 		return nil, err
 	}
-	res, _, err := c.pe.EnqueueWithPush(ctx, cmd, []string{comp.UDID}, false)
+	res, _, err := c.pe.EnqueueWithPush(ctx, cmd, []string{t.udid}, false)
 	if err != nil {
 		return res, err
 	}
 	if res != nil && res.EnqueueError != nil {
 		return res, fmt.Errorf("enqueue: %w", res.EnqueueError)
 	}
-	c.event(ctx, cmd.CommandUUID, comp.UDID, inspector.Queued, map[string]any{"request_type": cmd.Command.RequestType, "kind": kind, "by": createdBy})
+	c.event(ctx, cmd.CommandUUID, t.udid, inspector.Queued, map[string]any{"request_type": cmd.Command.RequestType, "kind": kind, "by": createdBy})
 	pushErr := ""
 	pushID := ""
 	if res != nil {
 		if res.PushError != nil {
 			pushErr = res.PushError.Error()
 		}
-		if st, ok := res.Status[comp.UDID]; ok {
+		if st, ok := res.Status[t.udid]; ok {
 			pushID = st.PushID
 			if st.PushError != nil {
 				pushErr = st.PushError.Error()
@@ -69,10 +107,10 @@ func (c *Commander) Enqueue(ctx context.Context, comp *model.Computer, cmd *mdm.
 		}
 	}
 	if pushErr != "" {
-		c.log.Warn("push failed after enqueue", "err", pushErr, "computer", comp.Name)
-		c.event(ctx, cmd.CommandUUID, comp.UDID, inspector.PushFailed, map[string]any{"error": pushErr})
+		c.log.Warn("push failed after enqueue", "err", pushErr, "computer", t.name)
+		c.event(ctx, cmd.CommandUUID, t.udid, inspector.PushFailed, map[string]any{"error": pushErr})
 	} else {
-		c.event(ctx, cmd.CommandUUID, comp.UDID, inspector.PushSent, map[string]any{"apns_id": pushID})
+		c.event(ctx, cmd.CommandUUID, t.udid, inspector.PushSent, map[string]any{"apns_id": pushID})
 	}
 	return res, nil
 }

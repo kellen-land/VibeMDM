@@ -504,7 +504,8 @@ type MDMCommand struct {
 	CommandUUID     string     `json:"command_uuid"`
 	EnrollmentID    string     `json:"enrollment_id"`
 	ComputerID      string     `json:"computer_id"`
-	ComputerName    string     `json:"computer_name,omitempty"`
+	MobileDeviceID  string     `json:"mobile_device_id,omitempty"`
+	ComputerName    string     `json:"computer_name,omitempty"` // the device's name (computer or mobile device)
 	RequestType     string     `json:"request_type"`
 	Kind            string     `json:"kind"`
 	Status          string     `json:"status"` // Pending | Acknowledged | Error | NotNow | CommandFormatError
@@ -1171,4 +1172,74 @@ type AgentInstallAttempt struct {
 	CreatedBy   string    `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// MobileDevice is an iPhone, iPad, iPod touch or Apple TV. Mobile devices are kept apart from
+// computers (their own tables, groups, profiles and apps), as in Jamf Pro.
+type MobileDevice struct {
+	ID                    string         `json:"id"`
+	UDID                  string         `json:"udid"`
+	SerialNumber          string         `json:"serial_number"`
+	Name                  string         `json:"name"`
+	DeviceType            string         `json:"device_type"` // iPhone | iPad | iPod | AppleTV
+	Model                 string         `json:"model"`
+	ModelName             string         `json:"model_name"`
+	ProductName           string         `json:"product_name"`
+	OSVersion             string         `json:"os_version"`
+	OSBuild               string         `json:"os_build"`
+	CapacityGB            *float64       `json:"capacity_gb"`
+	AvailableGB           *float64       `json:"available_gb"`
+	BatteryLevel          *float64       `json:"battery_level"` // 0..1
+	WiFiMAC               string         `json:"wifi_mac"`
+	BluetoothMAC          string         `json:"bluetooth_mac"`
+	IMEI                  string         `json:"imei"`
+	MEID                  string         `json:"meid"`
+	PhoneNumber           string         `json:"phone_number"`
+	Carrier               string         `json:"carrier"`
+	CellularTechnology    string         `json:"cellular_technology"`
+	IsRoaming             *bool          `json:"is_roaming"`
+	IsSupervised          *bool          `json:"is_supervised"`
+	IsSharedIPad          *bool          `json:"is_shared_ipad"`
+	ActivationLockEnabled *bool          `json:"activation_lock_enabled"`
+	FindMyEnabled         *bool          `json:"find_my_enabled"`
+	LostModeEnabled       *bool          `json:"lost_mode_enabled"`
+	PasscodePresent       *bool          `json:"passcode_present"`
+	PasscodeCompliant     *bool          `json:"passcode_compliant"`
+	HardwareEncryption    *int           `json:"hardware_encryption"`
+	LastBackupAt          *time.Time     `json:"last_backup_at"`
+	MDMEnrolled           bool           `json:"mdm_enrolled"`
+	MDMEnrolledAt         *time.Time     `json:"mdm_enrolled_at"`
+	MDMLastCheckin        *time.Time     `json:"mdm_last_checkin"`
+	MDMUnenrolledAt       *time.Time     `json:"mdm_unenrolled_at"`
+	DeviceInfo            map[string]any `json:"device_info"`
+	SecurityInfo          map[string]any `json:"security_info"`
+	LastInventoryAt       *time.Time     `json:"last_inventory_at"`
+	AssetTag              string         `json:"asset_tag"`
+	Site                  string         `json:"site"`
+	Department            string         `json:"department"`
+	Building              string         `json:"building"`
+	Room                  string         `json:"room"`
+	AssignedUser          string         `json:"assigned_user"`
+	AssignedRealName      string         `json:"assigned_real_name"`
+	AssignedEmail         string         `json:"assigned_email"`
+	Notes                 string         `json:"notes"`
+	CreatedAt             time.Time      `json:"created_at"`
+	UpdatedAt             time.Time      `json:"updated_at"`
+}
+
+// MobileDeviceApp is an app installed on a mobile device.
+type MobileDeviceApp struct {
+	Name          string `json:"name"`
+	Version       string `json:"version"`
+	BundleID      string `json:"bundle_id"`
+	Managed       bool   `json:"managed"`
+	ManagedStatus string `json:"managed_status"`
+}
+
+// MobileDeviceDetail is a mobile device with its related inventory.
+type MobileDeviceDetail struct {
+	MobileDevice
+	Apps     []MobileDeviceApp `json:"apps"`
+	Profiles []ComputerProfile `json:"profiles"`
+	Groups   []ComputerGroup   `json:"groups"`
 }

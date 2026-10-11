@@ -444,6 +444,9 @@ export interface MDMCommand {
   command_uuid: string
   enrollment_id: string
   computer_id: string
+  /** Set instead of computer_id for iPhone and iPad commands. */
+  mobile_device_id?: string
+  /** The device's name (computer or mobile device). */
   computer_name?: string
   request_type: string
   kind: string

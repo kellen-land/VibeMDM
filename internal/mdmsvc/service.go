@@ -4,6 +4,7 @@ package mdmsvc
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -83,10 +84,20 @@ func (s *Service) Authenticate(r *mdm.Request, m *mdm.Authenticate) error {
 	if a.SerialNumber == "" {
 		a.SerialNumber = m.SerialNumber
 	}
-	_, err := s.st.UpsertComputerFromAuthenticate(r.Context(), store.MDMAuthenticateInfo{
+	info := store.MDMAuthenticateInfo{
 		UDID: a.UDID, SerialNumber: a.SerialNumber, DeviceName: a.DeviceName, Model: a.Model, ModelName: a.ModelName,
 		OSVersion: a.OSVersion, BuildVersion: a.BuildVersion, ProductName: a.ProductName,
-	})
+	}
+	// iPhones, iPads and Apple TVs are mobile devices, kept apart from computers (as in Jamf Pro).
+	if typ := store.MobileDeviceType(a.ProductName, a.Model); typ != "" {
+		if _, err := s.st.UpsertMobileFromAuthenticate(r.Context(), info); err != nil {
+			s.log.Error("upsert mobile device from Authenticate", "err", err, "udid", a.UDID)
+		} else {
+			s.log.Info("mdm: mobile device authenticated", "udid", a.UDID, "type", typ, "serial", a.SerialNumber, "name", a.DeviceName)
+		}
+		return nil
+	}
+	_, err := s.st.UpsertComputerFromAuthenticate(r.Context(), info)
 	if err != nil {
 		s.log.Error("upsert computer from Authenticate", "err", err, "udid", a.UDID)
 	} else {
@@ -104,6 +115,10 @@ func (s *Service) TokenUpdate(r *mdm.Request, m *mdm.TokenUpdate) error {
 		return nil // user channel
 	}
 	comp, wasEnrolled, err := s.st.MarkMDMEnrolled(r.Context(), m.UDID)
+	if errors.Is(err, store.ErrNotFound) {
+		s.mobileTokenUpdate(r.Context(), m.UDID)
+		return nil
+	}
 	if err != nil {
 		s.log.Error("mark MDM enrolled", "err", err, "udid", m.UDID)
 		return nil
@@ -139,6 +154,14 @@ func (s *Service) TokenUpdate(r *mdm.Request, m *mdm.TokenUpdate) error {
 func (s *Service) CheckOut(r *mdm.Request, m *mdm.CheckOut) error {
 	err := s.next.CheckOut(r, m)
 	if m.UDID != "" && m.UserID == "" {
+		if d, derr := s.st.GetMobileDeviceByUDID(r.Context(), m.UDID); derr == nil {
+			if e := s.st.MarkMobileUnenrolled(r.Context(), m.UDID); e != nil {
+				s.log.Error("mark mobile device unenrolled", "err", e)
+			}
+			s.log.Info("mdm: mobile device checked out", "udid", m.UDID)
+			s.hooks.Fire(webhook.MobileDeviceUnenrolled, map[string]any{"mobile_device_id": d.ID, "device": d.Name, "serial": d.SerialNumber, "udid": m.UDID})
+			return err
+		}
 		if e := s.st.MarkMDMUnenrolled(r.Context(), m.UDID); e != nil {
 			s.log.Error("mark unenrolled", "err", e)
 		} else {
@@ -249,6 +272,12 @@ func (s *Service) processResult(ctx context.Context, results *mdm.CommandResults
 		}
 	}
 	comp, compErr := s.st.GetComputerByUDID(ctx, results.UDID)
+	if compErr != nil {
+		if d, err := s.st.GetMobileDeviceByUDID(ctx, results.UDID); err == nil {
+			s.processMobileResult(ctx, d, requestType, doc, results, errText)
+			return
+		}
+	}
 	if compErr == nil && requestType != "" {
 		s.hooks.Fire(webhook.MDMCommandCompleted, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "command_uuid": results.CommandUUID,
 			"request_type": requestType, "status": results.Status, "error": errText})

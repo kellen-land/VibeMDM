@@ -28,6 +28,8 @@ import (
 const (
 	ComputerEnrolled            = "ComputerEnrolled"           // MDM enrollment completed
 	ComputerUnenrolled          = "ComputerUnenrolled"         // MDM CheckOut
+	MobileDeviceEnrolled        = "MobileDeviceEnrolled"       // iPhone/iPad MDM enrollment completed
+	MobileDeviceUnenrolled      = "MobileDeviceUnenrolled"     // iPhone/iPad MDM CheckOut
 	AgentEnrolled               = "AgentEnrolled"              // agent enrolled
 	ComputerCheckIn             = "ComputerCheckIn"            // agent check-in
 	ComputerInventoryCompleted  = "ComputerInventoryCompleted" // inventory stored
@@ -45,7 +47,7 @@ const (
 )
 
 // AllEvents lists every event name for the UI.
-var AllEvents = []string{ComputerEnrolled, ComputerUnenrolled, AgentEnrolled, ComputerCheckIn,
+var AllEvents = []string{ComputerEnrolled, ComputerUnenrolled, MobileDeviceEnrolled, MobileDeviceUnenrolled, AgentEnrolled, ComputerCheckIn,
 	ComputerInventoryCompleted, PolicyCompleted, PolicyFailed, MDMCommandCompleted, RestrictedSoftwareViolation, ShellSessionOpened,
 	FileVaultKeyEscrowed, FileVaultKeyViewed, LAPSPasswordRotated, LAPSPasswordViewed, HealthIssueOpened, HealthIssueResolved}
 

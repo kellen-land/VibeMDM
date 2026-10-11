@@ -22,6 +22,18 @@ var DeviceInformationQueries = []string{
 	"PINRequiredForDeviceLock", "TimeZone", "AwaitingConfiguration", "EACSPreflight", "DeviceID",
 }
 
+// MobileDeviceInformationQueries are the queries VibeMDM asks of an iPhone or iPad.
+var MobileDeviceInformationQueries = []string{
+	"UDID", "DeviceName", "OSVersion", "BuildVersion", "ModelName", "Model", "ProductName", "SerialNumber", "DeviceCapacity",
+	"AvailableDeviceCapacity", "BatteryLevel", "WiFiMAC", "BluetoothMAC", "IMEI", "MEID", "PhoneNumber", "ICCID",
+	"CurrentCarrierNetwork", "SubscriberCarrierNetwork", "CellularTechnology", "IsRoaming", "ServiceSubscriptions",
+	"IsSupervised", "IsActivationLockEnabled", "IsDeviceLocatorServiceEnabled", "IsMDMLostModeEnabled", "IsCloudBackupEnabled",
+	"LastCloudBackupDate", "IsMultiUser", "MaximumResidentUsers", "EstimatedResidentUsers", "TimeZone", "Languages", "Locales",
+	"ManagementStatus", "AwaitingConfiguration", "DeviceID", "PersonalHotspotEnabled", "DataRoamingEnabled", "VoiceRoamingEnabled",
+	"DiagnosticSubmissionEnabled", "AppAnalyticsEnabled", "IsDoNotDisturbInEffect", "EASDeviceIdentifier", "ModemFirmwareVersion",
+	"SoftwareUpdateDeviceID", "OSUpdateSettings",
+}
+
 // Build renders a command dict into an MDM command plist and parses it into a NanoMDM command.
 func Build(requestType string, fields map[string]any) (*mdm.Command, error) {
 	if requestType == "" {
@@ -73,6 +85,14 @@ func Raw(raw []byte) (*mdm.Command, error) {
 func DeviceInformation() (*mdm.Command, error) {
 	return Build("DeviceInformation", map[string]any{"Queries": DeviceInformationQueries})
 }
+
+// MobileDeviceInformation requests iPhone and iPad inventory.
+func MobileDeviceInformation() (*mdm.Command, error) {
+	return Build("DeviceInformation", map[string]any{"Queries": MobileDeviceInformationQueries})
+}
+
+// ManagedApplicationList requests the state of apps installed by MDM (iOS, iPadOS).
+func ManagedApplicationList() (*mdm.Command, error) { return Build("ManagedApplicationList", nil) }
 
 // SecurityInfo requests security state.
 func SecurityInfo() (*mdm.Command, error) { return Build("SecurityInfo", nil) }

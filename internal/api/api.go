@@ -400,6 +400,23 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	adm("PUT /api/v1/webhooks/{id}", h.updateWebhook)
 	adm("DELETE /api/v1/webhooks/{id}", h.deleteWebhook)
 
+	// Mobile devices (iPhone, iPad): a separate tree, as in Jamf Pro
+	r("GET /api/v1/mobile-devices", h.listMobileDevices)
+	r("GET /api/v1/mobile-devices/{id}", h.getMobileDevice)
+	r("PATCH /api/v1/mobile-devices/{id}", h.updateMobileDevice)
+	r("DELETE /api/v1/mobile-devices/{id}", h.deleteMobileDevice)
+	r("GET /api/v1/mobile-devices/{id}/commands", h.mobileDeviceCommands)
+	r("POST /api/v1/mobile-devices/{id}/update-inventory", h.mobileUpdateInventory)
+	r("GET /api/v1/mobile-device-groups", h.listMobileGroups)
+	r("POST /api/v1/mobile-device-groups", h.createMobileGroup)
+	r("GET /api/v1/mobile-device-groups/criteria-fields", h.mobileCriteriaFields)
+	r("POST /api/v1/mobile-device-groups/preview", h.previewMobileGroup)
+	r("GET /api/v1/mobile-device-groups/{id}", h.getMobileGroup)
+	r("PUT /api/v1/mobile-device-groups/{id}", h.updateMobileGroup)
+	r("DELETE /api/v1/mobile-device-groups/{id}", h.deleteMobileGroup)
+	r("GET /api/v1/mobile-device-groups/{id}/members", h.mobileGroupMembers)
+	r("PUT /api/v1/mobile-device-groups/{id}/members", h.setMobileGroupMembers)
+
 	r("GET /api/v1/groups", h.listGroups)
 	r("POST /api/v1/groups", h.createGroup)
 	r("GET /api/v1/groups/criteria-fields", h.criteriaFields)
