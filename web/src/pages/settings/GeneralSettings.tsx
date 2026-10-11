@@ -18,7 +18,7 @@ import { useToast } from '../../components/ui/Toast'
 import { statusKey } from '../../auth/AuthContext'
 
 /** The parts of the server settings form, each shown on its own Settings page. */
-export type GeneralSection = 'general' | 'enrollment' | 'remote-shell' | 'ai' | 'logging' | 'signing'
+export type GeneralSection = 'general' | 'enrollment' | 'remote-shell' | 'ai' | 'logging' | 'signing' | 'self-service'
 
 export function GeneralSettings({ section = 'general' }: { section?: GeneralSection }) {
   const { isAdmin } = useAuth()
@@ -54,6 +54,10 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
         remote_shell_idle_timeout_secs: form.remote_shell_idle_timeout_secs,
         mcp_enabled: form.mcp_enabled,
         mcp_allow_writes: form.mcp_enabled && form.mcp_allow_writes,
+        self_service_app_disabled: form.self_service_app_disabled,
+        self_service_app_name: form.self_service_app_name,
+        self_service_accent_color: form.self_service_accent_color,
+        self_service_welcome: form.self_service_welcome,
       }
       if (clearSigning) body.clear_signing = true
       else if (certPem.trim() && keyPem.trim()) {
@@ -198,6 +202,42 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
       )}
 
       {section === 'ai' && <MCPCard form={form} set={set} readOnly={ro} />}
+
+      {section === 'self-service' && (
+        <Card>
+          <CardHeader
+            title="Self Service app"
+            description="An app on every Mac with the agent where people install the apps and run the policies you make available, like Jamf Self Service+. Built with swiftDialog, which the agent installs automatically."
+            actions={form.self_service_app_disabled ? <Badge>Off</Badge> : <Badge tone="good" dot>On</Badge>}
+          />
+          <CardBody className="flex flex-col gap-5">
+            <Toggle
+              checked={!form.self_service_app_disabled}
+              onChange={(v) => set({ self_service_app_disabled: !v })}
+              disabled={ro}
+              label="Install the Self Service app"
+              description="Added to /Applications at enrollment and kept up to date at each check-in. Turning this off removes it."
+            />
+            <FormGrid cols={2}>
+              <Field label="App name" hint="Shown in /Applications, the Dock and the window title.">
+                <Input value={form.self_service_app_name} onChange={(e) => set({ self_service_app_name: e.target.value })} disabled={ro} placeholder={form.self_service_app_default_name} maxLength={60} />
+              </Field>
+              <Field label="Accent colour" hint="Used for the icon, buttons and banner.">
+                <div className="flex items-center gap-2">
+                  <input type="color" value={form.self_service_accent_color || '#0FB5AE'} onChange={(e) => set({ self_service_accent_color: e.target.value.toUpperCase() })} disabled={ro} className="h-9 w-12 cursor-pointer rounded-md border border-line bg-transparent" aria-label="Accent colour" />
+                  <Input value={form.self_service_accent_color} onChange={(e) => set({ self_service_accent_color: e.target.value })} disabled={ro} mono className="max-w-[9rem]" />
+                </div>
+              </Field>
+              <Field label="Welcome text" hint="The banner on the Discover page." className="md:col-span-2">
+                <Textarea rows={2} value={form.self_service_welcome} onChange={(e) => set({ self_service_welcome: e.target.value })} disabled={ro} maxLength={300} placeholder="Apps and tools your IT team has made available for this Mac." />
+              </Field>
+            </FormGrid>
+            <p className="text-xs text-ink-muted">
+              Items appear when a policy or Mac app has <em>Make available in Self Service</em> on and the Mac is in its scope. Untested on real hardware.
+            </p>
+          </CardBody>
+        </Card>
+      )}
 
       {section === 'logging' && <LoggingCard settings={settings.data} readOnly={ro} />}
 

@@ -279,7 +279,7 @@ export function PolicyEditorPage() {
           <CardHeader title="Self Service" description="Let users run this policy themselves from the Self Service app." />
           <CardBody className="flex flex-col gap-5">
             <p className="text-xs text-ink-muted">
-              Shown in the Self Service portal on the Mac (<span className="font-mono">http://127.0.0.1:8571</span>, opened with <span className="font-mono">vibemdm-agent selfservice</span>).
+              Shown in the Self Service app on each Mac in scope (Settings → Self Service).
             </p>
             <Toggle checked={p.self_service.enabled} onChange={(v) => set({ self_service: { ...p.self_service, enabled: v } })} disabled={ro} label="Make available in Self Service" />
             <FormGrid cols={2}>
@@ -291,6 +291,12 @@ export function PolicyEditorPage() {
               </Field>
               <Field label="Description" className="md:col-span-2">
                 <Textarea rows={3} value={p.self_service.description} onChange={(e) => set({ self_service: { ...p.self_service, description: e.target.value } })} disabled={ro || !p.self_service.enabled} />
+              </Field>
+              <Field label="Category" hint="Groups the item in Self Service.">
+                <Input value={p.self_service.category ?? ''} onChange={(e) => set({ self_service: { ...p.self_service, category: e.target.value } })} disabled={ro || !p.self_service.enabled} placeholder={p.category || 'General'} />
+              </Field>
+              <Field label="Featured">
+                <Checkbox checked={!!p.self_service.featured} onChange={(e) => set({ self_service: { ...p.self_service, featured: e.target.checked } })} disabled={ro || !p.self_service.enabled} label="Show on the Discover page" />
               </Field>
             </FormGrid>
           </CardBody>

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{.AppName}}</title>
+<style>
+:root{--accent:{{.Accent}};--bg:#f5f6f8;--side:#eceef1;--panel:#fff;--line:#dfe3e8;--ink:#1c2227;--muted:#66717b;--faint:#98a2ab;--ok:#1f9d55;--err:#d0383e}
+@media (prefers-color-scheme:dark){:root{--bg:#16191c;--side:#1c2024;--panel:#22272b;--line:#30363c;--ink:#e8ecef;--muted:#9aa4ad;--faint:#6f7a83}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:13.5px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;display:flex;overflow:hidden;-webkit-user-select:none;user-select:none}
+button{font:inherit}
+aside{width:224px;flex:none;background:var(--side);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 12px}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 8px 18px}
+.mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:16px;flex:none}
+.brand b{display:block;font-size:13.5px}.brand span{color:var(--muted);font-size:12px}
+nav{display:flex;flex-direction:column;gap:2px;overflow:auto}
+nav h4{margin:14px 10px 4px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--faint);font-weight:600}
+nav a{display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;color:var(--ink);text-decoration:none;cursor:default}
+nav a:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+nav a.on{background:color-mix(in srgb,var(--accent) 18%,transparent);font-weight:600}
+nav a .n{margin-left:auto;color:var(--faint);font-size:11.5px}
+nav svg{width:16px;height:16px;flex:none;opacity:.8}
+.foot{margin-top:auto;padding:10px 10px 0;color:var(--faint);font-size:11.5px}
+main{flex:1;display:flex;flex-direction:column;min-width:0}
+header{display:flex;align-items:center;gap:12px;padding:16px 26px 12px}
+header h1{font-size:20px;margin:0;flex:1;font-weight:700}
+.search{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;width:260px}
+.search input{border:0;outline:0;background:transparent;color:var(--ink);font:inherit;width:100%;-webkit-user-select:text;user-select:text}
+#view{flex:1;overflow:auto;padding:4px 26px 30px}
+.hero{border-radius:14px;padding:22px 24px;color:#fff;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 55%,#000));margin-bottom:22px}
+.hero h2{margin:0 0 4px;font-size:21px}.hero p{margin:0;opacity:.92;max-width:640px}
+section{margin-bottom:26px}
+section h3{font-size:15px;margin:0 0 10px;display:flex;align-items:baseline;gap:8px}
+section h3 a{font-size:12px;font-weight:500;color:var(--accent);cursor:default;margin-left:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.feat{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;gap:12px;align-items:center;cursor:default;min-width:0}
+.card:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.feat .card{padding:16px;align-items:flex-start}
+.feat .card .d{-webkit-line-clamp:3}
+.icon{width:48px;height:48px;border-radius:11px;flex:none;object-fit:contain}
+.feat .icon{width:64px;height:64px;border-radius:14px}
+.tile{display:grid;place-items:center;color:#fff;font-weight:700;font-size:20px}
+.meta{flex:1;min-width:0}
+.meta b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta .c{color:var(--faint);font-size:11.5px}
+.meta .d{color:var(--muted);font-size:12px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.btn{border:0;border-radius:999px;padding:5px 14px;font-weight:600;font-size:12.5px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);cursor:default;white-space:nowrap;flex:none}
+.btn.primary{background:var(--accent);color:#fff}
+.btn:disabled{opacity:.6}
+.btn.done{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:s .7s linear infinite;vertical-align:-1px;margin-right:5px}
+@keyframes s{to{transform:rotate(360deg)}}
+.empty{border:1px dashed var(--line);border-radius:12px;padding:44px;text-align:center;color:var(--muted)}
+.sheet{position:fixed;inset:0;background:rgba(0,0,0,.28);display:none;align-items:center;justify-content:center;padding:30px}
+.sheet.open{display:flex}
+.panel{background:var(--panel);border-radius:16px;max-width:620px;width:100%;max-height:100%;overflow:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.panel .top{display:flex;gap:16px;align-items:center;margin-bottom:16px}
+.panel .icon{width:76px;height:76px;border-radius:17px}
+.panel h2{margin:0;font-size:20px}
+.panel .c{color:var(--muted)}
+.panel .desc{white-space:pre-wrap;color:var(--ink);-webkit-user-select:text;user-select:text}
+.panel .row{display:flex;gap:8px;margin-top:20px;justify-content:flex-end}
+.close{background:transparent;color:var(--muted)}
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+td,th{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);font-size:12.5px}
+th{color:var(--muted);font-weight:600;width:200px}
+tr:last-child td,tr:last-child th{border-bottom:0}
+.ok{color:var(--ok)}.err{color:var(--err)}
+.toast{position:fixed;right:20px;bottom:20px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:10px 14px;box-shadow:0 8px 30px rgba(0,0,0,.18);max-width:380px;display:none}
+.toast.show{display:block}
+.toast.err{border-left-color:var(--err)}.toast.ok{border-left-color:var(--ok)}
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand"><div class="mark" id="mark"></div><div><b id="appname"></b><span id="org"></span></div></div>
+  <nav id="nav"></nav>
+  <div class="foot" id="foot"></div>
+</aside>
+<main>
+  <header><h1 id="title">Discover</h1>
+    <label class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Search" autocomplete="off"></label>
+  </header>
+  <div id="view"></div>
+</main>
+<div class="sheet" id="sheet"><div class="panel" id="panel"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const CFG = {{.ConfigJSON}};
+const $ = (s) => document.querySelector(s);
+const esc = (s) => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+const ICONS = {
+  discover: '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z"/>',
+  all: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  cat: '<path d="M3 7h7l2 2h9v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z"/>',
+  history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>',
+  mac: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/>',
+};
+const svg = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>`;
+let items = [], jobs = {}, view = 'discover', category = '', query = '', loadError = '';
+
+$('#mark').textContent = (CFG.org || 'S').trim().charAt(0).toUpperCase();
+$('#appname').textContent = CFG.appName; $('#org').textContent = CFG.org;
+$('#foot').textContent = 'Managed by ' + CFG.org;
+if (!CFG.embedded) document.title = CFG.appName;
+
+function hue(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
+function iconHTML(it, cls) {
+  const letter = esc((it.name || '?').trim().charAt(0).toUpperCase());
+  const tile = `<div class="icon tile ${cls||''}" style="background:hsl(${hue(it.name)},45%,48%)">${letter}</div>`;
+  if (!it.app_name || !it.installed) return tile;
+  return `<img class="icon ${cls||''}" src="/api/icon?app=${encodeURIComponent(it.app_name)}" onerror="this.outerHTML=this.dataset.tile" data-tile='${tile.replace(/'/g,'&#39;')}'>`;
+}
+function buttonLabel(it) {
+  const j = jobs[it.kind + ':' + it.id];
+  if (j && (j.status === 'running' || j.status === 'queued')) return { text: '<span class="spin"></span>' + (it.kind === 'app' ? 'Installing' : 'Running'), disabled: true, cls: '' };
+  if (j && j.status === 'completed' && Date.now() - Date.parse(j.finished) < 60000) return { text: '✓ Done', disabled: false, cls: 'done' };
+  if (it.kind === 'app' && it.installed) return { text: 'Reinstall', disabled: false, cls: '' };
+  return { text: esc(it.button_text || 'Install'), disabled: false, cls: 'primary' };
+}
+function card(it) {
+  const b = buttonLabel(it);
+  return `<div class="card" data-key="${esc(it.kind + ':' + it.id)}">${iconHTML(it)}<div class="meta"><b>${esc(it.name)}</b><div class="c">${esc(it.category || 'General')}</div><div class="d">${esc(it.description || '')}</div></div><button class="btn ${b.cls}" data-run="${esc(it.kind + ':' + it.id)}" ${b.disabled ? 'disabled' : ''}>${b.text}</button></div>`;
+}
+const categories = () => [...new Set(items.map((i) => i.category || 'General'))].sort();
+function renderNav() {
+  const cats = categories();
+  const a = (k, label, icon, n) => `<a class="${(view === k && (k !== 'category' || category === label)) ? 'on' : ''}" data-view="${k}" data-cat="${esc(k === 'category' ? label : '')}">${svg(icon)}<span>${esc(label)}</span>${n != null ? `<span class="n">${n}</span>` : ''}</a>`;
+  $('#nav').innerHTML = a('discover', 'Discover', 'discover') + a('all', 'All items', 'all', items.length) +
+    (cats.length ? '<h4>Categories</h4>' + cats.map((c) => a('category', c, 'cat', items.filter((i) => (i.category || 'General') === c).length)).join('') : '') +
+    '<h4>Activity</h4>' + a('history', 'History', 'history') + a('mac', 'This Mac', 'mac');
+}
+function filtered(list) {
+  const q = query.trim().toLowerCase();
+  return q ? list.filter((i) => (i.name + ' ' + (i.description || '') + ' ' + (i.category || '')).toLowerCase().includes(q)) : list;
+}
+async function render() {
+  renderNav();
+  const v = $('#view');
+  if (query.trim() && view !== 'history' && view !== 'mac') {
+    $('#title').textContent = 'Search';
+    const r = filtered(items);
+    v.innerHTML = r.length ? `<div class="grid">${r.map(card).join('')}</div>` : `<div class="empty">Nothing matches “${esc(query)}”.</div>`;
+    return;
+  }
+  if (view === 'discover') {
+    $('#title').textContent = 'Discover';
+    if (loadError) { v.innerHTML = `<div class="empty">${esc(loadError)}</div>`; return; }
+    const feat = items.filter((i) => i.featured);
+    let h = `<div class="hero"><h2>${esc(CFG.welcomeTitle)}</h2><p>${esc(CFG.welcome)}</p></div>`;
+    if (feat.length) h += `<section><h3>Featured</h3><div class="feat">${feat.map(card).join('')}</div></section>`;
+    for (const c of categories()) {
+      const list = items.filter((i) => (i.category || 'General') === c);
+      h += `<section><h3>${esc(c)}<a data-view="category" data-cat="${esc(c)}">See all</a></h3><div class="grid">${list.slice(0, 6).map(card).join('')}</div></section>`;
+    }
+    if (!items.length) h += `<div class="empty">Nothing is available yet. Check back later.</div>`;
+    v.innerHTML = h;
+  } else if (view === 'all' || view === 'category') {
+    $('#title').textContent = view === 'all' ? 'All items' : category;
+    const list = view === 'all' ? items : items.filter((i) => (i.category || 'General') === category);
+    v.innerHTML = list.length ? `<div class="grid">${list.map(card).join('')}</div>` : `<div class="empty">Nothing here.</div>`;
+  } else if (view === 'history') {
+    $('#title').textContent = 'History';
+    const r = await fetch('/api/history').then((r) => r.json()).catch(() => ({ items: [] }));
+    v.innerHTML = r.items.length ? `<table>${r.items.map((j) => `<tr><td>${esc(new Date(j.started).toLocaleString())}</td><td><b>${esc(j.name)}</b></td><td class="${j.status === 'completed' ? 'ok' : j.status === 'failed' ? 'err' : ''}">${esc(j.status === 'completed' ? 'Completed' : j.status === 'failed' ? 'Failed' : 'Running')}</td><td>${esc(j.message || '')}</td></tr>`).join('')}</table>` : `<div class="empty">Nothing has been installed from ${esc(CFG.appName)} yet.</div>`;
+  } else if (view === 'mac') {
+    $('#title').textContent = 'This Mac';
+    const d = await fetch('/api/device').then((r) => r.json()).catch(() => ({}));
+    const row = (k, val) => `<tr><th>${esc(k)}</th><td>${esc(val || '—')}</td></tr>`;
+    v.innerHTML = `<table>${row('Computer name', d.computer_name)}${row('Model', d.model)}${row('Serial number', d.serial_number)}${row('macOS', d.os_version)}${row('FileVault', d.filevault)}${row('IP address', d.ip_address)}${row('Last check-in', d.last_checkin ? new Date(d.last_checkin).toLocaleString() : '')}${row('Managed by', d.managed_by)}${row('Agent version', d.agent_version)}</table>
+      <div style="margin-top:14px;display:flex;gap:8px"><button class="btn primary" id="checkin">Check in now</button><span id="ckmsg" class="c" style="color:var(--muted);align-self:center"></span></div>`;
+    $('#checkin').onclick = async () => {
+      $('#checkin').disabled = true;
+      const r = await post('/api/checkin', {});
+      $('#ckmsg').textContent = r.ok ? 'Checking in with the management server…' : (r.error || 'Could not check in');
+      setTimeout(() => { if (view === 'mac') render(); }, 8000);
+    };
+  }
+}
+function openItem(key) {
+  const it = items.find((i) => i.kind + ':' + i.id === key);
+  if (!it) return;
+  const b = buttonLabel(it);
+  $('#panel').innerHTML = `<div class="top">${iconHTML(it)}<div><h2>${esc(it.name)}</h2><div class="c">${esc(it.category || 'General')}${it.kind === 'app' && it.installed ? ' · Installed' : ''}</div></div></div><div class="desc">${esc(it.description || 'No description.')}</div><div class="row"><button class="btn close" id="x">Close</button><button class="btn ${b.cls}" data-run="${esc(key)}" ${b.disabled ? 'disabled' : ''}>${b.text}</button></div>`;
+  $('#sheet').classList.add('open');
+  $('#x').onclick = () => $('#sheet').classList.remove('open');
+}
+async function post(url, body) {
+  try {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-VibeMDM-SelfService': '1' }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    return r.ok ? Object.assign({ ok: true }, j) : { ok: false, error: j.error || 'Request failed' };
+  } catch (e) { return { ok: false, error: String(e) }; }
+}
+function toast(msg, kind) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast show ' + (kind || '');
+  clearTimeout(toast.t); toast.t = setTimeout(() => (t.className = 'toast'), 6000);
+}
+async function run(key) {
+  const it = items.find((i) => i.kind + ':' + i.id === key);
+  if (!it) return;
+  const r = await post('/api/run', { kind: it.kind, id: it.id });
+  if (!r.ok) { toast(r.error, 'err'); return; }
+  jobs[key] = { status: 'queued' };
+  rerender();
+  poll();
+}
+let polling = false;
+async function poll() {
+  if (polling) return; polling = true;
+  try {
+    for (;;) {
+      const r = await fetch('/api/jobs').then((r) => r.json()).catch(() => null);
+      if (!r) break;
+      const before = JSON.stringify(jobs);
+      for (const j of r.items) {
+        const prev = jobs[j.key];
+        jobs[j.key] = j;
+        if (prev && (prev.status === 'running' || prev.status === 'queued') && (j.status === 'completed' || j.status === 'failed')) {
+          toast(j.status === 'completed' ? `${j.name} finished.` : `${j.name} failed: ${j.message || 'see History'}`, j.status === 'completed' ? 'ok' : 'err');
+          if (j.status === 'completed') loadItems();
+        }
+      }
+      if (JSON.stringify(jobs) !== before) rerender();
+      if (!r.items.some((j) => j.status === 'running' || j.status === 'queued')) break;
+      await new Promise((res) => setTimeout(res, 1500));
+    }
+  } finally { polling = false; }
+}
+function rerender() {
+  if (view === 'history' || view === 'mac') { renderNav(); return; }
+  render();
+  const open = $('#sheet').classList.contains('open') && $('#panel [data-run]');
+  if (open) openItem(open.dataset.run);
+}
+async function loadItems() {
+  try {
+    const r = await fetch('/api/items');
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || 'unavailable');
+    items = j.items || []; loadError = '';
+  } catch (e) { loadError = 'Self Service cannot reach the management server right now. Check your network connection and try again.'; }
+  rerender();
+}
+document.addEventListener('click', (e) => {
+  const run_ = e.target.closest('[data-run]');
+  if (run_) { e.stopPropagation(); if (!run_.disabled) run(run_.dataset.run); return; }
+  const nav = e.target.closest('[data-view]');
+  if (nav) { view = nav.dataset.view; category = nav.dataset.cat || ''; query = ''; $('#q').value = ''; $('#sheet').classList.remove('open'); render(); return; }
+  const c = e.target.closest('.card');
+  if (c) { openItem(c.dataset.key); return; }
+  if (e.target.id === 'sheet') $('#sheet').classList.remove('open');
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#sheet').classList.remove('open'); });
+$('#q').addEventListener('input', (e) => { query = e.target.value; render(); });
+loadItems(); poll();
+</script>
+</body>
+</html>

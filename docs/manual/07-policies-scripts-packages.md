@@ -210,18 +210,42 @@ once a day). Update the agent and the policy runs at the next check-in.
 
 ## 7.6 Self Service
 
-Self Service lets users run approved policies and install apps themselves.
+Self Service lets people install apps and run policies themselves, without an administrator password, like Jamf
+Self Service+.
 
-- The agent daemon serves a local portal at **`http://127.0.0.1:8571`**. Users open it with
-  `vibemdm-agent selfservice`, a bookmark, or a Dock link you deploy.
-- It lists every **enabled** policy with `self_service.enabled` that is in scope for the Mac, plus every Mac App
-  with Self Service enabled. Each item shows its display name, description and button text.
-- Clicking the button asks the server (`POST /agent/v1/selfservice/run`). The server re-checks enabled and scope,
-  creates a pending log with trigger `self_service` and returns the policy or app, which the agent runs at once.
-  **Frequency is not applied** to Self Service runs.
-- The portal accepts only requests to its own host name (DNS-rebinding protection), and requests that run something
-  must send the custom header `X-VibeMDM-SelfService` and a JSON body, which other websites cannot send without a
-  CORS preflight that the portal never approves.
+**The app.** Every Mac with the agent gets **`/Applications/<org> Self Service.app`** (Settings → Self Service:
+on by default, with the app name, accent colour and welcome text). The agent creates it at enrollment and checks it
+at every check-in: a small bundle with a generated icon in the accent colour whose launcher opens a
+[swiftDialog](https://github.com/swiftDialog/swiftDialog) window showing the local portal. The agent installs
+swiftDialog with Installomator when it is missing (retrying at most every six hours); until then the app opens the
+portal in the browser. Opening the app again brings the open window forward. Renaming the app in the settings
+replaces it; turning Self Service off removes it. An app of the same name that VibeMDM did not create is never
+touched. `vibemdm-agent selfservice` opens it for the logged-in user.
+
+**The portal** (`http://127.0.0.1:8571`, served by the agent) has a sidebar with **Discover** (the welcome banner,
+**Featured** items and a row per category), **All items**, one entry per **category**, **History** (the last 50
+runs from Self Service, kept on the Mac) and **This Mac** (name, model, serial number, macOS, FileVault, IP address,
+last check-in, who manages it, agent version, and **Check in now**). Search filters by name, description and
+category. Each item shows an icon (the app's own icon once it is installed, otherwise a coloured letter), its
+category and description, and a button: *Install* (or the item's button text), *Reinstall* for an installed app,
+a spinner while it runs and *Done* when it has finished; clicking an item opens its details. Runs are asynchronous
+and one at a time per item; failures show a message, and the details are in the policy or app log on the server.
+
+**What appears.** Every **enabled** policy with *Make available in Self Service* that is in scope for the Mac, plus
+every Mac App with Self Service enabled. Per item: display name, description, button text, **category** (default:
+the policy's or app's category, else "General") and **featured** (shown on Discover).
+
+**How a run works.** The portal asks the server (`POST /agent/v1/selfservice/run`). The server re-checks enabled and
+scope, creates a pending log with trigger `self_service` and returns the policy or app, which the agent runs.
+**Frequency is not applied** to Self Service runs.
+
+**Security.** The portal listens on the loopback address only, accepts only requests to its own host name
+(DNS-rebinding protection), and requests that run something must send the custom header `X-VibeMDM-SelfService` and
+a JSON body, which other websites cannot send without a CORS preflight that the portal never approves. Any user
+logged in to the Mac can use it, as with Jamf Self Service.
+
+**Untested on real hardware:** the app bundle (icon, Dock, Finder), swiftDialog's window with the portal (loading
+`http://127.0.0.1` pages in swiftDialog was verified on macOS 26.6.2), and installs started from it.
 
 To make a policy Self Service only, enable Self Service and select no triggers. (The Health check *Policy can
 never run* flags policies with no trigger that are not in Self Service.)

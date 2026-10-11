@@ -120,6 +120,7 @@ type AgentCheckinResponse struct {
 	InventoryRequested     bool                  `json:"inventory_requested"`
 	FireEnrollmentComplete bool                  `json:"fire_enrollment_complete"`
 	ServerTime             time.Time             `json:"server_time"`
+	SelfService            *AgentSelfService     `json:"self_service,omitempty"`
 }
 
 // AgentRestrictedReport is a violation report from the agent.
@@ -138,6 +139,19 @@ type SelfServiceItem struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	ButtonText  string `json:"button_text"`
+	Category    string `json:"category"`
+	Featured    bool   `json:"featured"`
+	// AppName is the app an item installs (Mac apps), used to show its icon and whether it is installed.
+	AppName string `json:"app_name,omitempty"`
+}
+
+// AgentSelfService configures the Self Service app on the Mac (sent with each check-in).
+type AgentSelfService struct {
+	Enabled bool   `json:"enabled"`
+	AppName string `json:"app_name"`
+	OrgName string `json:"org_name"`
+	Accent  string `json:"accent"`
+	Welcome string `json:"welcome"`
 }
 
 // ShellInvite tells the agent to dial back and open a remote shell session.

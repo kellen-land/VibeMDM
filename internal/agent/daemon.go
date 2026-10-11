@@ -12,6 +12,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/vibemdm/vibemdm/internal/model"
 )
 
 // Daemon is the long-running agent process.
@@ -30,6 +32,9 @@ type Daemon struct {
 
 	checkinNow chan string // trigger names requested out of band
 
+	ssJobs *ssJobs         // Self Service runs and history
+	ssApp  *selfServiceApp // the Self Service app in /Applications
+
 	// Ship (optional) uploads agent logs to the server.
 	Ship *LogShipper
 	// LogLevel (optional) is the live on-device log level; root can change it
@@ -40,9 +45,12 @@ type Daemon struct {
 // NewDaemon creates a daemon.
 func NewDaemon(cfg *Config, version string, logger *slog.Logger) *Daemon {
 	client := NewClient(cfg.ServerURL, cfg.DeviceToken, version)
-	return &Daemon{cfg: cfg, client: client, exec: NewExecutor(client, cfg, version, logger),
+	ex := NewExecutor(client, cfg, version, logger)
+	return &Daemon{cfg: cfg, client: client, exec: ex,
 		spool: &Spooler{client: client, log: logger.With("component", "spool")},
-		log:   logger.With("component", "daemon"), version: version, checkinNow: make(chan string, 16)}
+		log:   logger.With("component", "daemon"), version: version, checkinNow: make(chan string, 16),
+		ssApp: &selfServiceApp{appsDir: "/Applications", statePath: selfServiceState, version: version, log: logger,
+			ensureDlg: func(ctx context.Context) error { return ex.ensureDialog(ctx, nil) }}}
 }
 
 // localTrigger is the message sent over the unix socket.
@@ -71,6 +79,9 @@ func (d *Daemon) Run(ctx context.Context) error {
 		defer wg.Done()
 		monitor.Run(ctx)
 	}()
+
+	// The Self Service app follows the configuration each check-in brings.
+	d.exec.OnSelfService = func(c model.AgentSelfService) { d.ssApp.Apply(ctx, c) }
 
 	// Local Self Service portal.
 	wg.Add(1)

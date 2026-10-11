@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/vibemdm/vibemdm/internal/model"
@@ -34,6 +35,18 @@ type Executor struct {
 	// OnRestrictedRules, when set, receives the restricted-software rule set
 	// returned by each check-in (the daemon points this at its monitor).
 	OnRestrictedRules func([]model.AgentRestrictedRule)
+	// OnSelfService, when set, receives the Self Service app configuration of each check-in.
+	OnSelfService func(model.AgentSelfService)
+
+	lastCheckin atomic.Int64 // unix nanoseconds of the last successful check-in
+}
+
+// LastCheckin is the time of the last successful check-in (zero before the first).
+func (e *Executor) LastCheckin() time.Time {
+	if n := e.lastCheckin.Load(); n > 0 {
+		return time.Unix(0, n)
+	}
+	return time.Time{}
 }
 
 // NewExecutor creates an executor.
@@ -689,8 +702,12 @@ func (e *Executor) checkinAndRun(ctx context.Context, trigger string, requested 
 	for _, app := range resp.AppInstalls {
 		e.InstallApp(ctx, app)
 	}
+	e.lastCheckin.Store(time.Now().UnixNano())
 	if e.OnRestrictedRules != nil {
 		e.OnRestrictedRules(resp.RestrictedSoftware)
+	}
+	if e.OnSelfService != nil && resp.SelfService != nil {
+		e.OnSelfService(*resp.SelfService)
 	}
 	if resp.InventoryRequested {
 		e.Recon(ctx) // Recon logs its own failures

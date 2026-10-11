@@ -17,6 +17,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/auth"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/pushcert"
+	"github.com/vibemdm/vibemdm/internal/selfservice"
 	"github.com/vibemdm/vibemdm/internal/store"
 )
 
@@ -39,6 +40,11 @@ type settingsView struct {
 	LogArchiveEnabled           bool   `json:"log_archive_enabled"`
 	MCPEnabled                  bool   `json:"mcp_enabled"`
 	MCPAllowWrites              bool   `json:"mcp_allow_writes"`
+	SelfServiceAppDisabled      bool   `json:"self_service_app_disabled"`
+	SelfServiceAppName          string `json:"self_service_app_name"`
+	SelfServiceAppDefaultName   string `json:"self_service_app_default_name"`
+	SelfServiceAccentColor      string `json:"self_service_accent_color"`
+	SelfServiceWelcome          string `json:"self_service_welcome"`
 	Version                     string `json:"version"`
 }
 
@@ -52,6 +58,9 @@ func (h *Handler) view(s model.Settings, admin bool) settingsView {
 		FileVaultAutoRemediate: s.FileVaultAutoRemediate, EncryptionAtRest: h.st.Box.Enabled(),
 		LogRetentionDays: s.LogRetentionDays, LogArchiveEnabled: s.LogArchiveEnabled,
 		MCPEnabled: s.MCPEnabled, MCPAllowWrites: s.MCPAllowWrites,
+		SelfServiceAppDisabled: s.SelfServiceAppDisabled, SelfServiceAppName: s.SelfServiceAppName,
+		SelfServiceAppDefaultName: selfservice.AppName("", s.OrgName), SelfServiceAccentColor: s.SelfServiceAccentColor,
+		SelfServiceWelcome: s.SelfServiceWelcome,
 	}
 	if admin {
 		v.AgentEnrollmentSecret = s.AgentEnrollmentSecret
@@ -93,6 +102,10 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request) {
 		LogArchiveEnabled           *bool   `json:"log_archive_enabled"`
 		MCPEnabled                  *bool   `json:"mcp_enabled"`
 		MCPAllowWrites              *bool   `json:"mcp_allow_writes"`
+		SelfServiceAppDisabled      *bool   `json:"self_service_app_disabled"`
+		SelfServiceAppName          *string `json:"self_service_app_name"`
+		SelfServiceAccentColor      *string `json:"self_service_accent_color"`
+		SelfServiceWelcome          *string `json:"self_service_welcome"`
 	}
 	if err := decode(r, &req); err != nil {
 		writeErr(w, 400, err.Error())
@@ -163,6 +176,31 @@ func (h *Handler) updateSettings(w http.ResponseWriter, r *http.Request) {
 	if req.MCPAllowWrites != nil && *req.MCPAllowWrites != s.MCPAllowWrites {
 		s.MCPAllowWrites = *req.MCPAllowWrites
 		h.st.Audit(r.Context(), actor(r), "settings.mcp_writes", "settings", "", map[string]any{"allow_writes": s.MCPAllowWrites})
+	}
+	if req.SelfServiceAppDisabled != nil {
+		s.SelfServiceAppDisabled = *req.SelfServiceAppDisabled
+	}
+	if req.SelfServiceAppName != nil {
+		name := strings.TrimSpace(*req.SelfServiceAppName)
+		if err := selfservice.CheckAppName(name); err != nil {
+			writeErr(w, 400, err.Error())
+			return
+		}
+		s.SelfServiceAppName = name
+	}
+	if req.SelfServiceAccentColor != nil {
+		if !selfservice.ValidAccent(*req.SelfServiceAccentColor) {
+			writeErr(w, 400, "the accent colour must look like #0FB5AE")
+			return
+		}
+		s.SelfServiceAccentColor = *req.SelfServiceAccentColor
+	}
+	if req.SelfServiceWelcome != nil {
+		if len(*req.SelfServiceWelcome) > 300 {
+			writeErr(w, 400, "the welcome text can be at most 300 characters")
+			return
+		}
+		s.SelfServiceWelcome = strings.TrimSpace(*req.SelfServiceWelcome)
 	}
 	if req.ClearSigning {
 		s.SigningCertPEM, s.SigningKeyPEM = "", ""
