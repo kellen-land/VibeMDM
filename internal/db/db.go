@@ -187,3 +187,12 @@ func TimePtr(t sql.NullTime) *time.Time {
 	tt := t.Time
 	return &tt
 }
+
+// BoolPtr converts a nullable bool to a pointer (nil when NULL).
+func BoolPtr(b sql.NullBool) *bool {
+	if !b.Valid {
+		return nil
+	}
+	v := b.Bool
+	return &v
+}

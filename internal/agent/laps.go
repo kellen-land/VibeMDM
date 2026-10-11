@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 
 	"github.com/vibemdm/vibemdm/internal/laps"
@@ -32,6 +33,8 @@ type LAPSAPI interface {
 	LAPSStage(ctx context.Context, account, password string) error
 	LAPSCommit(ctx context.Context, c model.AgentLAPSCommit) error
 	LAPSError(ctx context.Context, msg string) error
+	LAPSState(ctx context.Context, st model.AgentLAPSState) error
+	LAPSTokenGrant(ctx context.Context) (*model.AgentLAPSTokenGrant, error)
 }
 
 // LAPS manages the local administrator account's password.
@@ -104,7 +107,22 @@ func (l *LAPS) Cycle(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if !cfg.Enabled || !cfg.Rotate {
+	if !cfg.Enabled {
+		return nil
+	}
+	// A Secure Token grant uses the current password, so it runs before any rotation.
+	state := l.tokenState(ctx, cfg)
+	if cfg.GrantSecureToken && cfg.CurrentPassword != "" {
+		state = l.grantToken(ctx, cfg, state)
+	}
+	if state != nil && tokenReportDue(*state) {
+		if err := l.API.LAPSState(ctx, *state); err != nil {
+			l.Log.Warn("reporting Secure Token state", "component", "laps", "err", err)
+		} else {
+			tokenReported(*state)
+		}
+	}
+	if !cfg.Rotate {
 		return nil
 	}
 	l.Log.Info("rotating local admin password", "component", "laps", "account", cfg.Account, "reason", cfg.Reason)
@@ -222,4 +240,76 @@ func (l *LAPS) rotate(ctx context.Context, cfg *model.AgentLAPSConfig) error {
 func (e *Executor) LAPSCycle(ctx context.Context) error {
 	l := &LAPS{API: e.client, Run: RunCommand, Log: e.log}
 	return l.Cycle(ctx)
+}
+
+// tokenState reads the account's Secure Token and volume ownership (nil if the account is missing).
+func (l *LAPS) tokenState(ctx context.Context, cfg *model.AgentLAPSConfig) *model.AgentLAPSState {
+	if !laps.Exists(ctx, l.Run, cfg.Account) {
+		return nil
+	}
+	token := laps.HasSecureToken(ctx, l.Run, cfg.Account)
+	return &model.AgentLAPSState{SecureToken: &token, VolumeOwner: laps.VolumeOwner(ctx, l.Run, laps.GUID(ctx, l.Run, cfg.Account))}
+}
+
+// grantToken fetches the one-time administrator credentials and gives the account a Secure Token.
+func (l *LAPS) grantToken(ctx context.Context, cfg *model.AgentLAPSConfig, state *model.AgentLAPSState) *model.AgentLAPSState {
+	if state == nil {
+		return nil
+	}
+	g, err := l.API.LAPSTokenGrant(ctx)
+	if err != nil {
+		l.Log.Warn("fetching Secure Token grant credentials", "component", "laps", "err", err)
+		return state
+	}
+	if *state.SecureToken {
+		state.Granted = true // already has one (e.g. granted at login by the bootstrap token)
+		return state
+	}
+	l.Log.Info("granting a Secure Token to the local admin account", "component", "laps", "account", cfg.Account, "admin_user", g.AdminUser)
+	if err := laps.GrantSecureToken(ctx, l.Run, cfg.Account, cfg.CurrentPassword, g.AdminUser, g.AdminPassword); err != nil {
+		msg := laps.Scrub(err.Error(), cfg.CurrentPassword, g.AdminPassword)
+		l.Log.Warn("Secure Token grant failed", "component", "laps", "account", cfg.Account, "err", msg)
+		state.GrantError = msg
+		return state
+	}
+	l.Log.Info("Secure Token granted", "component", "laps", "account", cfg.Account)
+	return l.withGranted(ctx, cfg)
+}
+
+func (l *LAPS) withGranted(ctx context.Context, cfg *model.AgentLAPSConfig) *model.AgentLAPSState {
+	st := l.tokenState(ctx, cfg)
+	if st == nil {
+		st = &model.AgentLAPSState{}
+	}
+	st.Granted = true
+	return st
+}
+
+// The Secure Token state is reported when it changes, after a grant attempt, or every 6 hours.
+var (
+	tokenMu       sync.Mutex
+	tokenLast     string
+	tokenLastSent time.Time
+)
+
+func tokenKey(st model.AgentLAPSState) string {
+	b := func(p *bool) string {
+		if p == nil {
+			return "?"
+		}
+		return fmt.Sprint(*p)
+	}
+	return b(st.SecureToken) + "/" + b(st.VolumeOwner)
+}
+
+func tokenReportDue(st model.AgentLAPSState) bool {
+	tokenMu.Lock()
+	defer tokenMu.Unlock()
+	return st.Granted || st.GrantError != "" || tokenKey(st) != tokenLast || time.Since(tokenLastSent) > 6*time.Hour
+}
+
+func tokenReported(st model.AgentLAPSState) {
+	tokenMu.Lock()
+	defer tokenMu.Unlock()
+	tokenLast, tokenLastSent = tokenKey(st), time.Now()
 }

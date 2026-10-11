@@ -164,17 +164,22 @@ type lapsRow struct {
 	rotateAfter, lastErrorAt                                       sql.NullTime
 	rotated                                                        int
 	sealed, desired                                                sql.NullString
+	secureToken, volumeOwner                                       sql.NullBool
+	tokenCheckedAt                                                 sql.NullTime
+	grantPending                                                   bool
 }
 
 const lapsRowCols = `COALESCE(l.account,''), l.password_encrypted, COALESCE(l.fingerprint,''), l.escrowed_at, COALESCE(l.rotated_count,0),
 	l.pending_encrypted IS NOT NULL, l.pending_at, l.last_viewed_at, COALESCE(l.last_viewed_by,''), l.rotate_after,
 	COALESCE(l.rotate_requested,FALSE), COALESCE(l.last_error,''), l.last_error_at,
-	COALESCE(l.guid,''), l.desired_encrypted, COALESCE(l.desired_by,''), l.desired_at`
+	COALESCE(l.guid,''), l.desired_encrypted, COALESCE(l.desired_by,''), l.desired_at,
+	l.secure_token, l.volume_owner, l.token_checked_at,
+	EXISTS (SELECT 1 FROM laps_token_grants tg WHERE tg.computer_id = l.computer_id AND tg.expires_at > now())`
 
 func (r *lapsRow) scanDest() []any {
 	return []any{&r.account, &r.sealed, &r.fingerprint, &r.escrowedAt, &r.rotated, &r.hasPending, &r.pendingAt,
 		&r.lastViewedAt, &r.lastViewedBy, &r.rotateAfter, &r.rotateRequested, &r.lastError, &r.lastErrorAt,
-		&r.guid, &r.desired, &r.desiredBy, &r.desiredAt}
+		&r.guid, &r.desired, &r.desiredBy, &r.desiredAt, &r.secureToken, &r.volumeOwner, &r.tokenCheckedAt, &r.grantPending}
 }
 
 func (r *lapsRow) finish() {
@@ -219,6 +224,7 @@ func lapsStatus(r *lapsRow, cfg model.LAPSConfig, inScope bool, now time.Time) m
 	if r.hasDesired {
 		st.PasswordSetBy = r.desiredBy
 	}
+	st.SecureToken, st.VolumeOwner, st.TokenCheckedAt, st.TokenGrantPending = db.BoolPtr(r.secureToken), db.BoolPtr(r.volumeOwner), db.TimePtr(r.tokenCheckedAt), r.grantPending
 	if cfg.AutoRotate && r.escrowedAt.Valid {
 		t := r.escrowedAt.Time.Add(time.Duration(cfg.RotationDays) * 24 * time.Hour)
 		st.ExpiresAt = &t
@@ -262,6 +268,12 @@ func (s *Store) LAPSConfigForAgent(ctx context.Context, c *model.Computer) (mode
 	r, err := s.lapsRow(ctx, c.ID)
 	if err != nil {
 		return out, err
+	}
+	if r.grantPending && r.hasPassword {
+		out.GrantSecureToken = true
+		if pw, err := s.Box.Open(r.sealed.String); err == nil {
+			out.CurrentPassword = pw
+		}
 	}
 	if due, why := lapsRotation(r, cfg, time.Now()); due {
 		out.Rotate, out.Reason = true, why
@@ -570,4 +582,67 @@ func (s *Store) LAPSOverview(ctx context.Context) (model.LAPSConfig, []model.LAP
 		rows = append(rows, st)
 	}
 	return cfg, rows, sum, rs.Err()
+}
+
+// LAPSSetTokenState records the agent's report of the account's Secure Token and volume
+// ownership, plus the outcome of a grant attempt.
+func (s *Store) LAPSSetTokenState(ctx context.Context, computerID string, st model.AgentLAPSState) error {
+	nb := func(b *bool) sql.NullBool {
+		if b == nil {
+			return sql.NullBool{}
+		}
+		return sql.NullBool{Bool: *b, Valid: true}
+	}
+	if _, err := s.DB.ExecContext(ctx, `INSERT INTO laps_passwords (computer_id, secure_token, volume_owner, token_checked_at) VALUES ($1, $2, $3, now())
+		ON CONFLICT (computer_id) DO UPDATE SET secure_token = EXCLUDED.secure_token, volume_owner = EXCLUDED.volume_owner, token_checked_at = now()`,
+		computerID, nb(st.SecureToken), nb(st.VolumeOwner)); err != nil {
+		return err
+	}
+	switch {
+	case st.Granted:
+		return lapsEvent(ctx, s.DB, computerID, "", "TOKEN_GRANTED", "agent", "Secure Token granted")
+	case st.GrantError != "":
+		return lapsEvent(ctx, s.DB, computerID, "", "ERROR", "agent", st.GrantError)
+	}
+	return nil
+}
+
+// LAPSCreateTokenGrant stores an existing Secure Token administrator's credentials, sealed, for
+// the agent to fetch once within ttl.
+func (s *Store) LAPSCreateTokenGrant(ctx context.Context, computerID, adminUser, adminPassword, by string, ttl time.Duration) error {
+	sealed, err := s.Box.Seal(adminPassword)
+	if err != nil {
+		return err
+	}
+	if _, err := s.DB.ExecContext(ctx, `INSERT INTO laps_token_grants (computer_id, admin_user, admin_password_encrypted, created_by, expires_at)
+		VALUES ($1, $2, $3, $4, $5) ON CONFLICT (computer_id) DO UPDATE SET admin_user = EXCLUDED.admin_user,
+		admin_password_encrypted = EXCLUDED.admin_password_encrypted, created_by = EXCLUDED.created_by, created_at = now(), expires_at = EXCLUDED.expires_at`,
+		computerID, adminUser, sealed, by, time.Now().Add(ttl)); err != nil {
+		return err
+	}
+	return lapsEvent(ctx, s.DB, computerID, "", "PENDING", by, "Secure Token grant requested (credentials of "+adminUser+")")
+}
+
+// LAPSTakeTokenGrant returns and deletes a pending grant (ErrNotFound if none or expired).
+func (s *Store) LAPSTakeTokenGrant(ctx context.Context, computerID string) (*model.AgentLAPSTokenGrant, error) {
+	var user, sealed string
+	var fresh bool
+	err := s.DB.QueryRowContext(ctx, `DELETE FROM laps_token_grants WHERE computer_id = $1 RETURNING admin_user, admin_password_encrypted, expires_at > now()`,
+		computerID).Scan(&user, &sealed, &fresh)
+	if err != nil {
+		return nil, wrapNotFound(err)
+	}
+	if !fresh {
+		return nil, ErrNotFound
+	}
+	pw, err := s.Box.Open(sealed)
+	if err != nil {
+		return nil, err
+	}
+	return &model.AgentLAPSTokenGrant{AdminUser: user, AdminPassword: pw}, nil
+}
+
+// LAPSExpireTokenGrants deletes grants nobody fetched in time.
+func (s *Store) LAPSExpireTokenGrants(ctx context.Context) {
+	s.DB.ExecContext(ctx, `DELETE FROM laps_token_grants WHERE expires_at <= now()`)
 }

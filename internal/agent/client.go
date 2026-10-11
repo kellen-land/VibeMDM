@@ -346,3 +346,17 @@ func (c *Client) LAPSCommit(ctx context.Context, commit model.AgentLAPSCommit) e
 func (c *Client) LAPSError(ctx context.Context, msg string) error {
 	return c.do(ctx, http.MethodPost, "/agent/v1/laps/error", map[string]string{"error": msg}, nil, 0)
 }
+
+// LAPSState reports the LAPS account's Secure Token and volume ownership.
+func (c *Client) LAPSState(ctx context.Context, st model.AgentLAPSState) error {
+	return c.do(ctx, http.MethodPost, "/agent/v1/laps/state", st, nil, 0)
+}
+
+// LAPSTokenGrant fetches (once) the credentials for a pending Secure Token grant.
+func (c *Client) LAPSTokenGrant(ctx context.Context) (*model.AgentLAPSTokenGrant, error) {
+	var out model.AgentLAPSTokenGrant
+	if err := c.do(ctx, http.MethodPost, "/agent/v1/laps/token-grant", nil, &out, 0); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}

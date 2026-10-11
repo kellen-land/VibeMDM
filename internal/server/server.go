@@ -567,6 +567,7 @@ func (s *Server) housekeeping(ctx context.Context) {
 			tick++
 			if tick%10 == 1 {
 				s.filevaultKeySweep(ctx)
+				s.st.LAPSExpireTokenGrants(ctx)
 			}
 			if tick%30 == 1 {
 				if n, err := s.cmdr.ReconcileDDM(ctx); err != nil {

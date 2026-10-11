@@ -342,6 +342,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	adm("POST /api/v1/computers/{id}/laps/reveal", h.revealLAPS)
 	adm("POST /api/v1/computers/{id}/laps/rotate", h.rotateLAPS)
 	adm("PUT /api/v1/computers/{id}/laps/password", h.setLAPSPassword)
+	adm("POST /api/v1/computers/{id}/laps/secure-token", h.grantLAPSSecureToken)
 	r("GET /api/v1/computers/{id}/laps/history", h.computerLAPSHistory)
 	r("GET /api/v1/laps/pending-rotations", h.lapsPending)
 

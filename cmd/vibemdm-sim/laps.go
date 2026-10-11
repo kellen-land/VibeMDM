@@ -16,9 +16,14 @@ import (
 // simAccounts is a tiny stand-in for the Mac's local account database, so the simulator
 // runs the real agent LAPS code (generate, stage, apply, verify, commit) end to end.
 type simAccounts struct {
-	mu    sync.Mutex
-	users map[string]string
+	mu     sync.Mutex
+	users  map[string]string
+	tokens map[string]bool // accounts with a Secure Token
 }
+
+// simTokenAdmin is a pretend Secure Token administrator on every simulated Mac, so the
+// console's Grant Secure Token flow can be tried: account "simadmin", password "simadmin-pw".
+const simTokenAdmin, simTokenAdminPassword = "simadmin", "simadmin-pw"
 
 func (a *simAccounts) run(_ context.Context, name string, args ...string) (string, error) {
 	a.mu.Lock()
@@ -38,6 +43,26 @@ func (a *simAccounts) run(_ context.Context, name string, args ...string) (strin
 			return "GeneratedUID: " + strings.ToUpper(fmt.Sprintf("%x", sha256.Sum256([]byte(args[2]+fmt.Sprintf("%p", a))))[:8]) + "-SIM\n", nil
 		}
 		return "", errors.New("no such user")
+	case tool == "sysadminctl" && len(args) > 1 && args[0] == "-secureTokenStatus":
+		if a.tokens[args[1]] {
+			return "Secure token is ENABLED for user " + args[1], nil
+		}
+		return "Secure token is DISABLED for user " + args[1], nil
+	case tool == "sysadminctl" && len(args) > 7 && args[0] == "-secureTokenOn":
+		if args[5] == simTokenAdmin && args[7] == simTokenAdminPassword && a.users[args[1]] == args[3] {
+			if a.tokens == nil {
+				a.tokens = map[string]bool{}
+			}
+			a.tokens[args[1]] = true
+			return "", nil
+		}
+		return "Operation is not permitted without secure token unlock.", nil // exits 0, like the real tool
+	case tool == "diskutil":
+		out := "Cryptographic users for disk3s5\n"
+		for u := range a.tokens {
+			out += "+-- " + strings.ToUpper(fmt.Sprintf("%x", sha256.Sum256([]byte("/Users/"+u+fmt.Sprintf("%p", a))))[:8]) + "-SIM\n|   Volume Owner: Yes\n"
+		}
+		return out, nil
 	case tool == "dscl" && len(args) > 4 && args[1] == "-create" && args[3] == "IsHidden":
 		return "", nil
 	case tool == "dscl" && len(args) > 2 && args[1] == "-read":
