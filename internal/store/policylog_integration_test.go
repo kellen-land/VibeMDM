@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 	"testing"
 	"time"
@@ -119,5 +120,31 @@ func TestComputerProfilesShowTheNewestReportOnce(t *testing.T) {
 	s.ReplaceComputerProfiles(ctx, c.ID, "mdm", []model.ComputerProfile{{Identifier: "com.vibemdm.enrollment", IsManaged: true}, {Identifier: "com.example.new", IsManaged: true}})
 	if list, _ := s.ListComputerProfiles(ctx, c.ID); len(list) != 2 {
 		t.Fatalf("newer MDM report: %+v", list)
+	}
+}
+
+func TestLAPSAdminCredentialsDoNotCountAsViewing(t *testing.T) {
+	s := testStore(t)
+	box, _ := secrets.New("test passphrase for the store tests")
+	s.Box = box
+	ctx := context.Background()
+	stamp := time.Now().Format("150405.000")
+	c, _ := s.UpsertComputerFromAuthenticate(ctx, MDMAuthenticateInfo{UDID: "LADM-" + stamp, SerialNumber: "LADM" + stamp, DeviceName: "ladm", Model: "Mac14,2", ProductName: "Mac14,2"})
+	t.Cleanup(func() { s.DeleteComputer(ctx, c.ID) })
+	if _, _, err := s.LAPSAdminCredentials(ctx, c.ID); err != ErrNotFound {
+		t.Fatalf("no LAPS row: %v", err)
+	}
+	sealed, _ := box.Seal("Laps-Current-1")
+	if _, err := s.DB.ExecContext(ctx, `INSERT INTO laps_passwords (computer_id, account, password_encrypted, fingerprint, escrowed_at) VALUES ($1, 'vibeadmin', $2, 'x', now())`, c.ID, sealed); err != nil {
+		t.Fatal(err)
+	}
+	user, pw, err := s.LAPSAdminCredentials(ctx, c.ID)
+	if err != nil || user != "vibeadmin" || pw != "Laps-Current-1" {
+		t.Fatalf("%q %q %v", user, pw, err)
+	}
+	var viewed sql.NullTime
+	s.DB.QueryRowContext(ctx, `SELECT last_viewed_at FROM laps_passwords WHERE computer_id = $1`, c.ID).Scan(&viewed)
+	if viewed.Valid {
+		t.Fatal("agent use must not count as a human viewing the password")
 	}
 }

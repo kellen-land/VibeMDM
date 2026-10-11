@@ -631,7 +631,11 @@ func (d *device) runPolicy(ctx context.Context, c *agent.Client, p model.AgentPo
 	}
 	if len(p.Accounts) > 0 {
 		// Fetch the passwords the way the agent does (exercises the server's release rules), never print them.
-		pws, err := c.PolicyAccountSecrets(ctx, p.LogID)
+		sec, err := c.PolicyAccountSecrets(ctx, p.LogID)
+		var pws []string
+		if sec != nil {
+			pws = sec.Passwords
+		}
 		for i, a := range p.Accounts {
 			st, out := "completed", "[simulator] "+a.Action+" "+a.Username
 			if (a.Action == "create" || a.Action == "reset_password") && (err != nil || i >= len(pws) || pws[i] == "") {

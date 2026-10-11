@@ -102,19 +102,28 @@ func (m *accountsMac) run(_ context.Context, name string, args ...string) (strin
 	return "", errors.New("unexpected command " + tool)
 }
 
+// newOps wires accountOps to the fake Mac. A LAPS config with a CurrentPassword stands for
+// the server sending the LAPS account's credentials with the run's secrets.
 func newOps(m *accountsMac, pws []string, laps *model.AgentLAPSConfig) (*accountOps, *int) {
 	fetches := 0
 	return &accountOps{
 		run: m.run,
-		secrets: func(context.Context) ([]string, error) {
+		secrets: func(context.Context) (*AccountSecrets, error) {
 			fetches++
-			return pws, nil
+			sec := &AccountSecrets{Passwords: pws}
+			if laps != nil {
+				sec.AdminUser, sec.AdminPassword = laps.Account, laps.CurrentPassword
+			}
+			return sec, nil
 		},
 		lapsCfg: func(context.Context) (*model.AgentLAPSConfig, error) {
 			if laps == nil {
 				return &model.AgentLAPSConfig{}, nil
 			}
-			return laps, nil
+			// The agent's LAPS config normally carries no password (only during a rotation).
+			c := *laps
+			c.CurrentPassword = ""
+			return &c, nil
 		},
 		console: func(context.Context) string { return m.console },
 	}, &fetches
@@ -228,7 +237,7 @@ func TestAccountsDisableFileVault(t *testing.T) {
 func TestAccountsPasswordFetchFailure(t *testing.T) {
 	m := &accountsMac{users: map[string]*fakeUser{}}
 	ops, _ := newOps(m, nil, nil)
-	ops.secrets = func(context.Context) ([]string, error) { return nil, errors.New("404 no open run") }
+	ops.secrets = func(context.Context) (*AccountSecrets, error) { return nil, errors.New("404 no open run") }
 	if r := ops.apply(context.Background(), 0, model.PolicyAccount{Action: localaccount.Create, Username: "student"}); r.ExitCode == 0 || m.users["student"] != nil {
 		t.Fatalf("created an account without a password: %+v", r)
 	}

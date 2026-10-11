@@ -21,14 +21,13 @@ var Capabilities = []string{"policy_accounts"}
 // is scrubbed of them before it is reported.
 type accountOps struct {
 	run     laps.Runner
-	secrets func(ctx context.Context) ([]string, error)
+	secrets func(ctx context.Context) (*AccountSecrets, error)
 	lapsCfg func(ctx context.Context) (*model.AgentLAPSConfig, error)
 	console func(ctx context.Context) string
 
-	pws     []string
-	pwsErr  error
+	sec     *AccountSecrets
+	secErr  error
 	fetched bool
-	admin   *tokenAdmin
 }
 
 // tokenAdmin is a Secure Token administrator VibeMDM knows the password of: the LAPS account,
@@ -38,7 +37,7 @@ type tokenAdmin struct{ user, password string }
 func (e *Executor) accountOps(logID string) *accountOps {
 	return &accountOps{
 		run: RunCommand,
-		secrets: func(ctx context.Context) ([]string, error) {
+		secrets: func(ctx context.Context) (*AccountSecrets, error) {
 			if logID == "" {
 				return nil, fmt.Errorf("this run has no policy log, so its passwords cannot be fetched")
 			}
@@ -49,33 +48,49 @@ func (e *Executor) accountOps(logID string) *accountOps {
 	}
 }
 
-func (o *accountOps) password(ctx context.Context, i int) (string, error) {
+// fetch gets the run's secrets from the server once.
+func (o *accountOps) fetch(ctx context.Context) (*AccountSecrets, error) {
 	if !o.fetched {
-		o.pws, o.pwsErr = o.secrets(ctx)
+		o.sec, o.secErr = o.secrets(ctx)
 		o.fetched = true
 	}
-	if o.pwsErr != nil {
-		return "", fmt.Errorf("fetching the account password from the server: %w", o.pwsErr)
+	if o.secErr != nil {
+		return nil, fmt.Errorf("fetching the account secrets from the server: %w", o.secErr)
 	}
-	if i >= len(o.pws) || o.pws[i] == "" {
-		return "", fmt.Errorf("the server has no password for this account action")
-	}
-	return o.pws[i], nil
+	return o.sec, nil
 }
 
-// lapsAccount returns the LAPS account name and, when it holds a Secure Token, its credentials.
-func (o *accountOps) lapsAccount(ctx context.Context) (string, *tokenAdmin) {
+func (o *accountOps) password(ctx context.Context, i int) (string, error) {
+	sec, err := o.fetch(ctx)
+	if err != nil {
+		return "", err
+	}
+	if i >= len(sec.Passwords) || sec.Passwords[i] == "" {
+		return "", fmt.Errorf("the server has no password for this account action")
+	}
+	return sec.Passwords[i], nil
+}
+
+// tokenAdmin returns the LAPS account's credentials when the server sent them and the account
+// holds a Secure Token on this Mac.
+func (o *accountOps) tokenAdmin(ctx context.Context) *tokenAdmin {
+	sec, err := o.fetch(ctx)
+	if err != nil || sec.AdminUser == "" || sec.AdminPassword == "" || !laps.HasSecureToken(ctx, o.run, sec.AdminUser) {
+		return nil
+	}
+	return &tokenAdmin{user: sec.AdminUser, password: sec.AdminPassword}
+}
+
+// lapsAccount returns the name of the LAPS account, which policies must not touch.
+func (o *accountOps) lapsAccount(ctx context.Context) string {
 	if o.lapsCfg == nil {
-		return "", nil
+		return ""
 	}
 	cfg, err := o.lapsCfg(ctx)
-	if err != nil || !cfg.Enabled || cfg.Account == "" {
-		return "", nil
+	if err != nil || !cfg.Enabled {
+		return ""
 	}
-	if o.admin == nil && cfg.CurrentPassword != "" && laps.HasSecureToken(ctx, o.run, cfg.Account) {
-		o.admin = &tokenAdmin{user: cfg.Account, password: cfg.CurrentPassword}
-	}
-	return cfg.Account, o.admin
+	return cfg.Account
 }
 
 // Step names for logs: "Create account student".
@@ -101,11 +116,13 @@ func (o *accountOps) apply(ctx context.Context, i int, a model.PolicyAccount) Ex
 	if err := localaccount.Validate(a, true); err != nil {
 		return fail("%v", err)
 	}
-	lapsName, admin := o.lapsAccount(ctx)
-	if admin != nil {
-		secrets = append(secrets, admin.password)
+	var admin *tokenAdmin
+	if a.Action == localaccount.ResetPassword || (a.Action == localaccount.Create && a.EnableFileVault) {
+		if admin = o.tokenAdmin(ctx); admin != nil {
+			secrets = append(secrets, admin.password)
+		}
 	}
-	if lapsName != "" && strings.EqualFold(a.Username, lapsName) {
+	if lapsName := o.lapsAccount(ctx); lapsName != "" && strings.EqualFold(a.Username, lapsName) {
 		return fail("%s is the LAPS account; it is managed by LAPS, not by policies", a.Username)
 	}
 	exists := laps.Exists(ctx, o.run, a.Username)
