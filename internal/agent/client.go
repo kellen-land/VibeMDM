@@ -133,15 +133,21 @@ func (c *Client) SubmitPolicyLog(ctx context.Context, logID string, sub model.Ag
 	return c.do(ctx, http.MethodPost, "/agent/v1/policy-logs/"+logID, sub, nil, 0)
 }
 
-// PolicyAccountSecrets fetches the Local Accounts passwords for an open policy run, by entry index.
-func (c *Client) PolicyAccountSecrets(ctx context.Context, logID string) ([]string, error) {
-	var out struct {
-		Passwords []string `json:"passwords"`
-	}
+// AccountSecrets are the secrets of a policy run's Local Accounts actions: passwords by entry
+// index, and the LAPS account's credentials when an action needs a Secure Token administrator.
+type AccountSecrets struct {
+	Passwords     []string `json:"passwords"`
+	AdminUser     string   `json:"admin_user"`
+	AdminPassword string   `json:"admin_password"`
+}
+
+// PolicyAccountSecrets fetches the Local Accounts secrets for an open policy run.
+func (c *Client) PolicyAccountSecrets(ctx context.Context, logID string) (*AccountSecrets, error) {
+	var out AccountSecrets
 	if err := c.do(ctx, http.MethodPost, "/agent/v1/policy-logs/"+logID+"/account-secrets", struct{}{}, &out, 0); err != nil {
 		return nil, err
 	}
-	return out.Passwords, nil
+	return &out, nil
 }
 
 // ReconConfig fetches extension attribute scripts.

@@ -646,3 +646,18 @@ func (s *Store) LAPSTakeTokenGrant(ctx context.Context, computerID string) (*mod
 func (s *Store) LAPSExpireTokenGrants(ctx context.Context) {
 	s.DB.ExecContext(ctx, `DELETE FROM laps_token_grants WHERE expires_at <= now()`)
 }
+
+// LAPSAdminCredentials returns a computer's LAPS account and its current password for use by
+// the agent itself (Local Accounts actions that need a Secure Token administrator). Unlike a
+// reveal it is not a human viewing the password, so it does not schedule a rotation.
+func (s *Store) LAPSAdminCredentials(ctx context.Context, computerID string) (account, password string, err error) {
+	var sealed sql.NullString
+	if err = s.DB.QueryRowContext(ctx, `SELECT account, password_encrypted FROM laps_passwords WHERE computer_id = $1`, computerID).Scan(&account, &sealed); err != nil {
+		return "", "", wrapNotFound(err)
+	}
+	if account == "" || !sealed.Valid || sealed.String == "" {
+		return "", "", ErrNotFound
+	}
+	password, err = s.Box.Open(sealed.String)
+	return account, password, err
+}

@@ -422,9 +422,30 @@ func (h *Handler) policyAccountSecrets(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, "could not read the account passwords")
 		return
 	}
-	h.st.Audit(r.Context(), "agent:"+comp.Name, "policy.account_passwords_sent", "policy", policyID, map[string]any{"computer_id": comp.ID, "log_id": r.PathValue("id")})
+	out := map[string]any{"passwords": pws}
+	// Granting a Secure Token or resetting a Secure Token account needs a Secure Token
+	// administrator: the LAPS account (Jamf Pro uses its management account the same way).
+	adminSent := false
+	if pol, err := h.st.GetPolicy(r.Context(), policyID); err == nil && needsTokenAdmin(pol.Accounts) {
+		if user, pw, err := h.st.LAPSAdminCredentials(r.Context(), comp.ID); err == nil {
+			out["admin_user"], out["admin_password"] = user, pw
+			adminSent = true
+		}
+	}
+	h.st.Audit(r.Context(), "agent:"+comp.Name, "policy.account_passwords_sent", "policy", policyID,
+		map[string]any{"computer_id": comp.ID, "log_id": r.PathValue("id"), "laps_admin": adminSent})
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, 200, map[string]any{"passwords": pws})
+	writeJSON(w, 200, out)
+}
+
+// needsTokenAdmin reports whether Local Accounts actions may need a Secure Token administrator.
+func needsTokenAdmin(accounts []model.PolicyAccount) bool {
+	for _, a := range accounts {
+		if a.Action == "reset_password" || (a.Action == "create" && a.EnableFileVault) {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *Handler) policyLog(w http.ResponseWriter, r *http.Request) {

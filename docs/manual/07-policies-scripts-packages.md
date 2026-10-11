@@ -191,7 +191,10 @@ The LAPS account cannot be targeted (it is managed under Security → LAPS). Pas
 `VIBEMDM_ENCRYPTION_KEY` (set it, or they are stored as given), never returned by the API (`password_set` says one
 is stored; send an entry without `password` to keep it) and never part of the policy the agent receives or of
 stored tasks: during the run the agent fetches them from `POST /agent/v1/policy-logs/{log_id}/account-secrets`,
-which answers only while that computer's run is open and is audited (`policy.account_passwords_sent`). Command
+which answers only while that computer's run is open and is audited (`policy.account_passwords_sent`). When an
+action needs a Secure Token administrator (*Enable user for FileVault*, *Reset Password*), the same answer carries
+the LAPS account's current password; the agent uses it only if that account holds a Secure Token on the Mac. This is
+not a person viewing the password, so it does not trigger a rotation. Command
 output is scrubbed of passwords before it is logged.
 
 API: `accounts` on `POST/PUT /api/v1/policies`:
