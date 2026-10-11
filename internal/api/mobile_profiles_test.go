@@ -1,6 +1,9 @@
 package api
 
-import "testing"
+import (
+	"net/http/httptest"
+	"testing"
+)
 
 func TestRedactMobileValues(t *testing.T) {
 	v := map[string]any{"SSID_STR": "School", "Password": "pw", "IKEv2": map[string]any{"SharedSecret": "s", "RemoteAddress": "vpn.example"},
@@ -21,5 +24,14 @@ func TestRedactMobileValues(t *testing.T) {
 	id := redactValues(map[string]any{"PayloadContent": "MIIF…", "PayloadCertificateFileName": "a.p12"}, true).(map[string]any)
 	if id["PayloadContent"] != "[redacted]" || id["PayloadCertificateFileName"] != "a.p12" {
 		t.Fatalf("identity: %v", id)
+	}
+}
+
+func TestInvalidInputIsA400(t *testing.T) {
+	h := &Handler{}
+	rec := httptest.NewRecorder()
+	h.fail(rec, errInvalid("unknown task type"), "task")
+	if rec.Code != 400 {
+		t.Fatalf("got %d", rec.Code)
 	}
 }

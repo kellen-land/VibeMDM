@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
@@ -303,7 +302,7 @@ func (h *Handler) createTask(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) queueTask(r *http.Request, c *model.Computer, typ, scriptID string, params []string, command, policyID, trigger, message string) (*model.AgentTask, error) {
 	if !c.AgentEnrolled {
-		return nil, errors.New("the VibeMDM agent is not installed on this computer")
+		return nil, errInvalid("the VibeMDM agent is not installed on this computer")
 	}
 	payload := map[string]any{}
 	switch typ {
@@ -317,7 +316,7 @@ func (h *Handler) queueTask(r *http.Request, c *model.Computer, typ, scriptID st
 		payload = map[string]any{"script_id": sc.ID, "name": sc.Name, "contents": sc.Contents, "parameters": p}
 	case "run_command":
 		if strings.TrimSpace(command) == "" {
-			return nil, errors.New("command required")
+			return nil, errInvalid("command required")
 		}
 		payload = map[string]any{"command": command}
 	case "run_policy":
@@ -338,7 +337,7 @@ func (h *Handler) queueTask(r *http.Request, c *model.Computer, typ, scriptID st
 	case "inventory":
 	case "custom_trigger":
 		if trigger == "" {
-			return nil, errors.New("trigger required")
+			return nil, errInvalid("trigger required")
 		}
 		payload = map[string]any{"trigger": trigger}
 	case "filevault_regenerate":
@@ -350,7 +349,7 @@ func (h *Handler) queueTask(r *http.Request, c *model.Computer, typ, scriptID st
 	case "notify":
 		payload = map[string]any{"message": message}
 	default:
-		return nil, errors.New("unknown task type")
+		return nil, errInvalid("unknown task type")
 	}
 	t, err := h.st.CreateTask(r.Context(), c.ID, typ, payload, actor(r))
 	if err != nil {
