@@ -588,7 +588,7 @@ func (t *tools) runPolicy(ctx context.Context, p *auth.Principal, args map[strin
 	if !c.AgentEnrolled {
 		return nil, fmt.Errorf("%s does not have the VibeMDM agent", c.Name)
 	}
-	ap, err := t.d.Engine.Prepare(ctx, pol, "manual")
+	ap, err := t.d.Engine.PrepareFor(ctx, pol, c, "manual")
 	if err != nil {
 		return nil, err
 	}

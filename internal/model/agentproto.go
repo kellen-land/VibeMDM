@@ -39,6 +39,8 @@ type AgentCheckinRequest struct {
 	IPAddress    string `json:"ip_address"`
 	AgentVersion string `json:"agent_version"`
 	UptimeSecs   int64  `json:"uptime_seconds"`
+	// Capabilities lists optional features this agent supports (e.g. "policy_accounts").
+	Capabilities []string `json:"capabilities"`
 }
 
 // AgentScriptStep is a script to run, with content inlined.

@@ -111,6 +111,8 @@ export function ManagementTab({ c }: { c: ComputerDetail }) {
       const r = await api.post<CheckinResponse>(`/api/v1/computers/${c.id}/checkin`)
       toast.success(`Check-in requested (agent ${r.agent_online ? 'online' : 'offline'})`, r.agent_online ? 'The agent is checking in now; policies evaluate on demand.' : 'The agent will check in when it next connects.')
       await invalidate(qk.computer(c.id), ['tasks'], ['policy-logs'], qk.dashboard)
+      // The agent checks in a moment later; refresh again so the new check-in time and any runs show.
+      if (r.agent_online) setTimeout(() => void invalidate(qk.computer(c.id), ['tasks'], ['policy-logs'], qk.dashboard), 5000)
     } catch (e) {
       toast.error('Check-in request failed', errorMessage(e))
     } finally {

@@ -12,6 +12,10 @@ import (
 	"github.com/vibemdm/vibemdm/internal/model"
 )
 
+// Capabilities are the optional features this agent reports at check-in. The server only sends
+// a policy that uses one of them to agents that list it.
+var Capabilities = []string{"policy_accounts"}
+
 // accountOps runs the Local Accounts steps of a policy (Jamf Pro's Local Accounts payload).
 // Passwords are fetched from the server once per run and never logged; every command's output
 // is scrubbed of them before it is reported.
