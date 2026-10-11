@@ -28,6 +28,7 @@ import type {
   MobileDevice,
   MobileDeviceDetail,
   MobileDeviceListParams,
+  MobileExtensionAttribute,
   MobileSearchRunResult,
   ConfigProfileWithStatus,
   CriterionField,
@@ -233,6 +234,10 @@ export function useMobileDevices(p: MobileDeviceListParams = {}, opts?: Opts<Lis
 
 export function useMobileDevice(id: string | undefined) {
   return useQuery({ queryKey: qk.mobileDevice(id ?? ''), queryFn: () => api.get<MobileDeviceDetail>(`/api/v1/mobile-devices/${id}`), enabled: !!id, refetchInterval: 15_000 })
+}
+
+export function useMobileEAs(opts?: Opts<ListResponse<MobileExtensionAttribute>>) {
+  return useQuery({ queryKey: ['mobile-eas'], queryFn: () => api.get<ListResponse<MobileExtensionAttribute>>('/api/v1/mobile-extension-attributes'), ...opts })
 }
 
 export function useMobileGroups(opts?: Opts<ListResponse<ComputerGroup>>) {

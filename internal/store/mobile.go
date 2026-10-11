@@ -76,7 +76,7 @@ var mobileFieldDefs = map[string]fieldDef{
 }
 
 var mobileDomain = &groupDomain{devices: "mobile_devices", groups: "mobile_device_groups", members: "mobile_device_group_members",
-	memberCol: "mobile_device_id", fields: mobileFieldDefs,
+	memberCol: "mobile_device_id", eaValues: "mobile_device_ea_values", eaTable: "mobile_extension_attributes", fields: mobileFieldDefs,
 	existsCols: map[string]string{"application_title": "x.name", "application_version": "x.version", "application_bundle_id": "x.bundle_id",
 		"profile_identifier": "x.identifier", "profile_name": "x.display_name"},
 	order: []string{"device_name", "serial_number", "udid", "device_type", "model_name", "model", "os_version", "os_build", "capacity_gb",
@@ -89,8 +89,22 @@ var mobileDomain = &groupDomain{devices: "mobile_devices", groups: "mobile_devic
 
 // ---- mobile device groups ----
 
-// MobileCriterionFields lists the smart-group fields for mobile devices.
-func (s *Store) MobileCriterionFields() []CriterionField { return domainFields(mobileDomain) }
+// MobileCriterionFields lists the smart-group fields for mobile devices, including extension attributes.
+func (s *Store) MobileCriterionFields(ctx context.Context) ([]CriterionField, error) {
+	out := domainFields(mobileDomain)
+	eas, err := s.ListMobileEAs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, ea := range eas {
+		typ := map[string]string{"integer": "number", "date": "date"}[ea.DataType]
+		if typ == "" {
+			typ = "string"
+		}
+		out = append(out, CriterionField{Key: "ea:" + ea.ID, Label: "EA: " + ea.Name, Type: typ, Operators: opsFor(typ)})
+	}
+	return out, nil
+}
 
 // ListMobileGroups returns all mobile device groups with member counts.
 func (s *Store) ListMobileGroups(ctx context.Context) ([]model.ComputerGroup, error) {
@@ -687,4 +701,94 @@ func (s *Store) RunMobileSearch(ctx context.Context, criteria []model.Criterion,
 	}
 	out, _, err := s.ListMobileDevices(ctx, MobileDeviceFilter{IDs: ids, Limit: limit})
 	return out, err
+}
+
+// ---- mobile device extension attributes ----
+
+const mobileEACols = `id, name, description, data_type, input_type, popup_choices, created_at, updated_at`
+
+func scanMobileEA(row interface{ Scan(...any) error }) (*model.MobileExtensionAttribute, error) {
+	var e model.MobileExtensionAttribute
+	var choices db.JSON[[]string]
+	if err := row.Scan(&e.ID, &e.Name, &e.Description, &e.DataType, &e.InputType, &choices, &e.CreatedAt, &e.UpdatedAt); err != nil {
+		return nil, wrapNotFound(err)
+	}
+	e.PopupChoices = choices.V
+	if e.PopupChoices == nil {
+		e.PopupChoices = []string{}
+	}
+	return &e, nil
+}
+
+// ListMobileEAs returns the mobile device extension attributes.
+func (s *Store) ListMobileEAs(ctx context.Context) ([]model.MobileExtensionAttribute, error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT `+mobileEACols+` FROM mobile_extension_attributes ORDER BY lower(name)`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []model.MobileExtensionAttribute{}
+	for rows.Next() {
+		e, err := scanMobileEA(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *e)
+	}
+	return out, rows.Err()
+}
+
+// GetMobileEA returns one mobile extension attribute.
+func (s *Store) GetMobileEA(ctx context.Context, id string) (*model.MobileExtensionAttribute, error) {
+	return scanMobileEA(s.DB.QueryRowContext(ctx, `SELECT `+mobileEACols+` FROM mobile_extension_attributes WHERE id::text = $1`, id))
+}
+
+// SaveMobileEA creates (empty ID) or updates a mobile extension attribute.
+func (s *Store) SaveMobileEA(ctx context.Context, e model.MobileExtensionAttribute) (*model.MobileExtensionAttribute, error) {
+	if e.PopupChoices == nil {
+		e.PopupChoices = []string{}
+	}
+	if e.ID == "" {
+		return scanMobileEA(s.DB.QueryRowContext(ctx, `INSERT INTO mobile_extension_attributes (name, description, data_type, input_type, popup_choices)
+			VALUES ($1,$2,$3,$4,$5::jsonb) RETURNING `+mobileEACols, e.Name, e.Description, e.DataType, e.InputType, jsonArg(e.PopupChoices)))
+	}
+	return scanMobileEA(s.DB.QueryRowContext(ctx, `UPDATE mobile_extension_attributes SET name=$2, description=$3, data_type=$4, input_type=$5,
+		popup_choices=$6::jsonb, updated_at=now() WHERE id::text=$1 RETURNING `+mobileEACols, e.ID, e.Name, e.Description, e.DataType, e.InputType, jsonArg(e.PopupChoices)))
+}
+
+// DeleteMobileEA removes a mobile extension attribute and its values.
+func (s *Store) DeleteMobileEA(ctx context.Context, id string) error {
+	_, err := s.DB.ExecContext(ctx, `DELETE FROM mobile_extension_attributes WHERE id::text = $1`, id)
+	return err
+}
+
+// SetMobileEAValue stores one extension attribute value for a device ("" clears it).
+func (s *Store) SetMobileEAValue(ctx context.Context, deviceID, eaID, value string) error {
+	if value == "" {
+		_, err := s.DB.ExecContext(ctx, `DELETE FROM mobile_device_ea_values WHERE mobile_device_id::text = $1 AND ea_id::text = $2`, deviceID, eaID)
+		return err
+	}
+	_, err := s.DB.ExecContext(ctx, `INSERT INTO mobile_device_ea_values (mobile_device_id, ea_id, value) VALUES ($1, $2, $3)
+		ON CONFLICT (mobile_device_id, ea_id) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, deviceID, eaID, value)
+	return err
+}
+
+// ListMobileEAValues returns every mobile extension attribute with this device's value ("" if unset).
+func (s *Store) ListMobileEAValues(ctx context.Context, deviceID string) ([]model.EAValue, error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT e.id, e.name, e.data_type, COALESCE(v.value, ''), COALESCE(v.updated_at, e.updated_at)
+		FROM mobile_extension_attributes e LEFT JOIN mobile_device_ea_values v ON v.ea_id = e.id AND v.mobile_device_id::text = $1
+		ORDER BY lower(e.name)`, deviceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []model.EAValue{}
+	for rows.Next() {
+		var v model.EAValue
+		if err := rows.Scan(&v.EAID, &v.Name, &v.DataType, &v.Value, &v.UpdatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
 }

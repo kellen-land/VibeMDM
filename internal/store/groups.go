@@ -104,13 +104,14 @@ type groupDomain struct {
 	members    string // static membership table
 	memberCol  string // device column in the membership table
 	eaValues   string // extension attribute values table ("" = none)
+	eaTable    string // extension attribute definitions table
 	fields     map[string]fieldDef
 	existsCols map[string]string
 	order      []string
 }
 
 var computerDomain = &groupDomain{devices: "computers", groups: "computer_groups", members: "computer_group_members", memberCol: "computer_id",
-	eaValues: "computer_ea_values", fields: fieldDefs, existsCols: existsCols, order: computerFieldOrder}
+	eaValues: "computer_ea_values", eaTable: "extension_attributes", fields: fieldDefs, existsCols: existsCols, order: computerFieldOrder}
 
 // CriterionFields lists fields for the UI, including extension attributes.
 func (s *Store) CriterionFields(ctx context.Context) ([]CriterionField, error) {
@@ -206,12 +207,12 @@ func (s *Store) criterionExpr(ctx context.Context, d *groupDomain, cr model.Crit
 	var typ, expr, existsTpl string
 	if strings.HasPrefix(field, "ea:") && d.eaValues != "" {
 		eaID := strings.TrimPrefix(field, "ea:")
-		ea, err := s.GetExtensionAttribute(ctx, eaID)
-		if err != nil {
+		var dataType string
+		if err := s.DB.QueryRowContext(ctx, `SELECT data_type FROM `+d.eaTable+` WHERE id::text = $1`, eaID).Scan(&dataType); err != nil {
 			return "FALSE", nil
 		}
 		typ = "string"
-		switch ea.DataType {
+		switch dataType {
 		case "integer":
 			typ = "number"
 		case "date":

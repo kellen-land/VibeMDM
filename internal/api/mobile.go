@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/csv"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -47,6 +48,10 @@ func (h *Handler) getMobileDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if out.Groups, err = h.st.MobileDeviceGroups(r.Context(), d.ID); err != nil {
+		h.fail(w, err, "mobile device")
+		return
+	}
+	if out.ExtensionAttributes, err = h.st.ListMobileEAValues(r.Context(), d.ID); err != nil {
 		h.fail(w, err, "mobile device")
 		return
 	}
@@ -112,7 +117,12 @@ func (h *Handler) listMobileGroups(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) mobileCriteriaFields(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, h.st.MobileCriterionFields())
+	f, err := h.st.MobileCriterionFields(r.Context())
+	if err != nil {
+		h.fail(w, err, "criteria")
+		return
+	}
+	writeJSON(w, 200, f)
 }
 
 func (h *Handler) previewMobileGroup(w http.ResponseWriter, r *http.Request) {
@@ -397,4 +407,117 @@ func (h *Handler) exportMobileSearchCSV(w http.ResponseWriter, r *http.Request) 
 	}
 	cw.Flush()
 	h.st.Audit(r.Context(), actor(r), "mobile_search.export", "mobile_search", it.ID, map[string]any{"rows": len(devices)})
+}
+
+// ---- mobile device extension attributes ----
+
+func (h *Handler) listMobileEAs(w http.ResponseWriter, r *http.Request) {
+	items, err := h.st.ListMobileEAs(r.Context())
+	if err != nil {
+		h.fail(w, err, "extension attributes")
+		return
+	}
+	writeJSON(w, 200, listResp[model.MobileExtensionAttribute]{Items: items, Total: len(items)})
+}
+
+func (h *Handler) saveMobileEA(w http.ResponseWriter, r *http.Request) {
+	var e model.MobileExtensionAttribute
+	if err := decode(r, &e); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	e.ID = r.PathValue("id")
+	e.Name = strings.TrimSpace(e.Name)
+	if e.Name == "" {
+		writeErr(w, 400, "name required")
+		return
+	}
+	switch e.DataType {
+	case "":
+		e.DataType = "string"
+	case "string", "integer", "date":
+	default:
+		writeErr(w, 400, "data_type must be string, integer or date")
+		return
+	}
+	switch e.InputType {
+	case "":
+		e.InputType = "text"
+	case "text":
+		e.PopupChoices = nil
+	case "popup":
+		var clean []string
+		for _, c := range e.PopupChoices {
+			if c = strings.TrimSpace(c); c != "" {
+				clean = append(clean, c)
+			}
+		}
+		if len(clean) == 0 {
+			writeErr(w, 400, "a pop-up menu needs at least one choice")
+			return
+		}
+		e.PopupChoices = clean
+	default:
+		writeErr(w, 400, "input_type must be text or popup")
+		return
+	}
+	out, err := h.st.SaveMobileEA(r.Context(), e)
+	if err != nil {
+		h.fail(w, err, "extension attribute")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "mobile_ea.save", "mobile_ea", out.ID, map[string]any{"name": out.Name})
+	writeJSON(w, 200, out)
+}
+
+func (h *Handler) deleteMobileEA(w http.ResponseWriter, r *http.Request) {
+	if err := h.st.DeleteMobileEA(r.Context(), r.PathValue("id")); err != nil {
+		h.fail(w, err, "extension attribute")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "mobile_ea.delete", "mobile_ea", r.PathValue("id"), nil)
+	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+func (h *Handler) setMobileEAValue(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Value string `json:"value"`
+	}
+	if err := decode(r, &req); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	ea, err := h.st.GetMobileEA(r.Context(), r.PathValue("ea"))
+	if err != nil {
+		h.fail(w, err, "extension attribute")
+		return
+	}
+	req.Value = strings.TrimSpace(req.Value)
+	if req.Value != "" {
+		switch {
+		case ea.InputType == "popup" && !slices.Contains(ea.PopupChoices, req.Value):
+			writeErr(w, 400, "value is not one of the pop-up choices")
+			return
+		case ea.DataType == "integer":
+			if _, err := strconv.ParseInt(req.Value, 10, 64); err != nil {
+				writeErr(w, 400, "value must be a whole number")
+				return
+			}
+		case ea.DataType == "date":
+			if _, err := time.Parse("2006-01-02", req.Value); err != nil {
+				writeErr(w, 400, "value must be a date (YYYY-MM-DD)")
+				return
+			}
+		}
+	}
+	if _, err := h.st.GetMobileDevice(r.Context(), r.PathValue("id")); err != nil {
+		h.fail(w, err, "mobile device")
+		return
+	}
+	if err := h.st.SetMobileEAValue(r.Context(), r.PathValue("id"), ea.ID, req.Value); err != nil {
+		h.fail(w, err, "extension attribute")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "mobile_device.ea_value", "mobile_device", r.PathValue("id"), map[string]any{"ea": ea.Name})
+	writeJSON(w, 200, map[string]bool{"ok": true})
 }

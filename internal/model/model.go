@@ -1239,7 +1239,21 @@ type MobileDeviceApp struct {
 // MobileDeviceDetail is a mobile device with its related inventory.
 type MobileDeviceDetail struct {
 	MobileDevice
-	Apps     []MobileDeviceApp `json:"apps"`
-	Profiles []ComputerProfile `json:"profiles"`
-	Groups   []ComputerGroup   `json:"groups"`
+	Apps                []MobileDeviceApp `json:"apps"`
+	Profiles            []ComputerProfile `json:"profiles"`
+	Groups              []ComputerGroup   `json:"groups"`
+	ExtensionAttributes []EAValue         `json:"extension_attributes"`
+}
+
+// MobileExtensionAttribute is a custom inventory field for mobile devices. Values are entered by an
+// administrator (there is no agent on iOS): a free text field or a pop-up menu.
+type MobileExtensionAttribute struct {
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	Description  string    `json:"description"`
+	DataType     string    `json:"data_type"`  // string | integer | date
+	InputType    string    `json:"input_type"` // text | popup
+	PopupChoices []string  `json:"popup_choices"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }

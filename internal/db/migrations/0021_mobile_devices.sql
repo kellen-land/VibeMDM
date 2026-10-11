@@ -124,3 +124,24 @@ CREATE TABLE mobile_device_searches (
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Mobile device extension attributes. There is no agent on iOS, so values are entered by an
+-- administrator (text field or pop-up menu), as in Jamf Pro.
+CREATE TABLE mobile_extension_attributes (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name          TEXT NOT NULL UNIQUE,
+    description   TEXT NOT NULL DEFAULT '',
+    data_type     TEXT NOT NULL DEFAULT 'string' CHECK (data_type IN ('string', 'integer', 'date')),
+    input_type    TEXT NOT NULL DEFAULT 'text' CHECK (input_type IN ('text', 'popup')),
+    popup_choices JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE mobile_device_ea_values (
+    mobile_device_id UUID NOT NULL REFERENCES mobile_devices (id) ON DELETE CASCADE,
+    ea_id            UUID NOT NULL REFERENCES mobile_extension_attributes (id) ON DELETE CASCADE,
+    value            TEXT NOT NULL DEFAULT '',
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (mobile_device_id, ea_id)
+);

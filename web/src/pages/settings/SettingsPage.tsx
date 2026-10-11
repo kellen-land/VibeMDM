@@ -11,6 +11,7 @@ import { TokensSettings } from './TokensSettings'
 import { AuditLog } from './AuditLog'
 import { NetworkOrgSettings } from './NetworkOrgSettings'
 import { WebhooksSettings } from './WebhooksSettings'
+import { MobileEASettings } from './MobileEASettings'
 
 interface Item {
   key: string
@@ -37,7 +38,13 @@ const groups: { heading: string; items: Item[] }[] = [
       { key: 'signing', label: 'Profile signing' },
     ],
   },
-  { heading: 'Organization', items: [{ key: 'network', label: 'Buildings and networks' }] },
+  {
+    heading: 'Organization',
+    items: [
+      { key: 'network', label: 'Buildings and networks' },
+      { key: 'mobile-attributes', label: 'Mobile device attributes' },
+    ],
+  },
   {
     heading: 'Access',
     items: [
@@ -84,6 +91,7 @@ export function SettingsPage() {
               {active.key === 'users' && <UsersSettings />}
               {active.key === 'tokens' && <TokensSettings />}
               {active.key === 'audit' && <AuditLog />}
+              {active.key === 'mobile-attributes' && <MobileEASettings />}
             </>
           )}
         </div>

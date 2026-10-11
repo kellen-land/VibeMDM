@@ -2034,6 +2034,19 @@ export interface MobileDeviceDetail extends MobileDevice {
   apps: MobileDeviceApp[]
   profiles: ComputerProfile[]
   groups: ComputerGroup[]
+  extension_attributes: EAValue[]
+}
+
+/** Admin-entered custom field for mobile devices (no agent on iOS). */
+export interface MobileExtensionAttribute {
+  id: string
+  name: string
+  description: string
+  data_type: 'string' | 'integer' | 'date'
+  input_type: 'text' | 'popup'
+  popup_choices: string[]
+  created_at: string
+  updated_at: string
 }
 
 export interface MobileGroupPreview {

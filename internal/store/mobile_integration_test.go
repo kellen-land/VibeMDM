@@ -89,3 +89,48 @@ func TestMobileDevicesAreSeparateFromComputers(t *testing.T) {
 		t.Fatalf("search: %+v", res)
 	}
 }
+
+func TestMobileExtensionAttributes(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	stamp := time.Now().Format("150405.000")
+	d, _ := s.UpsertMobileFromAuthenticate(ctx, MDMAuthenticateInfo{UDID: "EA-" + stamp, Model: "iPad11,6", ProductName: "iPad11,6", DeviceName: "cart iPad"})
+	t.Cleanup(func() { s.DeleteMobileDevice(ctx, d.ID) })
+	ea, err := s.SaveMobileEA(ctx, model.MobileExtensionAttribute{Name: "Cart " + stamp, DataType: "string", InputType: "popup", PopupChoices: []string{"A", "B"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { s.DeleteMobileEA(ctx, ea.ID) })
+	if err := s.SetMobileEAValue(ctx, d.ID, ea.ID, "B"); err != nil {
+		t.Fatal(err)
+	}
+	vals, _ := s.ListMobileEAValues(ctx, d.ID)
+	found := false
+	for _, v := range vals {
+		if v.EAID == ea.ID && v.Value == "B" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("value not listed: %+v", vals)
+	}
+	ids, err := s.PreviewMobileCriteria(ctx, []model.Criterion{{Field: "ea:" + ea.ID, Operator: "is", Value: "B"}})
+	if err != nil || len(ids) != 1 || ids[0] != d.ID {
+		t.Fatalf("EA criterion: %v %v", ids, err)
+	}
+	fields, _ := s.MobileCriterionFields(ctx)
+	if fields[len(fields)-1].Key != "ea:"+ea.ID && !func() bool {
+		for _, f := range fields {
+			if f.Key == "ea:"+ea.ID {
+				return true
+			}
+		}
+		return false
+	}() {
+		t.Fatal("EA missing from criteria fields")
+	}
+	s.SetMobileEAValue(ctx, d.ID, ea.ID, "")
+	if ids, _ := s.PreviewMobileCriteria(ctx, []model.Criterion{{Field: "ea:" + ea.ID, Operator: "has_value"}}); len(ids) != 0 {
+		t.Fatal("cleared value still matches")
+	}
+}

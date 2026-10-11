@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Pencil, RefreshCw, Save, Trash2, X } from 'lucide-react'
-import { qk, useBuildings, useDepartments, useInvalidate, useMobileDevice } from '../../api/queries'
+import { qk, useBuildings, useDepartments, useInvalidate, useMobileDevice, useMobileEAs } from '../../api/queries'
 import { api, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import type { MobileDeviceDetail } from '../../api/types'
@@ -24,8 +24,8 @@ import { absoluteTime } from '../../lib/format'
 import { ComputerCommandsTab } from '../computers/ActivityTabs'
 import { DeviceIcon, MobileStatusBadges } from './MobileDevicesPage'
 
-type Section = 'general' | 'hardware' | 'network' | 'security' | 'apps' | 'profiles' | 'groups' | 'actions' | 'commands'
-const sectionKeys: readonly string[] = ['general', 'hardware', 'network', 'security', 'apps', 'profiles', 'groups', 'actions', 'commands']
+type Section = 'general' | 'hardware' | 'network' | 'security' | 'apps' | 'profiles' | 'attributes' | 'groups' | 'actions' | 'commands'
+const sectionKeys: readonly string[] = ['general', 'hardware', 'network', 'security', 'apps', 'profiles', 'attributes', 'groups', 'actions', 'commands']
 
 /** A mobile device record, laid out like a computer's: Inventory, Management and History. */
 export function MobileDeviceDetailPage() {
@@ -52,6 +52,7 @@ export function MobileDeviceDetailPage() {
             { key: 'security', label: 'Security' },
             { key: 'apps', label: 'Apps', count: d?.apps.length },
             { key: 'profiles', label: 'Profiles', count: d?.profiles.length },
+            ...(d && d.extension_attributes.length > 0 ? [{ key: 'attributes', label: 'Extension attributes' }] : []),
             { key: 'groups', label: 'Groups', count: d?.groups.length },
           ],
         },
@@ -139,6 +140,7 @@ export function MobileDeviceDetailPage() {
           {active === 'apps' && <AppsSection d={d} />}
           {active === 'profiles' && <ProfilesSection d={d} />}
           {active === 'groups' && <GroupsSection d={d} />}
+          {active === 'attributes' && <AttributesSection d={d} />}
           {active === 'actions' && <ActionsSection d={d} onDelete={() => setDeleteOpen(true)} />}
           {active === 'commands' && <ComputerCommandsTab id={d.id} mobile />}
         </Card>
@@ -427,6 +429,63 @@ function ActionsSection({ d, onDelete }: { d: MobileDeviceDetail; onDelete: () =
             </Button>
           </div>
         )}
+      </CardBody>
+    </>
+  )
+}
+
+function AttributesSection({ d }: { d: MobileDeviceDetail }) {
+  const { isAdmin } = useAuth()
+  const toast = useToast()
+  const invalidate = useInvalidate()
+  const eas = useMobileEAs()
+  const defs = new Map((eas.data?.items ?? []).map((e) => [e.id, e]))
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+  useEffect(() => setValues(Object.fromEntries(d.extension_attributes.map((v) => [v.ea_id, v.value]))), [d])
+  const dirty = d.extension_attributes.filter((v) => (values[v.ea_id] ?? '') !== v.value)
+  const save = async () => {
+    setSaving(true)
+    try {
+      for (const v of dirty) await api.put(`/api/v1/mobile-devices/${d.id}/ea-values/${v.ea_id}`, { value: values[v.ea_id] ?? '' })
+      await invalidate(qk.mobileDevice(d.id))
+      toast.success('Saved')
+    } catch (e) {
+      toast.error('Save failed', errorMessage(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+  return (
+    <>
+      <CardHeader
+        title="Extension attributes"
+        description="Custom fields defined under Settings → Mobile device attributes."
+        actions={
+          isAdmin && dirty.length > 0 ? (
+            <Button size="sm" variant="primary" icon={<Save />} loading={saving} onClick={save}>
+              Save
+            </Button>
+          ) : undefined
+        }
+      />
+      <CardBody>
+        <FormGrid cols={2}>
+          {d.extension_attributes.map((v) => {
+            const def = defs.get(v.ea_id)
+            const val = values[v.ea_id] ?? ''
+            const set = (x: string) => setValues({ ...values, [v.ea_id]: x })
+            return (
+              <Field key={v.ea_id} label={v.name} hint={def?.description}>
+                {def?.input_type === 'popup' ? (
+                  <Select value={val} onChange={(e) => set(e.target.value)} disabled={!isAdmin} options={[{ value: '', label: '— None —' }, ...def.popup_choices.map((c) => ({ value: c, label: c }))]} />
+                ) : (
+                  <Input value={val} onChange={(e) => set(e.target.value)} disabled={!isAdmin} type={v.data_type === 'date' ? 'date' : v.data_type === 'integer' ? 'number' : 'text'} />
+                )}
+              </Field>
+            )
+          })}
+        </FormGrid>
       </CardBody>
     </>
   )

@@ -38,6 +38,14 @@ VibeMDM sends `DeviceInformation` (iOS queries), `SecurityInfo`, `ProfileList`, 
 (phone number, IMEI, carrier), security (passcode set and compliant, data protection, supervised, Activation Lock,
 Find My, Lost Mode, last iCloud backup), apps with their managed state, installed profiles and groups.
 
+## Extension attributes
+
+There is no agent on iOS, so mobile extension attributes are entered by administrators: define them under **Settings →
+Mobile device attributes** (text field or pop-up menu; string, integer or date) and fill them in on the device record
+(*Inventory → Extension attributes*). They appear as `EA: …` fields in mobile groups and searches.
+API: `GET/POST /api/v1/mobile-extension-attributes`, `PUT/DELETE /api/v1/mobile-extension-attributes/{id}`,
+`PUT /api/v1/mobile-devices/{id}/ea-values/{ea}` `{"value": "…"}`.
+
 ## Groups and searches
 
 Mobile device groups (smart or static) and searches use the same criteria builder as computers, with mobile fields
