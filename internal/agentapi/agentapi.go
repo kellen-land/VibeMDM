@@ -109,6 +109,10 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.Handle("GET /agent/v1/enrollment-profile", a(h.enrollmentProfile))
 	mux.Handle("POST /agent/v1/unenroll", a(h.unenroll))
 	mux.Handle("GET /agent/v1/shell", a(h.shell))
+	mux.Handle("GET /agent/v1/laps", a(h.lapsConfig))
+	mux.Handle("POST /agent/v1/laps/stage", a(h.lapsStage))
+	mux.Handle("POST /agent/v1/laps/commit", a(h.lapsCommit))
+	mux.Handle("POST /agent/v1/laps/error", a(h.lapsError))
 	h.registerParity(mux)
 }
 

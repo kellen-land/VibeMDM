@@ -56,6 +56,7 @@ type device struct {
 	client   *http.Client
 	log      *slog.Logger
 	agentTok string
+	accounts *simAccounts // simulated local accounts for LAPS
 }
 
 func main() {
@@ -487,6 +488,7 @@ func (d *device) agentLoop(ctx context.Context, interval time.Duration) {
 		for _, t := range resp.Tasks {
 			d.runTask(ctx, c, t)
 		}
+		d.laps(ctx, c)
 		for _, app := range resp.AppInstalls {
 			d.log.Info("simulating app install", "app", app.Name, "label", app.Label)
 			c.SubmitAppInstallResult(ctx, app.LogID, "completed", "[simulator] Installomator "+strings.Join(app.Args, " ")+": installed")
@@ -705,6 +707,12 @@ func (d *device) runTask(ctx context.Context, c *agent.Client, t model.AgentTask
 		d.superVer = str(t.Payload["version"])
 		res.Stdout = "[simulator] super " + d.superVer + " installed (auth: " + str(t.Payload["auth_mode"]) + ")"
 		d.inventory(ctx, c, "")
+	case "laps_rotate":
+		if err := d.lapsCycle(ctx, c); err != nil {
+			res.Status, res.Error = "failed", err.Error()
+		} else {
+			res.Stdout = "[simulator] local administrator password checked"
+		}
 	case "filevault_regenerate":
 		if d.idx%2 != 0 {
 			res.Status, res.ExitCode, res.Stdout = "failed", 1, "FileVault is not enabled on this Mac; nothing to escrow."

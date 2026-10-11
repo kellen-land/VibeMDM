@@ -324,6 +324,13 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	adm("POST /api/v1/computers/{id}/filevault/reveal", h.revealFileVaultKey)
 	adm("POST /api/v1/computers/{id}/filevault/remediate", h.remediateFileVault)
 
+	// Local administrator password (LAPS)
+	r("GET /api/v1/laps", h.lapsOverview)
+	adm("PUT /api/v1/laps", h.saveLAPS)
+	r("GET /api/v1/computers/{id}/laps", h.computerLAPS)
+	adm("POST /api/v1/computers/{id}/laps/reveal", h.revealLAPS)
+	adm("POST /api/v1/computers/{id}/laps/rotate", h.rotateLAPS)
+
 	// Jamf-parity: restricted software, advanced searches, app catalog, webhooks
 	r("GET /api/v1/restricted-software", h.listRestricted)
 	r("POST /api/v1/restricted-software", h.createRestricted)

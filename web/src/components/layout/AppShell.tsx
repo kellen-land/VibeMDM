@@ -4,6 +4,7 @@ import {
   Activity,
   AppWindow,
   Ban,
+  ChevronDown,
   ChevronUp,
   FileCode,
   Fingerprint,
@@ -11,6 +12,7 @@ import {
   HeartPulse,
   KeyRound,
   LockKeyhole,
+  UserLock,
   Laptop,
   LayoutDashboard,
   ListChecks,
@@ -49,9 +51,10 @@ interface NavItem {
   end?: boolean
   badge?: 'health'
 }
+/** A group without a heading is always shown; others fold away to keep the sidebar calm. */
 const navGroups: { heading: string; items: NavItem[] }[] = [
   {
-    heading: 'Overview',
+    heading: '',
     items: [
       { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
       { to: '/health', label: 'Health', icon: HeartPulse, badge: 'health' },
@@ -71,14 +74,20 @@ const navGroups: { heading: string; items: NavItem[] }[] = [
       { to: '/policies', label: 'Policies', icon: ListChecks },
       { to: '/scripts', label: 'Scripts', icon: Terminal },
       { to: '/profiles', label: 'Configuration Profiles', icon: ShieldCheck },
-      { to: '/filevault', label: 'FileVault', icon: LockKeyhole },
       { to: '/updates', label: 'Software Updates', icon: RefreshCcwDot },
-      { to: '/compliance', label: 'Compliance', icon: ShieldHalf },
-      { to: '/identity', label: 'Identity', icon: Fingerprint },
       { to: '/packages', label: 'Packages', icon: Package },
       { to: '/apps', label: 'Mac Apps', icon: AppWindow },
-      { to: '/restricted-software', label: 'Restricted Software', icon: Ban },
       { to: '/extension-attributes', label: 'Extension Attributes', icon: Puzzle },
+    ],
+  },
+  {
+    heading: 'Security',
+    items: [
+      { to: '/filevault', label: 'FileVault', icon: LockKeyhole },
+      { to: '/laps', label: 'Local Admin Passwords', icon: UserLock },
+      { to: '/compliance', label: 'Compliance', icon: ShieldHalf },
+      { to: '/identity', label: 'Identity', icon: Fingerprint },
+      { to: '/restricted-software', label: 'Restricted Software', icon: Ban },
     ],
   },
   {
@@ -138,6 +147,27 @@ export function AppShell() {
   const toast = useToast()
   useEffect(() => setMobileOpen(false), [loc.pathname])
 
+  // Headed groups fold away; the one holding the current page opens itself. Choices persist per browser.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('vibemdm.nav') ?? '{}')
+    } catch {
+      return {}
+    }
+  })
+  useEffect(() => {
+    const active = navGroups.find((g) => g.heading && g.items.some((n) => (n.end ? loc.pathname === n.to : loc.pathname === n.to || loc.pathname.startsWith(n.to + '/'))))
+    if (active && !openGroups[active.heading]) setOpenGroups((o) => ({ ...o, [active.heading]: true }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loc.pathname])
+  useEffect(() => {
+    try {
+      localStorage.setItem('vibemdm.nav', JSON.stringify(openGroups))
+    } catch {
+      /* storage unavailable: folding still works for this visit */
+    }
+  }, [openGroups])
+
   const doLogout = async () => {
     try {
       await logout()
@@ -163,9 +193,19 @@ export function AppShell() {
       </div>
       <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
         {navGroups.map((g) => (
-          <div key={g.heading}>
-            <p className="px-2 pb-1 micro-label text-ink-faint">{g.heading}</p>
-            <div className="space-y-0.5">
+          <div key={g.heading || 'top'}>
+            {g.heading && (
+              <button
+                type="button"
+                onClick={() => setOpenGroups((o) => ({ ...o, [g.heading]: !o[g.heading] }))}
+                aria-expanded={!!openGroups[g.heading]}
+                className="flex w-full items-center justify-between rounded px-2 pb-1 micro-label text-ink-faint hover:text-ink-muted focus-ring"
+              >
+                {g.heading}
+                <ChevronDown className={cn('size-3.5 transition-transform', !openGroups[g.heading] && '-rotate-90')} aria-hidden="true" />
+              </button>
+            )}
+            <div className={cn('space-y-0.5', g.heading && !openGroups[g.heading] && 'hidden')}>
               {g.items.map((n) => (
                 <NavLink
                   key={n.to}

@@ -16,6 +16,7 @@ import { SearchInput } from '../../components/ui/SearchInput'
 import { RelativeTime } from '../../components/ui/RelativeTime'
 import { useToast } from '../../components/ui/Toast'
 import { FileVaultPanel } from './FileVaultPanel'
+import { LapsPanel } from './LapsPanel'
 import { absoluteTime, dash, formatDuration, formatMB } from '../../lib/format'
 
 const editableFields: { key: keyof ComputerEdit; label: string; textarea?: boolean; list?: 'building' | 'department' }[] = [
@@ -244,6 +245,7 @@ export function SecurityTab({ c }: { c: ComputerDetail }) {
         />
       </CardBody>
       <FileVaultPanel c={c} />
+      <LapsPanel c={c} />
       <CardHeader title="MDM security information" description="Latest SecurityInfo response." className="border-t border-line" />
       <CardBody>
         <KeyValueTable data={c.security_info} />

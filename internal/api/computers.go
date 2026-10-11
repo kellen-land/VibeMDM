@@ -343,6 +343,8 @@ func (h *Handler) queueTask(r *http.Request, c *model.Computer, typ, scriptID st
 		payload = map[string]any{"trigger": trigger}
 	case "filevault_regenerate":
 		payload = map[string]any{"reason": "no escrowed FileVault recovery key"}
+	case "laps_rotate":
+		payload = map[string]any{"reason": "requested by " + actor(r)}
 	case "restart", "shutdown", "logout_user":
 		payload = map[string]any{"message": message}
 	case "notify":

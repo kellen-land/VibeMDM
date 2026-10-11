@@ -19,6 +19,7 @@ import type {
   LogArchive,
   LogSource,
   FileVaultOverview,
+  LAPSOverview,
   Building,
   ComputerDetail,
   Computer,
@@ -136,6 +137,7 @@ export const qk = {
   webhooks: ['webhooks'] as const,
   webhookDeliveries: ['webhooks', 'deliveries'] as const,
   filevault: ['filevault'] as const,
+  laps: ['laps'] as const,
   commandInspect: (uuid: string, reveal = false) => ['command', uuid, 'inspect', reveal] as const,
   computerTimeline: (id: string, p?: object) => ['computer', id, 'timeline', p ?? {}] as const,
   commandSearch: (p?: object) => ['commands', 'search', p ?? {}] as const,
@@ -302,6 +304,10 @@ export function useCommandSearch(p: { q: string; computer_id?: string }) {
     enabled: p.q.trim().length >= 2,
     placeholderData: (prev) => prev,
   })
+}
+
+export function useLAPS() {
+  return useQuery({ queryKey: qk.laps, queryFn: () => api.get<LAPSOverview>('/api/v1/laps'), refetchInterval: 30_000 })
 }
 
 export function useFileVault() {

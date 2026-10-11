@@ -1818,3 +1818,66 @@ export interface OnboardingRunResult {
   /** computer name → reason */
   skipped: Record<string, string> | null
 }
+
+// ---- LAPS: local administrator password (internal/model LAPS*, internal/api/laps.go) ----
+
+export interface LAPSConfig {
+  enabled: boolean
+  scope: Scope
+  account_name: string
+  create_account: boolean
+  password_length: number
+  rotation_days: number
+  rotate_after_use: boolean
+  rotate_after_use_minutes: number
+}
+
+export type LAPSRotationStatus = 'ok' | 'due' | 'pending' | 'missing' | 'failing' | 'out_of_scope'
+
+/** One Mac's LAPS state. Never contains a password. */
+export interface LAPSStatus {
+  in_scope: boolean
+  has_password: boolean
+  account: string
+  fingerprint: string
+  escrowed_at: string | null
+  expires_at: string | null
+  rotated_count: number
+  pending: boolean
+  pending_at: string | null
+  last_viewed_at: string | null
+  last_viewed_by: string
+  rotate_after: string | null
+  rotate_requested: boolean
+  last_error: string
+  last_error_at: string | null
+  agent_enrolled: boolean
+  computer_id?: string
+  computer_name?: string
+  serial_number?: string
+  agent_last_seen?: string | null
+  rotation_status?: LAPSRotationStatus
+}
+
+export interface LAPSSummary {
+  in_scope: number
+  ok: number
+  due: number
+  pending: number
+  missing: number
+  failing: number
+}
+
+export interface LAPSOverview {
+  config: LAPSConfig
+  computers: LAPSStatus[] | null
+  summary: LAPSSummary
+}
+
+export interface LAPSReveal {
+  account: string
+  password: string
+  /** Staged but never confirmed by the agent; may be the live password. */
+  unconfirmed_password?: string
+  status: LAPSStatus
+}

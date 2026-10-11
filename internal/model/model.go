@@ -1045,3 +1045,56 @@ type AgentOnboardingSubmit struct {
 	Steps     []OnboardingStepResult `json:"steps"`
 	Log       string                 `json:"log"`
 }
+
+// LAPSConfig is the fleet-wide local administrator password (LAPS) policy.
+type LAPSConfig struct {
+	Enabled bool  `json:"enabled"`
+	Scope   Scope `json:"scope"`
+	// AccountName is the local account whose password is managed.
+	AccountName string `json:"account_name"`
+	// CreateAccount creates the account (as an administrator) when it is missing.
+	CreateAccount  bool `json:"create_account"`
+	PasswordLength int  `json:"password_length"`
+	// RotationDays is the maximum age of a password before the agent rotates it.
+	RotationDays int `json:"rotation_days"`
+	// RotateAfterUse rotates the password after an administrator revealed it.
+	RotateAfterUse        bool `json:"rotate_after_use"`
+	RotateAfterUseMinutes int  `json:"rotate_after_use_minutes"`
+}
+
+// LAPSStatus is one computer's LAPS state. It never contains a password.
+type LAPSStatus struct {
+	InScope     bool       `json:"in_scope"`
+	HasPassword bool       `json:"has_password"`
+	Account     string     `json:"account"`
+	Fingerprint string     `json:"fingerprint"`
+	EscrowedAt  *time.Time `json:"escrowed_at"`
+	// ExpiresAt is when the scheduled rotation falls due.
+	ExpiresAt    *time.Time `json:"expires_at"`
+	RotatedCount int        `json:"rotated_count"`
+	// Pending is true while a staged password has not been confirmed as applied.
+	Pending        bool       `json:"pending"`
+	PendingAt      *time.Time `json:"pending_at"`
+	LastViewedAt   *time.Time `json:"last_viewed_at"`
+	LastViewedBy   string     `json:"last_viewed_by"`
+	RotateAfter    *time.Time `json:"rotate_after"` // set by a reveal: rotate once this time passes
+	RotateRequest  bool       `json:"rotate_requested"`
+	LastError      string     `json:"last_error"`
+	LastErrorAt    *time.Time `json:"last_error_at"`
+	AgentEnrolled  bool       `json:"agent_enrolled"`
+	ComputerID     string     `json:"computer_id,omitempty"`
+	ComputerName   string     `json:"computer_name,omitempty"`
+	SerialNumber   string     `json:"serial_number,omitempty"`
+	AgentLastSeen  *time.Time `json:"agent_last_seen,omitempty"`
+	RotationStatus string     `json:"rotation_status,omitempty"` // ok | due | pending | missing | failing | out_of_scope
+}
+
+// LAPSSummary counts fleet LAPS states (Macs in scope with the agent).
+type LAPSSummary struct {
+	InScope int `json:"in_scope"`
+	OK      int `json:"ok"`
+	Due     int `json:"due"`
+	Pending int `json:"pending"`
+	Missing int `json:"missing"`
+	Failing int `json:"failing"`
+}

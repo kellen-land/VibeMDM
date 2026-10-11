@@ -60,6 +60,7 @@ const (
 	CheckSecurityPosture   = "security.device_posture"
 	CheckFileVaultNoKey    = "security.filevault_key_missing"
 	CheckFileVaultNoEscrow = "security.filevault_escrow_profile"
+	CheckLAPSNotCurrent    = "security.laps_not_current"
 	CheckProfileFailures   = "configuration.profile_failures"
 	CheckDDMInvalid        = "configuration.ddm_invalid"
 	CheckDDMStuck          = "configuration.ddm_not_syncing"
@@ -129,6 +130,9 @@ func Builtin(d Deps) *Registry {
 	r.Add(Check{ID: CheckFileVaultNoEscrow, Category: "security", Title: "FileVault escrow not configured",
 		Description: "Macs have FileVault on but the recovery key escrow profile is not deployed to them, so keys cannot be recovered.",
 		Run:         c.fileVaultNoEscrow})
+	r.Add(Check{ID: CheckLAPSNotCurrent, Category: "security", Title: "Local admin password not current",
+		Description:  "A Mac in the local administrator password (LAPS) scope has no escrowed password, a rotation that keeps failing, an unconfirmed password, or a rotation that is long overdue.",
+		SupportsHeal: true, Grace: 30 * time.Minute, Run: c.lapsNotCurrent})
 	r.Add(Check{ID: CheckProfileFailures, Category: "configuration", Title: "Configuration profile failures",
 		Description:  "A profile failed to install on one or more Macs.",
 		SupportsHeal: true, Run: c.profileFailures})
@@ -633,6 +637,56 @@ func (c *checks) fileVaultNoKey(ctx context.Context) ([]Finding, error) {
 			Summary: "FileVault on but no recovery key escrowed",
 			Detail:  "Keys are only escrowed when FileVault is enabled or the key is rotated after the escrow profile is installed. Without the agent, rotate the key manually with `fdesetup changerecovery -personal`.",
 			Facts:   map[string]any{"agent_enrolled": comp.AgentEnrolled}, Remediations: rems})
+	}
+	return out, nil
+}
+
+func (c *checks) lapsNotCurrent(ctx context.Context) ([]Finding, error) {
+	cfg, rows, _, err := c.d.St.LAPSOverview(ctx)
+	if err != nil || !cfg.Enabled {
+		return nil, err
+	}
+	now := time.Now()
+	var out []Finding
+	for _, st := range rows {
+		var summary, detail string
+		switch st.RotationStatus {
+		case "missing":
+			summary, detail = "No local admin password escrowed", "The agent has not yet set and escrowed a password for the managed account. It rotates at its next check-in; if this persists see the agent log (`vibemdm-agent logs`)."
+		case "failing":
+			summary, detail = "Local admin password rotation is failing", "The agent reported: "+st.LastError
+		case "pending":
+			if st.PendingAt == nil || now.Sub(*st.PendingAt) < time.Hour {
+				continue
+			}
+			summary, detail = "A new local admin password was never confirmed", "The agent staged a password but did not report whether it was applied. An administrator revealing the password sees both candidates."
+		case "due":
+			if st.ExpiresAt != nil && now.Sub(*st.ExpiresAt) < 24*time.Hour && !st.RotateRequest && st.RotateAfter == nil {
+				continue
+			}
+			summary, detail = "Local admin password rotation is overdue", "The Mac has not rotated its password although a rotation is due. It may be offline or the agent may be stopped."
+		default:
+			continue
+		}
+		id := st.ComputerID
+		rems := []Remediation{{ID: "rotate", Label: "Rotate now", Description: "Asks the agent to rotate the password immediately.", Safe: true,
+			Run: func(ctx context.Context) error {
+				if recent, err := c.d.St.HasRecentTask(ctx, id, "laps_rotate", time.Hour); err != nil || recent {
+					return err
+				}
+				if err := c.d.St.LAPSRequestRotation(ctx, id); err != nil {
+					return err
+				}
+				if _, err := c.d.St.CreateTask(ctx, id, "laps_rotate", map[string]any{"reason": "health: local admin password not current"}, actor); err != nil {
+					return err
+				}
+				if c.d.Wake != nil {
+					c.d.Wake(id)
+				}
+				return nil
+			}}, computerLink(id, "security"), link("laps", "Open LAPS", "", "/laps")}
+		out = append(out, Finding{ObjectType: "computer", ObjectID: id, ObjectName: st.ComputerName, Severity: Warning,
+			Summary: summary, Detail: detail, Facts: map[string]any{"status": st.RotationStatus, "account": cfg.AccountName}, Remediations: rems})
 	}
 	return out, nil
 }

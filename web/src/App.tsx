@@ -29,6 +29,7 @@ import { AppEditorPage } from './pages/AppEditorPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { CommandInspectorPage } from './pages/CommandInspectorPage'
 import { FileVaultPage } from './pages/FileVaultPage'
+import { LapsPage } from './pages/LapsPage'
 import { LogsPage } from './pages/LogsPage'
 import { CustomLabelsPage } from './pages/CustomLabelsPage'
 import { CustomLabelEditorPage } from './pages/CustomLabelEditorPage'
@@ -110,6 +111,7 @@ export function App() {
         <Route path="/logs/:tab" element={<LogsPage />} />
         <Route path="/commands/:uuid" element={<CommandInspectorPage />} />
         <Route path="/filevault" element={<FileVaultPage />} />
+        <Route path="/laps" element={<LapsPage />} />
         <Route path="/updates" element={<SoftwareUpdatesPage />} />
         <Route path="/updates/plans/new" element={<UpdatePlanEditorPage />} />
         <Route path="/updates/plans/:id" element={<UpdatePlanEditorPage />} />

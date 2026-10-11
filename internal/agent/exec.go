@@ -557,6 +557,12 @@ func (e *Executor) RunTask(ctx context.Context, t model.AgentTask) {
 			res.Status, res.Error = "failed", err.Error()
 		}
 		res.Stdout = fmt.Sprintf("trigger %q: executed %d policies", trig, n)
+	case "laps_rotate":
+		if err := e.LAPSCycle(ctx); err != nil {
+			res.Status, res.Error = "failed", err.Error()
+		} else {
+			res.Stdout = "local administrator password checked"
+		}
 	case "filevault_regenerate":
 		apply(e.RegenerateFileVaultKey(ctx))
 	case "compliance_scan":
@@ -670,6 +676,9 @@ func (e *Executor) CheckinAndRun(ctx context.Context, trigger string) (int, erro
 	}
 	if resp.InventoryRequested {
 		e.Recon(ctx) // Recon logs its own failures
+	}
+	if trigger == "checkin" || trigger == "startup" {
+		e.LAPSCycle(ctx) // logs its own failures; never blocks the check-in
 	}
 	// A routine check-in with nothing to do is debug-level so it does not flood the log.
 	done := log.Debug

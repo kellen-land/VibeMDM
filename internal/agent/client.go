@@ -322,3 +322,27 @@ func (c *Client) UploadDiagnostics(ctx context.Context, bundleID, path string) e
 func (c *Client) DiagnosticsFailed(ctx context.Context, bundleID, msg string) error {
 	return c.do(ctx, http.MethodPost, "/agent/v1/diagnostics/"+bundleID+"/failed", map[string]string{"error": msg}, nil, 0)
 }
+
+// LAPSConfig fetches the local admin password policy and rotation state for this Mac.
+func (c *Client) LAPSConfig(ctx context.Context) (*model.AgentLAPSConfig, error) {
+	var out model.AgentLAPSConfig
+	if err := c.do(ctx, http.MethodGet, "/agent/v1/laps", nil, &out, 0); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// LAPSStage uploads a new password before it is applied.
+func (c *Client) LAPSStage(ctx context.Context, account, password string) error {
+	return c.do(ctx, http.MethodPost, "/agent/v1/laps/stage", model.AgentLAPSStage{Account: account, Password: password}, nil, 0)
+}
+
+// LAPSCommit reports whether a staged password was applied.
+func (c *Client) LAPSCommit(ctx context.Context, fingerprint string, applied bool, errMsg string) error {
+	return c.do(ctx, http.MethodPost, "/agent/v1/laps/commit", model.AgentLAPSCommit{Fingerprint: fingerprint, Applied: applied, Error: errMsg}, nil, 0)
+}
+
+// LAPSError reports a failure that happened before a password was staged.
+func (c *Client) LAPSError(ctx context.Context, msg string) error {
+	return c.do(ctx, http.MethodPost, "/agent/v1/laps/error", map[string]string{"error": msg}, nil, 0)
+}

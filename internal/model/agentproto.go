@@ -222,3 +222,29 @@ type AgentLogEntry struct {
 	Msg       string         `json:"msg"`
 	Attrs     map[string]any `json:"attrs"`
 }
+
+// AgentLAPSConfig is what the server tells an agent about its local admin account.
+// CurrentPassword is only present when a rotation is due and an escrowed password exists,
+// so the agent can change the password with sysadminctl without breaking Secure Token.
+type AgentLAPSConfig struct {
+	Enabled         bool   `json:"enabled"`
+	Account         string `json:"account"`
+	CreateAccount   bool   `json:"create_account"`
+	PasswordLength  int    `json:"password_length"`
+	Rotate          bool   `json:"rotate"`
+	Reason          string `json:"reason,omitempty"` // missing | expired | used | requested
+	CurrentPassword string `json:"current_password,omitempty"`
+}
+
+// AgentLAPSStage uploads a newly generated password before the agent applies it.
+type AgentLAPSStage struct {
+	Account  string `json:"account"`
+	Password string `json:"password"`
+}
+
+// AgentLAPSCommit reports whether a staged password was applied.
+type AgentLAPSCommit struct {
+	Fingerprint string `json:"fingerprint"` // of the staged password being resolved
+	Applied     bool   `json:"applied"`
+	Error       string `json:"error,omitempty"`
+}
