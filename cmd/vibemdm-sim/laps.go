@@ -70,6 +70,8 @@ func (a *simAccounts) run(_ context.Context, name string, args ...string) (strin
 			return "", nil
 		}
 		return "", errors.New("no such user")
+	case tool == "pwpolicy":
+		return "Policy allows user to authenticate", nil
 	case tool == "dscl" && len(args) > 3 && args[1] == "-authonly":
 		if pw, ok := a.users[args[2]]; ok && pw == args[3] {
 			return "", nil
@@ -83,7 +85,7 @@ func (a *simAccounts) run(_ context.Context, name string, args ...string) (strin
 		return "", nil
 	case tool == "sysadminctl" && len(args) > 1 && args[0] == "-resetPasswordFor":
 		if a.users[args[1]] != arg("-oldPassword") {
-			return "old password mismatch", errors.New("exit 1")
+			return "sysadminctl[1:2] Operation is not permitted without secure token unlock. Error:-14090", nil // exits 0, like the real tool
 		}
 		a.users[args[1]] = arg("-newPassword")
 		return "", nil

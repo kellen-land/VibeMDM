@@ -141,6 +141,11 @@ func (l *LAPS) settlePending(ctx context.Context) error {
 	if err != nil {
 		return nil // none
 	}
+	if locked, _ := laps.LockedOut(ctx, l.Run, p.Account); locked {
+		// Testing now would fail even if the password is right, and every failed try keeps the
+		// account locked longer. Both passwords stay visible in the console until then.
+		return errLockedOut
+	}
 	applied := laps.Verify(ctx, l.Run, p.Account, p.Password)
 	msg := ""
 	if !applied {
@@ -174,8 +179,17 @@ func isConflict(err error) bool {
 	return errors.As(err, &ae) && ae.Status == 409
 }
 
+// errLockedOut stops a LAPS cycle while the password policy locks the account.
+var errLockedOut = errors.New("the LAPS account is locked by the Mac's password policy after failed sign-ins; waiting until it unlocks")
+
 func (l *LAPS) rotate(ctx context.Context, cfg *model.AgentLAPSConfig) error {
 	exists := laps.Exists(ctx, l.Run, cfg.Account)
+	if exists {
+		if locked, _ := laps.LockedOut(ctx, l.Run, cfg.Account); locked {
+			l.API.LAPSError(ctx, errLockedOut.Error()+"; the rotation will run then")
+			return errLockedOut
+		}
+	}
 	if !exists && !cfg.CreateAccount {
 		msg := fmt.Sprintf("account %q does not exist and account creation is off in the LAPS policy", cfg.Account)
 		l.API.LAPSError(ctx, msg)
@@ -200,17 +214,21 @@ func (l *LAPS) rotate(ctx context.Context, cfg *model.AgentLAPSConfig) error {
 		os.Remove(l.pendingPath()) // account untouched: nothing to settle
 		return fmt.Errorf("escrowing the new password: %w", err)
 	}
+	// SetPassword and Create confirm the change by authenticating with the new password.
 	var applyErr error
 	if exists {
 		applyErr = laps.SetPassword(ctx, l.Run, cfg.Account, cfg.CurrentPassword, pw)
 	} else {
 		applyErr = laps.Create(ctx, l.Run, cfg.Account, pw)
 	}
-	// Trust the account, not the exit status: a tool can fail after the change took effect.
-	if laps.Verify(ctx, l.Run, cfg.Account, pw) {
-		applyErr = nil
-	} else if applyErr == nil {
-		applyErr = errors.New("the new password did not authenticate after the change")
+	var notApplied *laps.NotAppliedError
+	if applyErr != nil && !errors.As(applyErr, &notApplied) {
+		// The outcome is open (for example the account is locked out, so even the right password
+		// fails). Discarding the new password could lose the only working one: keep it staged as
+		// unconfirmed, and let the next cycle settle it once the account can be tested.
+		msg := laps.Scrub(applyErr.Error(), pw, cfg.CurrentPassword) + "; the new password is kept as unconfirmed and checked again at the next check-in"
+		l.API.LAPSError(ctx, msg)
+		return errors.New(msg)
 	}
 	if applyErr == nil && cfg.HideAccount {
 		if err := laps.Hide(ctx, l.Run, cfg.Account); err != nil {
@@ -255,6 +273,9 @@ func (l *LAPS) tokenState(ctx context.Context, cfg *model.AgentLAPSConfig) *mode
 func (l *LAPS) grantToken(ctx context.Context, cfg *model.AgentLAPSConfig, state *model.AgentLAPSState) *model.AgentLAPSState {
 	if state == nil {
 		return nil
+	}
+	if locked, _ := laps.LockedOut(ctx, l.Run, cfg.Account); locked {
+		return state // the grant signs in with the account's password; wait until it unlocks
 	}
 	g, err := l.API.LAPSTokenGrant(ctx)
 	if err != nil {

@@ -81,6 +81,8 @@ type mac struct {
 	policy   func(string) bool // false: the password policy rejects it
 	calls    []string
 	exitCode bool // sysadminctl reports failures with a non-zero exit (older behaviour)
+	locked   bool // the lockout policy refuses every sign-in
+	failed   int  // failed sign-in attempts
 }
 
 func (m *mac) run(_ context.Context, name string, args ...string) (string, error) {
@@ -99,8 +101,14 @@ func (m *mac) run(_ context.Context, name string, args ...string) (string, error
 			return "Secure token is ENABLED for user " + args[1], nil
 		}
 		return "Secure token is DISABLED for user " + args[1], nil
+	case tool == "pwpolicy":
+		if m.locked {
+			return "Policy does not allow user to authenticate", errors.New("exit 1")
+		}
+		return "Policy allows user to authenticate", nil
 	case tool == "sysadminctl" && args[0] == "-resetPasswordFor":
-		if args[5] != m.pw {
+		if m.locked || args[5] != m.pw {
+			m.failed++
 			return fail("sysadminctl[123:456] Operation is not permitted without secure token unlock. Error:-14090 old " + args[5])
 		}
 		if !ok(args[3]) {
@@ -109,9 +117,10 @@ func (m *mac) run(_ context.Context, name string, args ...string) (string, error
 		m.pw = args[3]
 		return "", nil
 	case tool == "dscl" && args[1] == "-authonly":
-		if args[3] == m.pw {
+		if args[3] == m.pw && !m.locked {
 			return "", nil
 		}
+		m.failed++
 		return "Authentication for node /Local/Default failed. (-14090, eDSAuthFailed)", errors.New("exit 1")
 	case tool == "dscl" && args[1] == "-passwd":
 		if !ok(args[3]) {
@@ -132,31 +141,57 @@ func (m *mac) used(cmd string) bool {
 	return false
 }
 
-func TestSetPasswordPrefersSysadminctlThenFallsBack(t *testing.T) {
+func TestSetPasswordWithoutSecureTokenNeverSignsInWithTheOldPassword(t *testing.T) {
 	ctx := context.Background()
-	m := &mac{pw: "oldpw"}
-	if err := SetPassword(ctx, m.run, "vibeadmin", "oldpw", "newpw"); err != nil || m.pw != "newpw" || m.used("dscl . -passwd") {
-		t.Fatalf("sysadminctl path: err=%v pw=%q calls=%v", err, m.pw, m.calls)
-	}
-	// A stale escrowed password: sysadminctl exits 0 but changes nothing; dscl takes over.
-	for _, exit := range []bool{false, true} {
-		m = &mac{pw: "actual", exitCode: exit}
-		if err := SetPassword(ctx, m.run, "vibeadmin", "stale", "newpw"); err != nil || m.pw != "newpw" || !m.used("dscl . -passwd") {
-			t.Fatalf("fallback (exit code %v): err=%v pw=%q calls=%v", exit, err, m.pw, m.calls)
+	for _, old := range []string{"oldpw", "stale", ""} {
+		m := &mac{pw: "oldpw"}
+		if err := SetPassword(ctx, m.run, "vibeadmin", old, "newpw"); err != nil || m.pw != "newpw" {
+			t.Fatalf("old %q: err=%v pw=%q calls=%v", old, err, m.pw, m.calls)
+		}
+		if m.used("sysadminctl -resetPasswordFor") || m.failed != 0 {
+			t.Fatalf("old %q: a sign-in with the recorded password was attempted: %v (failed %d)", old, m.calls, m.failed)
 		}
 	}
-	m = &mac{pw: "unknown"}
-	if err := SetPassword(ctx, m.run, "vibeadmin", "", "newpw"); err != nil || m.pw != "newpw" || m.used("sysadminctl -resetPasswordFor") {
-		t.Fatalf("no old password: err=%v calls=%v", err, m.calls)
+}
+
+func TestSetPasswordOnALockedAccountIsNotReportedAsUnchanged(t *testing.T) {
+	m := &mac{pw: "oldpw", locked: true}
+	err := SetPassword(context.Background(), m.run, "vibeadmin", "oldpw", "newpw")
+	var na *NotAppliedError
+	if err == nil || errors.As(err, &na) {
+		t.Fatalf("the change took effect but cannot be confirmed: want an open outcome, got %v", err)
+	}
+	if locked, known := LockedOut(context.Background(), m.run, "vibeadmin"); !locked || !known {
+		t.Fatal("lockout not detected")
+	}
+}
+
+func TestParseAuthAllowed(t *testing.T) {
+	for out, want := range map[string][2]bool{
+		"Policy allows user to authenticate":         {false, true},
+		"Policy does not allow user to authenticate": {true, true},
+		"Policy denies authentication for this user": {true, true},
+		"": {false, false},
+		"pwpolicy: unknown option -authentication-allowed": {false, false},
+	} {
+		if l, k := parseAuthAllowed(out); l != want[0] || k != want[1] {
+			t.Errorf("%q: locked=%v known=%v", out, l, k)
+		}
 	}
 }
 
 func TestSetPasswordExplainsPolicyRejection(t *testing.T) {
-	m := &mac{pw: "oldpw", policy: func(pw string) bool { return strings.ToUpper(pw) != pw }} // must contain a lowercase letter
-	err := SetPassword(context.Background(), m.run, "vibeadmin", "oldpw", "NEWPW-NOLOWER")
-	if err == nil || !strings.Contains(err.Error(), "password policy") {
-		t.Fatalf("expected a policy explanation, got %v", err)
+	lower := func(pw string) bool { return strings.ToUpper(pw) != pw } // must contain a lowercase letter
+	for _, token := range []bool{false, true} {
+		m := &mac{pw: "oldpw", token: token, policy: lower}
+		err := SetPassword(context.Background(), m.run, "vibeadmin", "oldpw", "NEWPW-NOLOWER")
+		var na *NotAppliedError
+		if err == nil || !strings.Contains(err.Error(), "password policy") || !errors.As(err, &na) {
+			t.Fatalf("token %v: expected a not-applied policy explanation, got %v", token, err)
+		}
 	}
+	m := &mac{pw: "oldpw", policy: lower}
+	err := SetPassword(context.Background(), m.run, "vibeadmin", "oldpw", "NEWPW-NOLOWER")
 	if strings.Contains(err.Error(), "NEWPW-NOLOWER") || strings.Contains(err.Error(), "oldpw") {
 		t.Fatalf("error leaks a password: %v", err)
 	}
@@ -223,18 +258,22 @@ func TestParseVolumeOwner(t *testing.T) {
 func TestSetPasswordRefusesDsclOnSecureTokenAccount(t *testing.T) {
 	ctx := context.Background()
 	m := &mac{pw: "actual", token: true}
-	if err := SetPassword(ctx, m.run, "vibeadmin", "", "newpw"); err == nil || !strings.Contains(err.Error(), "Secure Token") {
+	var na *NotAppliedError
+	if err := SetPassword(ctx, m.run, "vibeadmin", "", "newpw"); err == nil || !strings.Contains(err.Error(), "Secure Token") || !errors.As(err, &na) {
 		t.Fatalf("expected refusal, got %v", err)
 	}
-	err := SetPassword(ctx, m.run, "vibeadmin", "stale", "newpw")
-	if err == nil || !strings.Contains(err.Error(), "not the account's password") || strings.Contains(err.Error(), "stale") {
-		t.Fatalf("expected a stale-password explanation without the password, got %v", err)
+	for _, exit := range []bool{false, true} {
+		m = &mac{pw: "actual", token: true, exitCode: exit}
+		err := SetPassword(ctx, m.run, "vibeadmin", "stale", "newpw")
+		if err == nil || !strings.Contains(err.Error(), "not the account's password") || strings.Contains(err.Error(), "stale") || !errors.As(err, &na) {
+			t.Fatalf("exit %v: expected a not-applied stale-password explanation without the password, got %v", exit, err)
+		}
+		if m.used("dscl . -passwd") || m.pw != "actual" {
+			t.Fatal("dscl must not run on a Secure Token account")
+		}
 	}
-	if m.used("dscl . -passwd") || m.pw != "actual" {
-		t.Fatal("dscl must not run on a Secure Token account")
-	}
-	if err := SetPassword(ctx, m.run, "vibeadmin", "actual", "newpw"); err != nil || m.pw != "newpw" {
-		t.Fatalf("with the right old password: %v", err)
+	if err := SetPassword(ctx, m.run, "vibeadmin", "actual", "newpw"); err != nil || m.pw != "newpw" || m.used("dscl . -passwd") {
+		t.Fatalf("with the right old password: %v %v", err, m.calls)
 	}
 }
 
