@@ -151,11 +151,16 @@ func (s *Service) CheckOut(r *mdm.Request, m *mdm.CheckOut) error {
 	return err
 }
 
-// SetBootstrapToken passes through and records escrow.
+// SetBootstrapToken passes through (NanoMDM stores the token) and records escrow. An empty
+// token clears it, as macOS does when the token is removed.
 func (s *Service) SetBootstrapToken(r *mdm.Request, m *mdm.SetBootstrapToken) error {
 	err := s.next.SetBootstrapToken(r, m)
 	if err == nil && m.UDID != "" {
-		s.st.DB.ExecContext(r.Context(), `UPDATE computers SET bootstrap_token_escrowed = TRUE, updated_at = now() WHERE udid = $1`, m.UDID)
+		escrowed := len(m.BootstrapToken.BootstrapToken) > 0
+		if e := s.st.SetBootstrapTokenEscrowed(r.Context(), m.UDID, escrowed); e != nil {
+			s.log.Warn("recording bootstrap token escrow", "err", e, "udid", m.UDID)
+		}
+		s.log.Info("mdm: bootstrap token received", "udid", m.UDID, "escrowed", escrowed)
 	}
 	return err
 }

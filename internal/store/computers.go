@@ -484,9 +484,9 @@ func (s *Store) ApplyMDMSecurityInfo(ctx context.Context, udid string, sec map[s
 	if m, ok := sec["SecureBoot"].(map[string]any); ok {
 		_ = m
 	}
-	if v, ok := sec["BootstrapTokenAllowedForAuthentication"].(string); ok {
-		bt = sql.NullBool{Bool: v == "allowed", Valid: true}
-	}
+	// Not escrow: BootstrapTokenAllowedForAuthentication says whether the Secure Enclave lets the
+	// bootstrap token authorize updates and kernel extensions ("disallowed" is normal without ADE).
+	// Escrow is known only from SetBootstrapToken (see SetBootstrapTokenEscrowed); bt stays NULL here.
 	if v, ok := sec["SystemIntegrityProtectionEnabled"].(bool); ok {
 		sip = sql.NullBool{Bool: v, Valid: true}
 	}
@@ -745,3 +745,9 @@ func (s *Store) ComputerGroups(ctx context.Context, computerID string) ([]model.
 
 // SetInventoryRequested is a helper used by UpdateInventory flows: nothing to persist, inventory is requested via tasks.
 var _ = time.Now
+
+// SetBootstrapTokenEscrowed records whether the Mac has escrowed its bootstrap token (SetBootstrapToken).
+func (s *Store) SetBootstrapTokenEscrowed(ctx context.Context, udid string, escrowed bool) error {
+	_, err := s.DB.ExecContext(ctx, `UPDATE computers SET bootstrap_token_escrowed = $2, updated_at = now() WHERE udid = $1`, udid, escrowed)
+	return err
+}

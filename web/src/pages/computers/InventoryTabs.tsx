@@ -225,7 +225,14 @@ export function OSTab({ c }: { c: ComputerDetail }) {
   )
 }
 
+/** "not supported" → "Not supported" */
+function titleCaseWords(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
 export function SecurityTab({ c }: { c: ComputerDetail }) {
+  // Whether the Secure Enclave lets the bootstrap token authorize updates and kernel extensions. Not escrow.
+  const bootstrapAuth = typeof c.security_info?.BootstrapTokenAllowedForAuthentication === 'string' ? (c.security_info.BootstrapTokenAllowedForAuthentication as string) : ''
   return (
     <>
       <CardHeader title="Security" />
@@ -241,8 +248,15 @@ export function SecurityTab({ c }: { c: ComputerDetail }) {
             { label: 'Supervised', value: <BoolBadge value={c.is_supervised} /> },
             { label: 'Activation Lock', value: <BoolBadge value={c.activation_lock_enabled} yes="Enabled" no="Disabled" /> },
             { label: 'Bootstrap token escrowed', value: <BoolBadge value={c.bootstrap_token_escrowed} /> },
+            ...(bootstrapAuth ? [{ label: 'Bootstrap token for authentication', value: titleCaseWords(bootstrapAuth) }] : []),
           ]}
         />
+        {c.mdm_enrolled && c.bootstrap_token_escrowed !== true && (
+          <p className="mt-4 text-xs text-ink-muted">
+            macOS escrows the bootstrap token when a Secure Token user logs in. To send it now, run <code className="font-mono text-ink">sudo profiles install -type bootstraptoken</code> on
+            the Mac and sign in as a Secure Token administrator; <code className="font-mono text-ink">sudo profiles status -type bootstraptoken</code> shows the result.
+          </p>
+        )}
       </CardBody>
       <FileVaultPanel c={c} />
       <LapsPanel c={c} />

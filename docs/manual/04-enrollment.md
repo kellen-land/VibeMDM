@@ -310,5 +310,13 @@ log stream --info --predicate 'process == "mdmclient"'   # live MDM traffic
 > `sudo profiles status -type bootstraptoken` and `sudo profiles install -type bootstraptoken`. The details of which
 > operations use it have changed across macOS versions; check the *Apple Platform Deployment* guide for your
 > version.
+>
+> Two different things are easy to confuse. **Escrowed** means the Mac sent `SetBootstrapToken` and the server holds
+> the token (VibeMDM shows *Bootstrap token escrowed*, from what NanoMDM stored). `SecurityInfo`'s
+> **`BootstrapTokenAllowedForAuthentication`** (`allowed`, `disallowed`, `not supported`) is instead whether the
+> Secure Enclave on an Apple silicon Mac lets the bootstrap token authorize software updates and kernel extensions.
+> It is set automatically for Automated Device Enrollment and can be changed in recoveryOS; `disallowed` is normal
+> for a user-approved enrollment and says nothing about escrow. With user-approved enrollment the automatic escrow at
+> login is not always reliable; `sudo profiles install -type bootstraptoken` escrows it on demand.
 
 Next: [Chapter 5 — Inventory and groups](05-inventory-and-groups.md).
