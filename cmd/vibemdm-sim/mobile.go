@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"howett.net/plist"
 )
 
 // iPhone and iPad answers. Commands not handled here fall through to the shared code
@@ -94,6 +96,15 @@ func (d *device) respondMobile(r map[string]any, rt string, cmd map[string]any) 
 		r["ActivationLockBypassCode"] = fmt.Sprintf("SIM%02d-ABCD-EFGH-JKLM-NPQR-STUV", d.idx)
 	case "RefreshCellularPlans", "DeviceLock", "EraseDevice", "RestartDevice", "ShutDownDevice":
 		// acknowledged
+	case "InstallProfile":
+		// Like iOS: supervised-only payloads fail to install on an unsupervised device.
+		if t := supervisedOnlyPayload(cmd); t != "" && !d.supervised {
+			r["Status"] = "Error"
+			r["ErrorChain"] = []any{map[string]any{"ErrorCode": 4001, "ErrorDomain": "MCProfileErrorDomain",
+				"LocalizedDescription": "The " + t + " payload can only be installed on a supervised device."}}
+			return true
+		}
+		return false
 	default:
 		return false
 	}
@@ -103,4 +114,22 @@ func (d *device) respondMobile(r map[string]any, rt string, cmd map[string]any) 
 func mobileError(r map[string]any, msg string) {
 	r["Status"] = "Error"
 	r["ErrorChain"] = []any{map[string]any{"ErrorCode": 12021, "ErrorDomain": "MCMDMErrorDomain", "LocalizedDescription": msg}}
+}
+
+// supervisedOnlyPayload returns the first payload type in an InstallProfile that needs supervision.
+func supervisedOnlyPayload(cmd map[string]any) string {
+	raw, _ := cmd["Payload"].([]byte)
+	var p map[string]any
+	if _, err := plist.Unmarshal(raw, &p); err != nil {
+		return ""
+	}
+	content, _ := p["PayloadContent"].([]any)
+	for _, c := range content {
+		m, _ := c.(map[string]any)
+		switch t, _ := m["PayloadType"].(string); t {
+		case "com.apple.app.lock", "com.apple.homescreenlayout", "com.apple.shareddeviceconfiguration", "com.apple.webcontent-filter":
+			return t
+		}
+	}
+	return ""
 }

@@ -1,0 +1,36 @@
+{
+  "title": "Certificate",
+  "description": "Installs a root or intermediate CA certificate so the device trusts servers that use it.",
+  "__payloadtype": "com.apple.security.pkcs1",
+  "__category": "Certificates",
+  "__multiple": true,
+  "__order": 10,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "PayloadContent"
+  ],
+  "properties": {
+    "PayloadDisplayName": {
+      "title": "Name shown in Settings",
+      "description": "Optional label for this certificate.",
+      "type": "string",
+      "property_order": 1
+    },
+    "PayloadCertificateFileName": {
+      "title": "File name",
+      "description": "Name of the certificate file.",
+      "type": "string",
+      "property_order": 2
+    },
+    "PayloadContent": {
+      "title": "Certificate",
+      "description": "DER or PEM file (.cer, .crt, .pem).",
+      "type": "string",
+      "format": "data",
+      "property_order": 3
+    }
+  }
+}

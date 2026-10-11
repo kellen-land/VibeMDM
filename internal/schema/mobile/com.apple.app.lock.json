@@ -1,0 +1,147 @@
+{
+  "title": "Single App Mode",
+  "description": "Locks the device to one app, for kiosks and shared devices. Supervised only.",
+  "__payloadtype": "com.apple.app.lock",
+  "__category": "Security",
+  "__multiple": false,
+  "__order": 40,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "App"
+  ],
+  "properties": {
+    "App": {
+      "title": "App",
+      "type": "object",
+      "property_order": 10,
+      "required": [
+        "Identifier"
+      ],
+      "properties": {
+        "Identifier": {
+          "title": "App bundle ID",
+          "description": "The app the device is locked to. It must be installed.",
+          "type": "string",
+          "property_order": 1,
+          "options": {
+            "inputAttributes": {
+              "placeholder": "com.example.kiosk"
+            }
+          }
+        },
+        "Options": {
+          "title": "Device options",
+          "description": "Fixed settings the user can't change.",
+          "type": "object",
+          "property_order": 2,
+          "properties": {
+            "DisableTouch": {
+              "title": "Disable touch screen",
+              "type": "boolean",
+              "property_order": 1
+            },
+            "DisableDeviceRotation": {
+              "title": "Disable rotation",
+              "type": "boolean",
+              "property_order": 2
+            },
+            "DisableVolumeButtons": {
+              "title": "Disable volume buttons",
+              "type": "boolean",
+              "property_order": 3
+            },
+            "DisableRingerSwitch": {
+              "title": "Disable ringer switch",
+              "type": "boolean",
+              "property_order": 4
+            },
+            "DisableSleepWakeButton": {
+              "title": "Disable sleep/wake button",
+              "type": "boolean",
+              "property_order": 5
+            },
+            "DisableAutoLock": {
+              "title": "Disable Auto-Lock",
+              "description": "On keeps the screen awake.",
+              "type": "boolean",
+              "property_order": 6
+            },
+            "EnableVoiceOver": {
+              "title": "Turn on VoiceOver",
+              "type": "boolean",
+              "property_order": 7
+            },
+            "EnableZoom": {
+              "title": "Turn on Zoom",
+              "type": "boolean",
+              "property_order": 8
+            },
+            "EnableInvertColors": {
+              "title": "Turn on Invert Colors",
+              "type": "boolean",
+              "property_order": 9
+            },
+            "EnableAssistiveTouch": {
+              "title": "Turn on AssistiveTouch",
+              "type": "boolean",
+              "property_order": 10
+            },
+            "EnableSpeakSelection": {
+              "title": "Turn on Speak Selection",
+              "type": "boolean",
+              "property_order": 11
+            },
+            "EnableMonoAudio": {
+              "title": "Turn on Mono Audio",
+              "type": "boolean",
+              "property_order": 12
+            },
+            "EnableVoiceControl": {
+              "title": "Turn on Voice Control",
+              "description": "iOS 13+.",
+              "type": "boolean",
+              "property_order": 13
+            }
+          }
+        },
+        "UserEnabledOptions": {
+          "title": "User can toggle",
+          "description": "Accessibility features the user may turn on and off.",
+          "type": "object",
+          "property_order": 3,
+          "properties": {
+            "VoiceOver": {
+              "title": "VoiceOver",
+              "type": "boolean",
+              "property_order": 1
+            },
+            "Zoom": {
+              "title": "Zoom",
+              "type": "boolean",
+              "property_order": 2
+            },
+            "InvertColors": {
+              "title": "Invert Colors",
+              "type": "boolean",
+              "property_order": 3
+            },
+            "AssistiveTouch": {
+              "title": "AssistiveTouch",
+              "type": "boolean",
+              "property_order": 4
+            },
+            "VoiceControl": {
+              "title": "Voice Control",
+              "description": "iOS 13+.",
+              "type": "boolean",
+              "property_order": 5
+            }
+          }
+        }
+      }
+    }
+  }
+}

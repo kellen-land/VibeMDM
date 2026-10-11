@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { KeyRound, Pencil, RefreshCw, Save, X } from 'lucide-react'
-import { qk, useBuildings, useDepartments, useInvalidate, useMobileDevice, useMobileEAs } from '../../api/queries'
+import { qk, useBuildings, useDepartments, useInvalidate, useMobileDevice, useMobileDeviceProfileDeployments, useMobileEAs } from '../../api/queries'
 import { api, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import type { MobileDeviceDetail } from '../../api/types'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
-import { Badge, BoolBadge } from '../../components/ui/Badge'
+import { Badge, BoolBadge, StatusBadge } from '../../components/ui/Badge'
 import { Alert } from '../../components/ui/Alert'
 import { Tabs } from '../../components/ui/Tabs'
 import { SectionNav } from '../../components/ui/SectionNav'
@@ -463,8 +463,26 @@ function AppsSection({ d }: { d: MobileDeviceDetail }) {
 }
 
 function ProfilesSection({ d }: { d: MobileDeviceDetail }) {
+  const deps = useMobileDeviceProfileDeployments(d.id)
+  const open = (deps.data?.items ?? []).filter((x) => x.status !== 'installed' && x.status !== 'removed')
   return (
     <>
+      {open.length > 0 && (
+        <>
+          <CardHeader title="Waiting or failed" description="VibeMDM profiles that are not installed yet." />
+          <ul className="divide-y divide-line border-b border-line">
+            {open.map((x) => (
+              <li key={x.profile_id} className="flex flex-wrap items-center gap-3 px-5 py-2.5 text-sm">
+                <Link to={`/mobile-profiles/${x.profile_id}`} className="font-medium text-ink hover:underline">
+                  {x.profile_name}
+                </Link>
+                <StatusBadge status={x.status} />
+                {x.error && <span className="text-xs text-critical">{x.error}</span>}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <CardHeader title="Profiles" description="Configuration profiles installed on the device." />
       <Table
         rows={d.profiles}

@@ -1,0 +1,73 @@
+{
+  "title": "Web Clip",
+  "description": "Puts a website shortcut on the Home Screen.",
+  "__payloadtype": "com.apple.webClip.managed",
+  "__category": "Apps and Home Screen",
+  "__multiple": true,
+  "__order": 20,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "URL",
+    "Label"
+  ],
+  "properties": {
+    "Label": {
+      "title": "Label",
+      "description": "Name shown under the icon on the Home Screen.",
+      "type": "string",
+      "property_order": 10
+    },
+    "URL": {
+      "title": "URL",
+      "description": "The web address the clip opens.",
+      "type": "string",
+      "property_order": 11,
+      "pattern": "^https?://",
+      "options": {
+        "inputAttributes": {
+          "placeholder": "https://intranet.example.com"
+        }
+      }
+    },
+    "Icon": {
+      "title": "Icon",
+      "description": "Square PNG, up to 400 x 400 pixels. A white square is used if empty.",
+      "type": "string",
+      "format": "data",
+      "property_order": 12
+    },
+    "IsRemovable": {
+      "title": "Allow removing",
+      "description": "Off stops the user deleting the web clip.",
+      "type": "boolean",
+      "property_order": 13
+    },
+    "FullScreen": {
+      "title": "Open full screen",
+      "description": "On opens the page as a full-screen web app without Safari controls.",
+      "type": "boolean",
+      "property_order": 14
+    },
+    "IgnoreManifestScope": {
+      "title": "Stay full screen on other sites",
+      "description": "On keeps full-screen mode when leaving the clip's site. iOS 14+.",
+      "type": "boolean",
+      "property_order": 15
+    },
+    "Precomposed": {
+      "title": "Use icon as is",
+      "description": "On stops the system adding effects to the icon.",
+      "type": "boolean",
+      "property_order": 16
+    },
+    "TargetApplicationBundleIdentifier": {
+      "title": "Open in app (bundle ID)",
+      "description": "Bundle ID of the app that opens the URL instead of Safari. iOS 14+.",
+      "type": "string",
+      "property_order": 17
+    }
+  }
+}

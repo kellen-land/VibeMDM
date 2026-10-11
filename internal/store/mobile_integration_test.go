@@ -2,6 +2,8 @@ package store
 
 import (
 	"context"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -208,5 +210,72 @@ func TestMobileLostModeAndActivationLockBypass(t *testing.T) {
 	s.DB.QueryRowContext(ctx, `SELECT result FROM command_results WHERE command_uuid = $1`, cmd).Scan(&result)
 	if result != "<?xml <string>[sealed by VibeMDM]</string>" {
 		t.Fatalf("result not scrubbed: %q", result)
+	}
+}
+
+func TestMobileProfilesScopeAndDeployments(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	stamp := time.Now().Format("150405.000")
+	mk := func(n string) *model.MobileDevice {
+		d, err := s.UpsertMobileFromAuthenticate(ctx, MDMAuthenticateInfo{UDID: "PROF-" + n + stamp, Model: "iPad11,6", ProductName: "iPad11,6", DeviceName: n})
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { s.DeleteMobileDevice(ctx, d.ID) })
+		return d
+	}
+	a, b, c := mk("a"), mk("b"), mk("c")
+	library := "Library " + stamp
+	s.UpdateMobileDevice(ctx, a.ID, MobileDeviceEdit{Building: &library})
+	s.UpdateMobileDevice(ctx, c.ID, MobileDeviceEdit{Building: &library})
+	g, _ := s.CreateMobileGroup(ctx, model.ComputerGroup{Name: "Prof static " + stamp})
+	t.Cleanup(func() { s.DeleteMobileGroup(ctx, g.ID) })
+	s.SetMobileStaticMembers(ctx, g.ID, []string{b.ID})
+
+	// Building (a, c) + group (b), minus c.
+	sc := model.MobileScope{Targets: model.MobileScopeSelection{GroupIDs: []string{g.ID}, Buildings: []string{strings.ToUpper(library)}},
+		Exclusions: model.MobileScopeSelection{MobileDeviceIDs: []string{c.ID}}}
+	ids, err := s.ResolveMobileScope(ctx, sc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(ids)
+	want := []string{a.ID, b.ID}
+	sort.Strings(want)
+	if strings.Join(ids, ",") != strings.Join(want, ",") {
+		t.Fatalf("scope: %v want %v", ids, want)
+	}
+
+	p, err := s.CreateMobileProfile(ctx, model.MobileConfigProfile{Name: "Wi-Fi " + stamp, Identifier: "com.vibemdm.mobile.t" + stamp, Payload: "<?xml?>",
+		Payloads: []model.MobilePayloadValues{{Type: "com.apple.wifi.managed", Values: map[string]any{"SSID_STR": "School"}}}, Scope: sc})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { s.DeleteMobileProfile(ctx, p.ID) })
+	if len(p.Payloads) != 1 || p.Payloads[0].Values["SSID_STR"] != "School" || len(p.Scope.Targets.GroupIDs) != 1 {
+		t.Fatalf("round trip: %+v", p)
+	}
+	up, _ := s.CreateMobileProfile(ctx, model.MobileConfigProfile{Name: "Uploaded " + stamp, Identifier: "com.example.up" + stamp, Payload: "<?xml?>"})
+	t.Cleanup(func() { s.DeleteMobileProfile(ctx, up.ID) })
+	if up.Payloads != nil {
+		t.Fatal("an uploaded profile must keep payloads nil")
+	}
+
+	s.UpsertMobileDeployment(ctx, p.ID, a.ID, "pending", "CMD-A"+stamp, "")
+	s.UpsertMobileDeployment(ctx, p.ID, b.ID, "pending", "CMD-B"+stamp, "")
+	s.SetMobileDeploymentStatusByCommand(ctx, "CMD-A"+stamp, "installed", "")
+	s.SetMobileDeploymentStatusByCommand(ctx, "CMD-B"+stamp, "failed", "needs supervision")
+	counts, _ := s.MobileDeploymentStatusCounts(ctx)
+	if counts[p.ID]["installed"] != 1 || counts[p.ID]["failed"] != 1 {
+		t.Fatalf("counts: %v", counts[p.ID])
+	}
+	deps, _ := s.ListMobileDeployments(ctx, "", b.ID)
+	if len(deps) != 1 || deps[0].Error != "needs supervision" || deps[0].ProfileName != p.Name {
+		t.Fatalf("device deployments: %+v", deps)
+	}
+	s.DeleteMobileDevice(ctx, b.ID)
+	if deps, _ := s.ListMobileDeployments(ctx, p.ID, ""); len(deps) != 1 {
+		t.Fatalf("deployment rows must cascade with the device: %+v", deps)
 	}
 }

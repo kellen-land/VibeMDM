@@ -1269,3 +1269,72 @@ type DeviceLocation struct {
 	Accuracy  *float64  `json:"accuracy"` // meters
 	At        time.Time `json:"at"`
 }
+
+// MobileScope says which iPhones and iPads a mobile object applies to: the
+// targets minus the exclusions (exclusions always win).
+type MobileScope struct {
+	AllMobileDevices bool                 `json:"all_mobile_devices"`
+	Targets          MobileScopeSelection `json:"targets"`
+	Exclusions       MobileScopeSelection `json:"exclusions"`
+}
+
+// MobileScopeSelection names mobile devices, mobile device groups, buildings and departments.
+type MobileScopeSelection struct {
+	MobileDeviceIDs []string `json:"mobile_device_ids"`
+	GroupIDs        []string `json:"group_ids"`
+	Buildings       []string `json:"buildings"`
+	Departments     []string `json:"departments"`
+}
+
+// IsEmpty reports whether the selection names nothing.
+func (s MobileScopeSelection) IsEmpty() bool {
+	return len(s.MobileDeviceIDs)+len(s.GroupIDs)+len(s.Buildings)+len(s.Departments) == 0
+}
+
+func (s *MobileScopeSelection) normalize() {
+	s.MobileDeviceIDs = nonNil(s.MobileDeviceIDs)
+	s.GroupIDs = nonNil(s.GroupIDs)
+	s.Buildings = nonNil(s.Buildings)
+	s.Departments = nonNil(s.Departments)
+}
+
+// Normalize replaces nil slices so the JSON shape is stable.
+func (s *MobileScope) Normalize() {
+	s.Targets.normalize()
+	s.Exclusions.normalize()
+}
+
+// MobilePayloadValues is one payload of a mobile profile built with the payload editors.
+type MobilePayloadValues struct {
+	Type   string         `json:"type"`
+	Values map[string]any `json:"values"`
+}
+
+// MobileConfigProfile is a Mobile Device Configuration Profile.
+type MobileConfigProfile struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Category    string `json:"category"`
+	Identifier  string `json:"identifier"`
+	UUID        string `json:"uuid"`
+	// Payload is the .mobileconfig XML (empty in lists).
+	Payload string `json:"payload,omitempty"`
+	// Payloads holds the editor values; nil when the profile was uploaded as XML.
+	Payloads  []MobilePayloadValues `json:"payloads"`
+	Scope     MobileScope           `json:"scope"`
+	CreatedAt time.Time             `json:"created_at"`
+	UpdatedAt time.Time             `json:"updated_at"`
+}
+
+// MobileProfileDeployment is a mobile profile's state on one device.
+type MobileProfileDeployment struct {
+	ProfileID        string    `json:"profile_id"`
+	ProfileName      string    `json:"profile_name"`
+	MobileDeviceID   string    `json:"mobile_device_id"`
+	MobileDeviceName string    `json:"mobile_device_name"`
+	Status           string    `json:"status"`
+	CommandUUID      string    `json:"command_uuid"`
+	Error            string    `json:"error"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}

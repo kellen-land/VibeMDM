@@ -73,6 +73,37 @@ and the API answers 409.
 After Lost Mode, Settings, Lock or Clear passcode, VibeMDM asks for `DeviceInformation` or `SecurityInfo` again so the
 record catches up. Not yet available: wallpaper, Return to Service, OS updates and `ClearRestrictionsPassword`.
 
+## Configuration profiles
+
+*Mobile Devices → Configuration Profiles* is separate from computer profiles (its own list, scope and deployments), as
+in Jamf Pro. **New profile** opens the editor: *General* (name, category, the description users see in Settings),
+then **Add payload** to pick from the built-in editors:
+
+| Category | Payloads |
+| --- | --- |
+| General | Lock Screen message (S), AirPrint |
+| Security | Passcode, Restrictions (a curated set of common keys), Content Filter (built-in web filter, S), Single App Mode (S) |
+| Network | Wi-Fi (personal networks; no 802.1X yet), VPN (IKEv2 or a VPN app) |
+| Apps and Home Screen | Home Screen Layout (S; folder contents not editable yet), Web Clip, Notifications |
+| Certificates | Certificate (CA, `.cer`), Identity certificate (PKCS #12) |
+
+Each editor is a JSON schema in `internal/schema/mobile/` whose keys were checked against Apple's
+[device-management](https://github.com/apple/device-management) repository. Settings you leave *Not set* are omitted, so
+the device keeps Apple's default. Wi-Fi, VPN, Web Clip and certificates can appear more than once in a profile; the
+others once. **Show profile XML** previews the generated `.mobileconfig`. **Upload** instead keeps a `.mobileconfig`
+made elsewhere (Apple Configurator, iMazing Profile Editor) as XML.
+
+Scope uses *Targets* (all mobile devices, devices, mobile device groups, buildings, departments) and *Exclusions*.
+Saving installs the profile on devices in scope (`InstallProfile`) and removes it from devices that left
+(`RemoveProfile`); changing the payload re-sends it everywhere. *Deployments* shows each device's status; **Sync scope**
+re-checks group membership and **Redeploy** sends it again. A newly enrolled device receives every profile scoped to
+it. Payloads marked **S** need a supervised device: an unsupervised one rejects the whole profile, and the device
+record lists it under *Profiles → Waiting or failed* with the device's error. Passwords, shared secrets and identity
+files are hidden from viewers.
+
+Not yet available: DDM declarations for iOS 17+, enterprise Wi-Fi (802.1X), certificate references in VPN and Wi-Fi,
+and per-profile removal from single devices. **Untested on real hardware:** every payload above.
+
 ## Activation Lock bypass code
 
 For a supervised device, VibeMDM asks for `ActivationLockBypassCode` after inventory (at most once a day until it has
@@ -92,6 +123,12 @@ now** asks again.
 | `GET /api/v1/mobile-devices/{id}/commands` | MDM command history (also `GET /api/v1/commands?mobile_device_id=`) |
 | `POST /api/v1/mobile-devices/{id}/update-inventory` | Ask for inventory now |
 | `POST /api/v1/mobile-devices/{id}/actions` | Send a command: `{"action": "lock" \| "clear_passcode" \| "erase" \| "restart" \| "shutdown" \| "enable_lost_mode" \| "disable_lost_mode" \| "locate" \| "play_sound" \| "settings" \| "refresh_cellular_plans" \| "collect_bypass_code", …}` (`message`, `phone`, `footnote`, `confirm_name`, `preserve_data_plan`, `settings: [{"item", "device_name", "enabled", "time_zone"}]`, `esim_server_url`) |
+| `GET /api/v1/mobile-device-payloads` | Payload editors (type, title, category, JSON schema) |
+| `GET/POST /api/v1/mobile-device-profiles`, `GET/PUT/DELETE /api/v1/mobile-device-profiles/{id}` | Mobile profiles: `{"name", "category", "description", "scope", "payloads": [{"type", "values"}]}` or `"payload": "<xml>"` for an upload |
+| `POST /api/v1/mobile-device-profiles/preview` | Build the XML without saving (`payload_errors` per payload) |
+| `GET /api/v1/mobile-device-profiles/{id}/deployments`, `POST …/deploy` `{"reinstall": bool}` | Status per device; sync or redeploy |
+| `GET /api/v1/mobile-devices/{id}/profile-deployments` | One device's VibeMDM profiles |
+| `POST /api/v1/mobile-scope/preview` | `{"scope": …}` → devices in scope |
 | `POST /api/v1/mobile-devices/{id}/activation-lock-bypass/reveal` | `{"reason": "…"}` → `{"code": "…"}` (audited, not cached) |
 | `GET/POST /api/v1/mobile-device-groups`, `GET/PUT/DELETE /api/v1/mobile-device-groups/{id}` | Groups |
 | `GET/PUT /api/v1/mobile-device-groups/{id}/members` | Members (`{"mobile_device_ids": [...]}` for static groups) |

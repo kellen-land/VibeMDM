@@ -61,7 +61,9 @@ Test hardware: iPhone 13 mini, iPad (8th generation), supervised with Apple Conf
 - [ ] More mobile commands: Settings wallpaper, Erase with Return to Service (iOS 17+), `ClearRestrictionsPassword`, OS updates via DDM plans
 - [x] Activation Lock bypass code: collect from supervised devices, store sealed, audited reveal with a reason
     - Supervised devices are asked for the code after inventory; it is sealed, scrubbed from NanoMDM's raw result and revealed from the Security section only with a reason recorded in the audit log.
-- [ ] Mobile Device Configuration Profiles with GUI editors: Restrictions, Passcode, Wi-Fi, VPN, Web Clips, Home Screen Layout, Notifications, Single App Mode, Content Filter, Certificates, AirPrint, Lock Screen message; DDM declarations for iOS 17+
+- [x] Mobile Device Configuration Profiles with GUI editors: Restrictions, Passcode, Wi-Fi, VPN, Web Clips, Home Screen Layout, Notifications, Single App Mode, Content Filter, Certificates, AirPrint, Lock Screen message
+    - Added a separate Mobile Device Configuration Profiles area with 13 schema-driven payload editors checked against Apple's device-management repository, .mobileconfig upload, mobile scoping, per-device deployments and failures on the device record; untested on real hardware.
+- [ ] Mobile DDM declarations for iOS 17+ (passcode, software update enforcement), enterprise Wi-Fi (802.1X) and certificate references in VPN/Wi-Fi payloads
 - [ ] Mobile apps: App Store apps by Store ID (user signs in), install/update/remove with status from ManagedApplicationList, Managed App Configuration via the JSON-schema form engine
 - [ ] Apps and Books: content token, licence sync, device-based licences, token-expiry and licence-shortage Health checks
     - Blocked: ABM/ASM.

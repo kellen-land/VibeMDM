@@ -36,6 +36,8 @@ import { MobileGroupsPage } from './pages/MobileGroupsPage'
 import { MobileGroupEditorPage } from './pages/MobileGroupEditorPage'
 import { MobileSearchesPage } from './pages/MobileSearchesPage'
 import { MobileEnrollmentPage } from './pages/mobile/MobileEnrollmentPage'
+import { MobileProfilesPage } from './pages/mobile/MobileProfilesPage'
+import { MobileProfileEditorPage } from './pages/mobile/MobileProfileEditorPage'
 import { MobileSearchEditorPage } from './pages/MobileSearchEditorPage'
 import { LogsPage } from './pages/LogsPage'
 import { CustomLabelsPage } from './pages/CustomLabelsPage'
@@ -126,6 +128,9 @@ export function App() {
         <Route path="/mobile-groups/:id" element={<MobileGroupEditorPage />} />
         <Route path="/mobile-searches" element={<MobileSearchesPage />} />
         <Route path="/mobile-enrollment" element={<MobileEnrollmentPage />} />
+        <Route path="/mobile-profiles" element={<MobileProfilesPage />} />
+        <Route path="/mobile-profiles/new" element={<MobileProfileEditorPage />} />
+        <Route path="/mobile-profiles/:id" element={<MobileProfileEditorPage />} />
         <Route path="/mobile-searches/:id" element={<MobileSearchEditorPage />} />
         <Route path="/updates" element={<SoftwareUpdatesPage />} />
         <Route path="/updates/plans/new" element={<UpdatePlanEditorPage />} />

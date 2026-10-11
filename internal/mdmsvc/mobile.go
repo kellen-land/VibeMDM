@@ -34,6 +34,9 @@ func (s *Service) mobileTokenUpdate(ctx context.Context, udid string) {
 		if err := s.cmdr.RequestMobileInventory(ctx, &d, "system"); err != nil {
 			s.log.Warn("initial mobile inventory request", "err", err, "mobile_device", d.Name)
 		}
+		if err := s.cmdr.SyncMobileProfilesForDevice(ctx, &d, "system"); err != nil {
+			s.log.Warn("mobile profiles on enrollment", "err", err, "mobile_device", d.Name)
+		}
 	}(*d)
 }
 
@@ -42,6 +45,18 @@ func (s *Service) processMobileResult(ctx context.Context, d *model.MobileDevice
 	if requestType != "" {
 		s.hooks.Fire(webhook.MDMCommandCompleted, map[string]any{"mobile_device_id": d.ID, "device": d.Name, "command_uuid": results.CommandUUID,
 			"request_type": requestType, "status": results.Status, "error": errText})
+	}
+	switch requestType {
+	case "InstallProfile", "RemoveProfile":
+		status := map[string]string{"InstallProfile": "installed", "RemoveProfile": "removed"}[requestType]
+		if errText != "" {
+			status = "failed"
+		}
+		s.st.SetMobileDeploymentStatusByCommand(ctx, results.CommandUUID, status, errText)
+		if errText == "" {
+			s.mobileRefresh(ctx, d, commands.ProfileList)
+		}
+		return
 	}
 	if errText != "" {
 		return

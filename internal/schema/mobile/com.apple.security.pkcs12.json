@@ -1,0 +1,42 @@
+{
+  "title": "Identity certificate (PKCS #12)",
+  "description": "Installs a certificate with its private key, for example for Wi-Fi, VPN or email authentication.",
+  "__payloadtype": "com.apple.security.pkcs12",
+  "__category": "Certificates",
+  "__multiple": true,
+  "__order": 20,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "PayloadContent"
+  ],
+  "properties": {
+    "PayloadDisplayName": {
+      "title": "Name shown in Settings",
+      "description": "Optional label for this identity.",
+      "type": "string",
+      "property_order": 1
+    },
+    "PayloadCertificateFileName": {
+      "title": "File name",
+      "description": "Name of the .p12 or .pfx file.",
+      "type": "string",
+      "property_order": 2
+    },
+    "PayloadContent": {
+      "title": "Identity file",
+      "description": "PKCS #12 file (.p12 or .pfx) containing the certificate and private key.",
+      "type": "string",
+      "format": "data",
+      "property_order": 3
+    },
+    "Password": {
+      "title": "Password",
+      "description": "Password for the .p12 file. Stored in the profile and hidden from viewers.",
+      "type": "string",
+      "property_order": 4
+    }
+  }
+}

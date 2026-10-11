@@ -1,0 +1,358 @@
+{
+  "title": "Restrictions",
+  "description": "Turns device features, apps and iCloud services on or off. Many restrictions only work on supervised devices; unset items keep Apple's default (allowed).",
+  "__payloadtype": "com.apple.applicationaccess",
+  "__category": "Security",
+  "__multiple": false,
+  "__order": 20,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "allowCamera": {
+      "title": "Allow camera",
+      "description": "Off hides the Camera app and blocks taking photos. Unsupervised support is deprecated.",
+      "type": "boolean",
+      "property_order": 10
+    },
+    "allowScreenShot": {
+      "title": "Allow screenshots and screen recording",
+      "description": "Off also stops Classroom from viewing the screen.",
+      "type": "boolean",
+      "property_order": 11
+    },
+    "allowAirDrop": {
+      "title": "Allow AirDrop",
+      "description": "Off turns AirDrop off. Supervised only.",
+      "type": "boolean",
+      "property_order": 12
+    },
+    "allowAssistant": {
+      "title": "Allow Siri",
+      "description": "Off turns Siri off. Apple is moving this to declarative Siri settings (iOS 26.4).",
+      "type": "boolean",
+      "property_order": 13
+    },
+    "allowAssistantWhileLocked": {
+      "title": "Allow Siri while locked",
+      "description": "Off turns Siri off on the Lock Screen when a passcode is set.",
+      "type": "boolean",
+      "property_order": 14
+    },
+    "allowFingerprintForUnlock": {
+      "title": "Allow Touch ID / Face ID unlock",
+      "description": "Off requires the passcode to unlock. Unsupervised support is deprecated.",
+      "type": "boolean",
+      "property_order": 15
+    },
+    "allowLockScreenControlCenter": {
+      "title": "Allow Control Center on Lock Screen",
+      "description": "Off hides Control Center while locked.",
+      "type": "boolean",
+      "property_order": 16
+    },
+    "allowLockScreenNotificationsView": {
+      "title": "Allow notification history on Lock Screen",
+      "description": "Off hides past notifications while locked; new ones still appear.",
+      "type": "boolean",
+      "property_order": 17
+    },
+    "allowUSBRestrictedMode": {
+      "title": "Allow USB Restricted Mode",
+      "description": "Off lets USB accessories connect while the device is locked. Supervised only.",
+      "type": "boolean",
+      "property_order": 18
+    },
+    "allowHostPairing": {
+      "title": "Allow pairing with computers",
+      "description": "Off blocks pairing with any Mac or PC except the supervising one. Supervised only.",
+      "type": "boolean",
+      "property_order": 19
+    },
+    "forceAutomaticDateAndTime": {
+      "title": "Force automatic date and time",
+      "description": "On keeps Set Automatically turned on in Date & Time. Supervised only.",
+      "type": "boolean",
+      "property_order": 20
+    },
+    "allowFindMyDevice": {
+      "title": "Allow Find My Device",
+      "description": "Off turns off Find My Device in the Find My app. Supervised only. iOS 13+.",
+      "type": "boolean",
+      "property_order": 21
+    },
+    "allowDiagnosticSubmission": {
+      "title": "Allow sending diagnostics to Apple",
+      "description": "Off stops automatic diagnostic reports.",
+      "type": "boolean",
+      "property_order": 22
+    },
+    "allowEraseContentAndSettings": {
+      "title": "Allow Erase All Content and Settings",
+      "description": "Off hides the erase option in Settings. Supervised only.",
+      "type": "boolean",
+      "property_order": 23
+    },
+    "allowPasscodeModification": {
+      "title": "Allow passcode changes",
+      "description": "Off stops adding, changing or removing the passcode. Supervised only.",
+      "type": "boolean",
+      "property_order": 24
+    },
+    "allowFingerprintModification": {
+      "title": "Allow Touch ID / Face ID changes",
+      "description": "Off stops adding or removing fingerprints and faces. Supervised only.",
+      "type": "boolean",
+      "property_order": 25
+    },
+    "allowAccountModification": {
+      "title": "Allow account changes",
+      "description": "Off stops adding or changing Apple Accounts and Mail, Contacts and Calendar accounts. Supervised only.",
+      "type": "boolean",
+      "property_order": 26
+    },
+    "allowDeviceNameModification": {
+      "title": "Allow device name changes",
+      "description": "Off stops renaming the device. Supervised only.",
+      "type": "boolean",
+      "property_order": 27
+    },
+    "allowWallpaperModification": {
+      "title": "Allow wallpaper changes",
+      "description": "Off stops changing the wallpaper. Supervised only.",
+      "type": "boolean",
+      "property_order": 28
+    },
+    "allowBluetoothModification": {
+      "title": "Allow Bluetooth changes",
+      "description": "Off stops turning Bluetooth on or off. Supervised only.",
+      "type": "boolean",
+      "property_order": 29
+    },
+    "allowPersonalHotspotModification": {
+      "title": "Allow Personal Hotspot changes",
+      "description": "Off stops changing the Personal Hotspot setting. Supervised only.",
+      "type": "boolean",
+      "property_order": 30
+    },
+    "allowVPNCreation": {
+      "title": "Allow adding VPNs",
+      "description": "Off stops users adding VPN configurations. Supervised only.",
+      "type": "boolean",
+      "property_order": 31
+    },
+    "forceWiFiToAllowedNetworksOnly": {
+      "title": "Only join managed Wi-Fi networks",
+      "description": "On limits the device to Wi-Fi networks installed by a profile. Supervised only. iOS 14.5+.",
+      "type": "boolean",
+      "property_order": 32
+    },
+    "allowUIConfigurationProfileInstallation": {
+      "title": "Allow installing profiles",
+      "description": "Off stops users installing configuration profiles and certificates themselves. Supervised only.",
+      "type": "boolean",
+      "property_order": 33
+    },
+    "allowEnablingRestrictions": {
+      "title": "Allow Screen Time",
+      "description": "Off stops users turning on Screen Time restrictions. Supervised only.",
+      "type": "boolean",
+      "property_order": 34
+    },
+    "allowAppInstallation": {
+      "title": "Allow installing apps",
+      "description": "Off removes the App Store and blocks all app installs and updates by the user. MDM can still install apps. Supervised only.",
+      "type": "boolean",
+      "property_order": 35
+    },
+    "allowUIAppInstallation": {
+      "title": "Allow App Store",
+      "description": "Off removes the App Store; apps can still be installed by MDM or Configurator. Supervised only.",
+      "type": "boolean",
+      "property_order": 36
+    },
+    "allowAutomaticAppDownloads": {
+      "title": "Allow automatic app downloads",
+      "description": "Off stops apps bought on other devices downloading automatically. Supervised only.",
+      "type": "boolean",
+      "property_order": 37
+    },
+    "allowAppRemoval": {
+      "title": "Allow deleting apps",
+      "description": "Off stops users deleting apps. Supervised only.",
+      "type": "boolean",
+      "property_order": 38
+    },
+    "allowInAppPurchases": {
+      "title": "Allow in-app purchases",
+      "description": "Off blocks in-app purchases. Unsupervised support is deprecated.",
+      "type": "boolean",
+      "property_order": 39
+    },
+    "allowMarketplaceAppInstallation": {
+      "title": "Allow alternative app marketplaces",
+      "description": "Off blocks installing marketplace apps from the web (EU). Supervised only. iOS 17.4+.",
+      "type": "boolean",
+      "property_order": 40
+    },
+    "allowAppClips": {
+      "title": "Allow App Clips",
+      "description": "Off blocks App Clips and removes existing ones. Supervised only. iOS 14+.",
+      "type": "boolean",
+      "property_order": 41
+    },
+    "allowEnterpriseAppTrust": {
+      "title": "Allow trusting enterprise apps",
+      "description": "Off removes the Trust Enterprise Developer button in Settings.",
+      "type": "boolean",
+      "property_order": 42
+    },
+    "allowSafari": {
+      "title": "Allow Safari",
+      "description": "Off hides Safari and blocks web clips. Supervised only.",
+      "type": "boolean",
+      "property_order": 43
+    },
+    "allowGameCenter": {
+      "title": "Allow Game Center",
+      "description": "Off turns Game Center off. Supervised only.",
+      "type": "boolean",
+      "property_order": 44
+    },
+    "allowExplicitContent": {
+      "title": "Allow explicit music, podcasts and news",
+      "description": "Off hides content marked explicit. Supervised only.",
+      "type": "boolean",
+      "property_order": 45
+    },
+    "ratingApps": {
+      "title": "Maximum app age rating",
+      "description": "Hides apps above this age rating. Ratings vary by region; these are the common bands.",
+      "type": "integer",
+      "enum": [
+        1000,
+        600,
+        300,
+        200,
+        100,
+        0
+      ],
+      "options": {
+        "enum_titles": [
+          "All apps",
+          "17+",
+          "12+",
+          "9+",
+          "4+",
+          "No apps"
+        ]
+      },
+      "property_order": 46
+    },
+    "allowCloudBackup": {
+      "title": "Allow iCloud Backup",
+      "description": "Off stops backing up to iCloud. Unsupervised support is deprecated.",
+      "type": "boolean",
+      "property_order": 47
+    },
+    "allowCloudDocumentSync": {
+      "title": "Allow iCloud Drive and document sync",
+      "description": "Off stops document syncing to iCloud. Supervised only.",
+      "type": "boolean",
+      "property_order": 48
+    },
+    "allowCloudPhotoLibrary": {
+      "title": "Allow iCloud Photos",
+      "description": "Off turns iCloud Photos off; photos not fully downloaded are removed. Unsupervised support is deprecated.",
+      "type": "boolean",
+      "property_order": 49
+    },
+    "allowCloudKeychainSync": {
+      "title": "Allow iCloud Keychain",
+      "description": "Off stops passwords syncing through iCloud. Unsupervised support is deprecated.",
+      "type": "boolean",
+      "property_order": 50
+    },
+    "allowManagedAppsCloudSync": {
+      "title": "Allow managed apps to use iCloud",
+      "description": "Off stops managed apps syncing with iCloud.",
+      "type": "boolean",
+      "property_order": 51
+    },
+    "forceEncryptedBackup": {
+      "title": "Force encrypted backups",
+      "description": "On encrypts all backups.",
+      "type": "boolean",
+      "property_order": 52
+    },
+    "allowOpenFromManagedToUnmanaged": {
+      "title": "Allow opening work documents in personal apps",
+      "description": "Off keeps documents from managed apps and accounts inside managed apps.",
+      "type": "boolean",
+      "property_order": 53
+    },
+    "allowOpenFromUnmanagedToManaged": {
+      "title": "Allow opening personal documents in work apps",
+      "description": "Off keeps documents from personal apps out of managed apps.",
+      "type": "boolean",
+      "property_order": 54
+    },
+    "requireManagedPasteboard": {
+      "title": "Apply these rules to copy and paste",
+      "description": "On makes the two settings above also limit copy and paste. iOS 15+.",
+      "type": "boolean",
+      "property_order": 55
+    },
+    "forceAirDropUnmanaged": {
+      "title": "Treat AirDrop as personal",
+      "description": "On treats AirDrop as an unmanaged destination for managed documents.",
+      "type": "boolean",
+      "property_order": 56
+    },
+    "allowRemoteScreenObservation": {
+      "title": "Allow Classroom screen viewing",
+      "description": "Off stops the Classroom app viewing this screen.",
+      "type": "boolean",
+      "property_order": 57
+    },
+    "forceClassroomAutomaticallyJoinClasses": {
+      "title": "Join Classroom classes automatically",
+      "description": "On accepts the teacher's requests without asking the student. Supervised only.",
+      "type": "boolean",
+      "property_order": 58
+    },
+    "forceClassroomUnpromptedAppAndDeviceLock": {
+      "title": "Let Classroom lock apps without asking",
+      "description": "On lets the teacher lock apps or the device without asking the student. Supervised only.",
+      "type": "boolean",
+      "property_order": 59
+    },
+    "forceClassroomUnpromptedScreenObservation": {
+      "title": "Let Classroom view the screen without asking",
+      "description": "On lets the teacher of a managed class view the screen without asking. Supervised only.",
+      "type": "boolean",
+      "property_order": 60
+    },
+    "forceClassroomRequestPermissionToLeaveClasses": {
+      "title": "Ask the teacher to leave a class",
+      "description": "On makes students ask before leaving an unmanaged class. Supervised only.",
+      "type": "boolean",
+      "property_order": 61
+    },
+    "forceDelayedSoftwareUpdates": {
+      "title": "Delay software updates",
+      "description": "On hides new iOS updates for the number of days below (30 if not set). Supervised only. Removed in iOS 27; use declarative software update settings there.",
+      "type": "boolean",
+      "property_order": 62
+    },
+    "enforcedSoftwareUpdateDelay": {
+      "title": "Update delay (days)",
+      "description": "How many days to hide a new update. Used with Delay software updates. Supervised only. Removed in iOS 27.",
+      "type": "integer",
+      "property_order": 63,
+      "minimum": 1,
+      "maximum": 90
+    }
+  }
+}

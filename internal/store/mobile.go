@@ -623,8 +623,8 @@ func (s *Store) ReplaceMobileProfiles(ctx context.Context, id string, profiles [
 	return tx.Commit()
 }
 
-// ListMobileProfiles returns a device's installed profiles.
-func (s *Store) ListMobileProfiles(ctx context.Context, id string) ([]model.ComputerProfile, error) {
+// ListMobileInstalledProfiles returns a device's installed profiles (from ProfileList).
+func (s *Store) ListMobileInstalledProfiles(ctx context.Context, id string) ([]model.ComputerProfile, error) {
 	rows, err := s.DB.QueryContext(ctx, `SELECT identifier, uuid, display_name, organization, is_managed FROM mobile_device_installed_profiles WHERE mobile_device_id = $1 ORDER BY lower(display_name)`, id)
 	if err != nil {
 		return nil, err

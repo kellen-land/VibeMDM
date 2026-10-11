@@ -48,7 +48,7 @@ func (h *Handler) getMobileDevice(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "mobile device")
 		return
 	}
-	if out.Profiles, err = h.st.ListMobileProfiles(r.Context(), d.ID); err != nil {
+	if out.Profiles, err = h.st.ListMobileInstalledProfiles(r.Context(), d.ID); err != nil {
 		h.fail(w, err, "mobile device")
 		return
 	}

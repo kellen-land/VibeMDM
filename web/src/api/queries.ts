@@ -29,6 +29,9 @@ import type {
   MobileDeviceDetail,
   MobileDeviceListParams,
   MobileExtensionAttribute,
+  MobileConfigProfile,
+  MobilePayloadDef,
+  MobileProfileDeployment,
   MobileSearchRunResult,
   ConfigProfileWithStatus,
   CriterionField,
@@ -138,6 +141,11 @@ export const qk = {
   restrictedEvents: (p?: object) => ['restricted-events', p ?? {}] as const,
   searches: ['advanced-searches'] as const,
   mobileSearches: ['mobile-searches'] as const,
+  mobileProfiles: ['mobile-profiles'] as const,
+  mobileProfile: (id: string) => ['mobile-profiles', id] as const,
+  mobileProfileDeployments: (id: string) => ['mobile-profiles', id, 'deployments'] as const,
+  mobileDeviceProfileDeployments: (id: string) => ['mobile-device', id, 'profile-deployments'] as const,
+  mobilePayloads: ['mobile-payloads'] as const,
   mobileSearch: (id: string) => ['mobile-search', id] as const,
   search: (id: string) => ['advanced-search', id] as const,
   searchRun: (id: string, p?: object) => ['advanced-search', id, 'run', p ?? {}] as const,
@@ -753,4 +761,33 @@ export function useComputerOnboarding(id: string) {
     enabled: !!id,
     refetchInterval: (query) => (runsActive(query.state.data) ? 5_000 : 30_000),
   })
+}
+
+export function useMobileProfiles(opts?: Opts<ListResponse<MobileConfigProfile>>) {
+  return useQuery({ queryKey: qk.mobileProfiles, queryFn: () => api.get<ListResponse<MobileConfigProfile>>('/api/v1/mobile-device-profiles'), ...opts })
+}
+
+export function useMobileProfile(id: string | undefined) {
+  return useQuery({ queryKey: qk.mobileProfile(id ?? ''), queryFn: () => api.get<MobileConfigProfile>(`/api/v1/mobile-device-profiles/${id}`), enabled: !!id && id !== 'new' })
+}
+
+export function useMobileProfileDeployments(id: string | undefined) {
+  return useQuery({
+    queryKey: qk.mobileProfileDeployments(id ?? ''),
+    queryFn: () => api.get<ListResponse<MobileProfileDeployment>>(`/api/v1/mobile-device-profiles/${id}/deployments`),
+    enabled: !!id && id !== 'new',
+    refetchInterval: 10_000,
+  })
+}
+
+export function useMobileDeviceProfileDeployments(id: string | undefined) {
+  return useQuery({
+    queryKey: qk.mobileDeviceProfileDeployments(id ?? ''),
+    queryFn: () => api.get<ListResponse<MobileProfileDeployment>>(`/api/v1/mobile-devices/${id}/profile-deployments`),
+    enabled: !!id,
+  })
+}
+
+export function useMobilePayloads() {
+  return useQuery({ queryKey: qk.mobilePayloads, queryFn: () => api.get<ListResponse<MobilePayloadDef>>('/api/v1/mobile-device-payloads'), staleTime: Infinity })
 }

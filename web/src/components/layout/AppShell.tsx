@@ -76,6 +76,7 @@ const navGroups: { heading: string; items: NavItem[] }[] = [
       { to: '/mobile-devices', label: 'Mobile Devices', icon: Smartphone },
       { to: '/mobile-groups', label: 'Mobile Device Groups', icon: Users },
       { to: '/mobile-searches', label: 'Searches', icon: Search },
+      { to: '/mobile-profiles', label: 'Configuration Profiles', icon: ShieldCheck },
       { to: '/mobile-enrollment', label: 'Enrollment', icon: QrCode },
     ],
   },
