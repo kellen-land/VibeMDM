@@ -161,44 +161,79 @@ func Verify(ctx context.Context, run Runner, account, password string) bool {
 func Create(ctx context.Context, run Runner, account, password string) error {
 	out, err := run(ctx, "/usr/sbin/sysadminctl", "-addUser", account, "-fullName", "Local Administrator", "-password", password, "-admin")
 	// sysadminctl often exits 0 when it fails, so the account itself is what counts.
-	if Exists(ctx, run, account) && Verify(ctx, run, account, password) {
+	if !Exists(ctx, run, account) {
+		return &NotAppliedError{toolError("creating the account", err, out, password)}
+	}
+	if Verify(ctx, run, account, password) {
 		return nil
 	}
 	return toolError("creating the account", err, out, password)
 }
 
-// SetPassword changes the account password. With the old password it uses sysadminctl,
-// which keeps the Secure Token, FileVault unlock and keychain wrapping in step. Only an account
-// without a Secure Token may fall back to dscl as root (first adoption of an existing account
-// whose password is unknown, or a stale escrowed password): on a Secure Token account that
-// would leave FileVault and the login password out of sync, so it is refused.
+// NotAppliedError is a failure where the account is known to be unchanged, so the
+// new password can safely be discarded. Any other error leaves the outcome open.
+type NotAppliedError struct{ Err error }
+
+func (e *NotAppliedError) Error() string { return e.Err.Error() }
+func (e *NotAppliedError) Unwrap() error { return e.Err }
+
+// SetPassword changes the account password and confirms it by authenticating with it.
 //
-// sysadminctl regularly exits 0 when it did not change anything (wrong old password, password
-// policy), so success is decided by authenticating with the new password, and the tool's own
-// message is reported when it fails.
+// An account without a Secure Token has no FileVault or Secure Token state to keep in step,
+// so root sets the password with dscl directly: no sign-in attempt is made with the recorded
+// old password, which, if stale, would count as a failed login and under a lockout policy
+// (mSCP/STIG: 3 attempts) lock the account. A Secure Token account must be changed with
+// sysadminctl and its old password, so FileVault and the keychain stay in step; dscl is
+// never used on it.
+//
+// sysadminctl regularly exits 0 when it did not change anything (wrong old password,
+// password policy), so the result is judged by authenticating with the new password. A
+// *NotAppliedError means the account is unchanged; any other error means the outcome could
+// not be confirmed (for example the account is locked out, so even a correct password fails).
 func SetPassword(ctx context.Context, run Runner, account, oldPassword, newPassword string) error {
-	var out string
-	var err error
-	if oldPassword != "" {
-		out, err = run(ctx, "/usr/sbin/sysadminctl", "-resetPasswordFor", account, "-newPassword", newPassword, "-oldPassword", oldPassword)
+	if !HasSecureToken(ctx, run, account) {
+		out, err := run(ctx, "/usr/bin/dscl", ".", "-passwd", "/Users/"+account, newPassword)
+		if err != nil {
+			return &NotAppliedError{toolError("setting the password", err, out, oldPassword, newPassword)}
+		}
 		if Verify(ctx, run, account, newPassword) {
 			return nil
 		}
+		return toolError("setting the password", nil, "", oldPassword, newPassword)
 	}
-	if HasSecureToken(ctx, run, account) {
-		if oldPassword == "" {
-			return errors.New("the account holds a Secure Token and its current password is unknown, so it cannot be changed safely; set the password with Set password in VibeMDM or reset it with a Secure Token administrator")
-		}
-		return toolError("sysadminctl could not change the password of this Secure Token account", err, out, oldPassword, newPassword)
+	if oldPassword == "" {
+		return &NotAppliedError{errors.New("the account holds a Secure Token and its current password is unknown, so it cannot be changed safely; set the password with Set password in VibeMDM or reset it with a Secure Token administrator")}
 	}
-	out2, err2 := run(ctx, "/usr/bin/dscl", ".", "-passwd", "/Users/"+account, newPassword)
+	out, err := run(ctx, "/usr/sbin/sysadminctl", "-resetPasswordFor", account, "-newPassword", newPassword, "-oldPassword", oldPassword)
 	if Verify(ctx, run, account, newPassword) {
-		return nil
+		return nil // also when the tool exited non-zero after the change took effect
 	}
-	if err2 == nil {
-		err2 = err
+	e := toolError("sysadminctl could not change the password of this Secure Token account", err, out, oldPassword, newPassword)
+	if err != nil || explainToolOutput(Scrub(out, oldPassword, newPassword)) != "" {
+		return &NotAppliedError{e}
 	}
-	return toolError("setting the password", err2, strings.TrimSpace(out+"\n"+out2), oldPassword, newPassword)
+	return e
+}
+
+// LockedOut reports whether the Mac's password policy currently refuses sign-ins for the
+// account (too many failed attempts), from `pwpolicy -u <account> -authentication-allowed`.
+// known is false when the answer is not recognised.
+func LockedOut(ctx context.Context, run Runner, account string) (locked, known bool) {
+	out, _ := run(ctx, "/usr/bin/pwpolicy", "-u", account, "-authentication-allowed")
+	return parseAuthAllowed(out)
+}
+
+func parseAuthAllowed(out string) (locked, known bool) {
+	o := strings.ToLower(out)
+	for _, no := range []string{"not allow", "disallow", "denies", "denied", "forbid", "does not permit", "not permitted"} {
+		if strings.Contains(o, no) {
+			return true, true
+		}
+	}
+	if strings.Contains(o, "allows") || strings.Contains(o, "is allowed") || strings.Contains(o, "permits") {
+		return false, true
+	}
+	return false, false
 }
 
 // toolError reports a failed sysadminctl/dscl call with its (scrubbed) output and, when the

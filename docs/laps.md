@@ -46,8 +46,10 @@ keeps the old password until the Mac confirms the new one (below).
 2. The agent picks the password: the admin-chosen one, or a generated one (`crypto/rand`).
 3. It writes the password to a root-only file `/Library/Application Support/VibeMDM/laps-pending.json`.
 4. It **stages** the password on the server (`POST /agent/v1/laps/stage`). If this fails the account is left alone.
-5. It changes the account: `sysadminctl -resetPasswordFor` with the old password, falling back to
-   `dscl . -passwd` when the new password does not authenticate and the account has no Secure Token; or `sysadminctl -addUser … -admin` when the account is missing and creation is allowed. With
+5. It changes the account. An account **without a Secure Token** gets `dscl . -passwd` as root, which needs no
+   sign-in with the recorded old password (a stale one would count as a failed login, and mSCP/STIG baselines lock
+   an account after 3). An account **with a Secure Token** gets `sysadminctl -resetPasswordFor` with the old
+   password, so FileVault and its keychain stay in step; dscl is never used on it; or `sysadminctl -addUser … -admin` when the account is missing and creation is allowed. With
    *Hide* on it sets `IsHidden` to 1.
 6. It checks the new password with `dscl . -authonly` and reads the account's `GeneratedUID`.
 7. It **commits** (`POST /agent/v1/laps/commit`) as applied or failed, then deletes the pending file. Only a
@@ -60,7 +62,9 @@ keeps the old password until the Mac confirms the new one (below).
 | The stage upload fails | Nothing changed on the Mac; the next check-in tries again. |
 | The change fails | The agent reports `failed`; the server discards the staged password, keeps the old one and logs a *Problem* event. An admin-chosen password is dropped so the Mac does not retry it forever. |
 | The tool exits with an error but the change took effect | The agent trusts `dscl -authonly`, not the exit status, and commits it as applied. |
-| The tool exits 0 but changed nothing | `sysadminctl` does this for a wrong old password or a password-policy rejection. The agent decides by `dscl -authonly`; for an account without a Secure Token it then falls back to `dscl . -passwd`. The failure message carries the tool's own output (passwords removed) with a plain explanation: *password policy rejected the new password*, *the current password on record is not the account's password* (use **Set password**), or *refused because of the Secure Token*. |
+| The tool exits 0 but changed nothing | `sysadminctl` does this for a wrong old password or a password-policy rejection. The agent decides by `dscl -authonly`, and the failure message carries the tool's own output (passwords removed) with a plain explanation: *password policy rejected the new password*, *the current password on record is not the account's password* (use **Set password**), or *refused because of the Secure Token*. |
+| The account is locked out by a password policy (too many failed sign-ins) | Checked first with `pwpolicy -u <account> -authentication-allowed`. The agent neither rotates nor tests passwords while locked (each failed try would extend the lock) and reports *locked … waiting until it unlocks*. |
+| The change cannot be confirmed (for example the account locked in between) | The new password is **not** discarded: it stays staged as unconfirmed (shown next to the current one under *Show password*) and the next check-in tests it once sign-ins are allowed. A password is only discarded when the agent knows the account is unchanged. |
 | A configuration profile sets password rules (for example an mSCP baseline) | Generated passwords never start with a symbol and never contain three repeated or consecutive characters (`aaa`, `abc`, `321`). The Jamf format has no lower case letters: if a profile requires them, use the Complex format. |
 | The agent dies or loses the network after changing the account | The pending file survives. At the next cycle the agent tests it against the account and commits applied or failed. If the server forgot the stage (409), it stages again first. |
 | A staged password is never confirmed | A Health finding opens after one hour; *Show password* displays the current and the unconfirmed password so you can try both. |

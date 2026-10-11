@@ -77,11 +77,18 @@ type fakeMac struct {
 	hidden      []string
 	tokens      map[string]bool   // accounts holding a Secure Token
 	admins      map[string]string // Secure Token admins and their passwords
+	locked      bool              // the lockout policy refuses every sign-in
+	failedAuth  int
 }
 
 func (m *fakeMac) run(_ context.Context, name string, args ...string) (string, error) {
 	m.calls = append(m.calls, filepath.Base(name))
 	switch {
+	case strings.HasSuffix(name, "pwpolicy"):
+		if m.locked {
+			return "Policy does not allow user to authenticate", errors.New("exit 1")
+		}
+		return "Policy allows user to authenticate", nil
 	case strings.HasSuffix(name, "sysadminctl") && args[0] == "-secureTokenStatus":
 		if m.tokens[args[1]] {
 			return "Secure token is ENABLED for user " + args[1], nil
@@ -116,9 +123,10 @@ func (m *fakeMac) run(_ context.Context, name string, args ...string) (string, e
 		}
 		return "", errors.New("no such user")
 	case strings.HasSuffix(name, "dscl") && args[1] == "-authonly":
-		if pw, ok := m.users[args[2]]; ok && pw == args[3] {
+		if pw, ok := m.users[args[2]]; ok && pw == args[3] && !m.locked {
 			return "", nil
 		}
+		m.failedAuth++
 		return "", errors.New("auth failed")
 	case strings.HasSuffix(name, "sysadminctl") && args[0] == "-addUser":
 		m.users[args[1]] = args[args2(args, "-password")]
@@ -329,5 +337,69 @@ func TestLAPSRotationKeepsSecureToken(t *testing.T) {
 	}
 	if len(api.commits) != 1 || api.commits[0] {
 		t.Fatalf("rotation must be reported as failed: %v", api.commits)
+	}
+}
+
+func TestLAPSLockedAccountKeepsTheNewPasswordUntilItCanBeChecked(t *testing.T) {
+	cfg := dueCfg()
+	cfg.CurrentPassword = "stale-password" // the server's copy is out of date
+	api := &fakeLAPSAPI{cfg: cfg}
+	mac := &fakeMac{users: map[string]string{"vibeadmin": "actual-password"}}
+	l := newLAPS(t, api, mac)
+
+	// Locked before the rotation: nothing is staged or changed, and no sign-in is attempted.
+	mac.locked = true
+	if err := l.Cycle(context.Background()); !errors.Is(err, errLockedOut) {
+		t.Fatalf("want errLockedOut, got %v", err)
+	}
+	if mac.users["vibeadmin"] != "actual-password" || len(api.staged) != 0 || mac.failedAuth != 0 || !strings.Contains(api.lastErrMsg, "locked") {
+		t.Fatalf("locked account was touched: pw=%q staged=%d failed=%d msg=%q", mac.users["vibeadmin"], len(api.staged), mac.failedAuth, api.lastErrMsg)
+	}
+
+	// Unlocked: the stale recorded password costs no failed sign-in, the change applies.
+	mac.locked = false
+	if err := l.Cycle(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(api.commits) != 1 || !api.commits[0] || mac.failedAuth != 0 {
+		t.Fatalf("commits=%v failed=%d", api.commits, mac.failedAuth)
+	}
+}
+
+func TestLAPSUnconfirmableChangeIsNotDiscarded(t *testing.T) {
+	api := &fakeLAPSAPI{cfg: dueCfg()}
+	mac := &fakeMac{users: map[string]string{"vibeadmin": "old-Password-1"}}
+	l := newLAPS(t, api, mac)
+	// The account locks between the lockout check and the confirmation (another sign-in failed).
+	l.Run = func(ctx context.Context, name string, args ...string) (string, error) {
+		out, err := mac.run(ctx, name, args...)
+		if strings.HasSuffix(name, "dscl") && args[1] == "-passwd" {
+			mac.locked = true
+		}
+		return out, err
+	}
+	if err := l.Cycle(context.Background()); err == nil {
+		t.Fatal("expected an unconfirmed result")
+	}
+	newPw := mac.users["vibeadmin"]
+	if len(api.commits) != 0 || len(api.staged) != 1 || api.staged[fp(newPw)] != newPw {
+		t.Fatalf("the applied password must stay staged, not be discarded: commits=%v staged=%v", api.commits, api.staged)
+	}
+	if !strings.Contains(api.lastErrMsg, "unconfirmed") {
+		t.Fatalf("message: %q", api.lastErrMsg)
+	}
+	// Still locked: the next cycle waits without trying the password.
+	before := mac.failedAuth
+	if err := l.Cycle(context.Background()); !errors.Is(err, errLockedOut) || mac.failedAuth != before {
+		t.Fatalf("settle while locked: err=%v failed %d -> %d", err, before, mac.failedAuth)
+	}
+	// Unlocked: the pending password is confirmed and committed as applied.
+	mac.locked = false
+	api.cfg.Rotate = false
+	if err := l.Cycle(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(api.commits) != 1 || !api.commits[0] {
+		t.Fatalf("commits: %v", api.commits)
 	}
 }
