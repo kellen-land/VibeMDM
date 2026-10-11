@@ -325,7 +325,7 @@ func (h *Handler) queueTask(r *http.Request, c *model.Computer, typ, scriptID st
 		if err != nil {
 			return nil, err
 		}
-		ap, err := h.engine.Prepare(r.Context(), p, "manual")
+		ap, err := h.engine.PrepareFor(r.Context(), p, c, "manual")
 		if err != nil {
 			return nil, err
 		}

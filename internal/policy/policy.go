@@ -4,7 +4,9 @@ package policy
 
 import (
 	"context"
+	"errors"
 	"log/slog"
+	"slices"
 	"sort"
 
 	"github.com/vibemdm/vibemdm/internal/model"
@@ -48,7 +50,14 @@ func (e *Engine) ForTrigger(ctx context.Context, comp *model.Computer, trigger s
 		if !ok {
 			continue
 		}
-		ap, err := e.Prepare(ctx, p, trigger)
+		ap, err := e.PrepareFor(ctx, p, comp, trigger)
+		var tooOld *ErrAgentTooOld
+		if errors.As(err, &tooOld) {
+			if err := e.st.RecordPolicyRefusal(ctx, p.ID, comp.ID, trigger, tooOld.Reason); err != nil {
+				e.log.Warn("recording a refused policy", "policy", p.Name, "err", err)
+			}
+			continue
+		}
 		if err != nil {
 			e.log.Warn("preparing policy", "policy", p.Name, "err", err)
 			continue
@@ -61,6 +70,36 @@ func (e *Engine) ForTrigger(ctx context.Context, comp *model.Computer, trigger s
 		out = append(out, *ap)
 	}
 	return out, nil
+}
+
+// Agent capabilities: optional features an agent must report before it is given a policy that
+// uses them (older agents ignore fields they do not know and would report success).
+const CapLocalAccounts = "policy_accounts"
+
+// ErrAgentTooOld means the computer's agent cannot run every part of the policy.
+type ErrAgentTooOld struct{ Reason string }
+
+func (e *ErrAgentTooOld) Error() string { return e.Reason }
+
+// missingCapability explains why an agent with caps cannot run p ("" when it can).
+func missingCapability(p *model.Policy, caps []string) string {
+	if len(p.Accounts) > 0 && !slices.Contains(caps, CapLocalAccounts) {
+		return "This Mac's VibeMDM agent is too old for Local Accounts actions, so the policy was not sent (it would have skipped them). Update the agent and run the policy again."
+	}
+	return ""
+}
+
+// PrepareFor is Prepare for one computer: it refuses (*ErrAgentTooOld) when the computer's
+// agent lacks a feature the policy uses.
+func (e *Engine) PrepareFor(ctx context.Context, p *model.Policy, comp *model.Computer, trigger string) (*model.AgentPolicy, error) {
+	caps, err := e.st.AgentCapabilities(ctx, comp.ID)
+	if err != nil {
+		return nil, err
+	}
+	if reason := missingCapability(p, caps); reason != "" {
+		return nil, &ErrAgentTooOld{Reason: reason}
+	}
+	return e.Prepare(ctx, p, trigger)
 }
 
 // Prepare inlines scripts and packages so the agent can execute the policy.

@@ -649,12 +649,22 @@ func (e *Executor) RunTask(ctx context.Context, t model.AgentTask) {
 
 // CheckinAndRun performs a check-in for a trigger and executes everything returned.
 func (e *Executor) CheckinAndRun(ctx context.Context, trigger string) (int, error) {
+	return e.checkinAndRun(ctx, trigger, false)
+}
+
+// CheckinAndRunRequested is a check-in the server asked for (Check in now): its result is
+// always logged, even when there was nothing to do, so the request visibly completes.
+func (e *Executor) CheckinAndRunRequested(ctx context.Context) (int, error) {
+	return e.checkinAndRun(ctx, "checkin", true)
+}
+
+func (e *Executor) checkinAndRun(ctx context.Context, trigger string, requested bool) (int, error) {
 	log := e.log.With("component", "checkin", "trigger", trigger)
 	start := time.Now()
 	si := CollectSystemInfo(ctx)
 	resp, err := e.client.Checkin(ctx, model.AgentCheckinRequest{
 		Trigger: trigger, ConsoleUser: si.ConsoleUser, Hostname: si.Hostname, ComputerName: si.ComputerName, OSVersion: si.OSVersion,
-		OSBuild: si.OSBuild, IPAddress: si.IP, AgentVersion: e.version, UptimeSecs: int64(si.Uptime.Seconds()),
+		OSBuild: si.OSBuild, IPAddress: si.IP, AgentVersion: e.version, UptimeSecs: int64(si.Uptime.Seconds()), Capabilities: Capabilities,
 	})
 	if err != nil {
 		log.Warn("check-in failed", "dur", time.Since(start), "err", err)
@@ -690,10 +700,14 @@ func (e *Executor) CheckinAndRun(ctx context.Context, trigger string) (int, erro
 	}
 	// A routine check-in with nothing to do is debug-level so it does not flood the log.
 	done := log.Debug
-	if work > 0 || resp.InventoryRequested || trigger != "checkin" {
+	if work > 0 || resp.InventoryRequested || trigger != "checkin" || requested {
 		done = log.Info
 	}
-	done("check-in complete", "policies", len(resp.Policies), "dur", time.Since(start))
+	if requested && work == 0 && !resp.InventoryRequested {
+		done("check-in complete; nothing to run", "requested", true, "dur", time.Since(start))
+		return 0, nil
+	}
+	done("check-in complete", "policies", len(resp.Policies), "requested", requested, "dur", time.Since(start))
 	return len(resp.Policies), nil
 }
 

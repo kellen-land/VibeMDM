@@ -141,7 +141,7 @@ func (d *Daemon) Run(ctx context.Context) error {
 			}
 			if resp.Checkin {
 				d.log.Info("server requested an immediate check-in")
-				d.checkin(ctx, "checkin")
+				d.runLocked(ctx, func(ctx context.Context) { d.exec.CheckinAndRunRequested(ctx) })
 			}
 			for _, inv := range resp.Shells {
 				go d.runShell(ctx, shellInvite{SessionID: inv.SessionID, Nonce: inv.Nonce})

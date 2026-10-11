@@ -196,6 +196,11 @@ API: `accounts` on `POST/PUT /api/v1/policies`:
 `[{"action": "create" | "reset_password" | "delete" | "disable_filevault", "username", "full_name", "password",
 "password_hint", "home_directory", "admin", "enable_filevault", "delete_home"}]`.
 
+Agents report the optional features they support at each check-in (`capabilities`; Local Accounts is
+`policy_accounts`). A policy with Local Accounts actions is never sent to an older agent, which would ignore them and
+report success: **Run now** answers with an error, and a scheduled run is logged as *failed* with the reason (at most
+once a day). Update the agent and the policy runs at the next check-in.
+
 **Untested on a real Mac:** every action above (the simulator only fetches the passwords and reports the steps).
 
 ## 7.6 Self Service

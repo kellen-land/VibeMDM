@@ -19,6 +19,7 @@ import (
 
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/onboarding"
+	"github.com/vibemdm/vibemdm/internal/policy"
 	"github.com/vibemdm/vibemdm/internal/store"
 	"github.com/vibemdm/vibemdm/internal/webhook"
 )
@@ -258,8 +259,13 @@ func (h *Handler) selfServiceRun(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, 403, "not in scope")
 			return
 		}
-		ap, err := h.engine.Prepare(r.Context(), p, "self_service")
+		ap, err := h.engine.PrepareFor(r.Context(), p, comp, "self_service")
 		if err != nil {
+			var tooOld *policy.ErrAgentTooOld
+			if errors.As(err, &tooOld) {
+				writeErr(w, 409, err.Error())
+				return
+			}
 			writeErr(w, 500, err.Error())
 			return
 		}

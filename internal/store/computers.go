@@ -307,12 +307,41 @@ func (s *Store) TouchAgentCheckin(ctx context.Context, id string, r model.AgentC
 		name = CASE WHEN $4 <> '' THEN $4 ELSE name END, os_version = CASE WHEN $5 <> '' THEN $5 ELSE os_version END,
 		os_build = CASE WHEN $6 <> '' THEN $6 ELSE os_build END, ip_address = CASE WHEN $7 <> '' THEN $7 ELSE ip_address END,
 		agent_version = CASE WHEN $8 <> '' THEN $8 ELSE agent_version END, uptime_seconds = CASE WHEN $9 > 0 THEN $9 ELSE uptime_seconds END,
-		updated_at = now() WHERE id = $1`,
-		id, r.ConsoleUser, r.Hostname, r.ComputerName, r.OSVersion, r.OSBuild, r.IPAddress, r.AgentVersion, r.UptimeSecs)
+		agent_capabilities = $10::jsonb, updated_at = now() WHERE id = $1`,
+		id, r.ConsoleUser, r.Hostname, r.ComputerName, r.OSVersion, r.OSBuild, r.IPAddress, r.AgentVersion, r.UptimeSecs, jsonArg(nonNilStrings(r.Capabilities)))
 	if err == nil && r.IPAddress != "" {
 		s.ApplySegmentAssignments(ctx, id, r.IPAddress)
 	}
 	return err
+}
+
+// AgentCapabilities returns the features the computer's agent reported at its last check-in.
+func (s *Store) AgentCapabilities(ctx context.Context, id string) ([]string, error) {
+	var caps db.JSON[[]string]
+	if err := s.DB.QueryRowContext(ctx, `SELECT agent_capabilities FROM computers WHERE id = $1`, id).Scan(&caps); err != nil {
+		return nil, wrapNotFound(err)
+	}
+	return caps.V, nil
+}
+
+func nonNilStrings(v []string) []string {
+	if v == nil {
+		return []string{}
+	}
+	return v
+}
+
+// RecordPolicyRefusal logs a policy the server would not hand to a computer, at most once a day
+// per policy and computer so ongoing policies do not fill the log.
+func (s *Store) RecordPolicyRefusal(ctx context.Context, policyID, computerID, trigger, reason string) error {
+	var n int
+	if err := s.DB.QueryRowContext(ctx, `SELECT count(*) FROM policy_logs WHERE policy_id = $1 AND computer_id = $2 AND status = 'failed'
+		AND log = $3 AND created_at > now() - interval '1 day'`, policyID, computerID, reason).Scan(&n); err != nil || n > 0 {
+		return err
+	}
+	now := time.Now().UTC()
+	return s.InsertPolicyLog(ctx, policyID, computerID, model.AgentPolicyLogSubmit{Trigger: trigger, Status: "failed", StartedAt: now, CompletedAt: now, Log: reason,
+		Steps: []model.PolicyStep{{Type: "agent", Name: "Agent version", Status: "failed", ExitCode: 1, Output: reason}}})
 }
 
 // MarkEnrollmentCompleteFired records that the enrollment_complete trigger ran.

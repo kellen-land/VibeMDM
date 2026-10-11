@@ -134,7 +134,7 @@ func (s *Service) BuildPayload(ctx context.Context, w *model.OnboardingWorkflow,
 			if err != nil {
 				return nil, fmt.Errorf("step %q: policy no longer exists", st.Title)
 			}
-			ap, err := s.engine.Prepare(ctx, pol, "onboarding")
+			ap, err := s.engine.PrepareFor(ctx, pol, comp, "onboarding")
 			if err != nil {
 				return nil, err
 			}

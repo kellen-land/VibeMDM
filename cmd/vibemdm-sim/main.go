@@ -35,6 +35,16 @@ import (
 
 var version = "dev"
 
+// legacyAgent makes the simulated agents report no capabilities (-legacy-agent).
+var legacyAgent bool
+
+func simCapabilities() []string {
+	if legacyAgent {
+		return nil
+	}
+	return agent.Capabilities
+}
+
 type device struct {
 	idx      int
 	udid     string
@@ -72,6 +82,7 @@ type device struct {
 func main() {
 	server := flag.String("server", "http://localhost:8080", "VibeMDM server URL")
 	n := flag.Int("n", 3, "number of simulated Macs")
+	flag.BoolVar(&legacyAgent, "legacy-agent", false, "report no agent capabilities, like an agent that predates them")
 	token := flag.String("token", "", "agent enrollment token (invitation or enrollment secret); empty = skip agent simulation")
 	challenge := flag.String("scep-challenge", "", "SCEP challenge (from Settings → SCEP); required for MDM enrollment")
 	topic := flag.String("topic", "com.apple.mgmt.External.simulator", "APNs topic to report in TokenUpdate")
@@ -536,7 +547,7 @@ func (d *device) agentLoop(ctx context.Context, interval time.Duration) {
 		defer c.ShipLogs(ctx, []model.AgentLogEntry{{At: time.Now().UTC(), Level: "INFO", Component: "daemon", Msg: "check-in complete",
 			Attrs: map[string]any{"trigger": trigger, "simulated": true, "user": user}}})
 		resp, err := c.Checkin(ctx, model.AgentCheckinRequest{Trigger: trigger, ConsoleUser: user, Hostname: strings.ToLower(d.name) + ".local", ComputerName: d.name,
-			OSVersion: d.osVer, OSBuild: d.build, IPAddress: fmt.Sprintf("10.0.%d.%d", d.idx/250, d.idx%250+10), AgentVersion: version, UptimeSecs: int64(3600 * d.idx)})
+			OSVersion: d.osVer, OSBuild: d.build, IPAddress: fmt.Sprintf("10.0.%d.%d", d.idx/250, d.idx%250+10), AgentVersion: version, UptimeSecs: int64(3600 * d.idx), Capabilities: simCapabilities()})
 		if err != nil {
 			d.log.Warn("agent checkin failed", "err", err)
 			return
