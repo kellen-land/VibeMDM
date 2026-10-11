@@ -96,7 +96,10 @@ Scans run through the agent as a `compliance_scan` task.
 1. The server sends each scannable rule's `check` script, its `expected_type` (`string`, `integer` or `base64`) and
    expected value, and, if remediation was requested, its `fix` script.
 2. The agent runs each check the way mSCP's own script does: **`/bin/zsh -c`** as root, with a 60-second timeout
-   per check (5 minutes per fix, 45 minutes per scan).
+   per check (5 minutes per fix, 45 minutes per scan). Like mSCP's script it sets **`CURRENT_USER`** (the user
+   logged in at the console) and **`CURR_USER_UID`**, which per-user rules use (`sudo -u "$CURRENT_USER" defaults
+   -currentHost …`). When nobody is logged in, those rules report `error` ("no one is logged in") instead of a
+   misleading `fail`, and their fixes are not run.
 3. It compares the output with the expected value:
 
    | Result | Meaning |
@@ -115,6 +118,10 @@ Scans run through the agent as a `compliance_scan` task.
 | **Scan now**: `POST /api/v1/compliance/baselines/{id}/scan` `{"computer_ids": [...], "remediate": false}`. An empty list scans the whole scope; omitting `remediate` uses the baseline setting | `manual` / `manual_remediate` |
 | Health self-heal (*Rescan affected Macs*) | `health` |
 | MCP `start_compliance_scan` (never with remediation) | `mcp` |
+
+A rule whose check prints nothing even after its fix ran (for example *Wake for network access*,
+`system_settings_wake_network_access_disable`, reads `womp` from `pmset`) usually means the Mac does not have that
+setting at all, which is common on virtual machines. Exempt the rule in the baseline for such Macs.
 
 Scans need the agent. Macs without it are skipped with a reason. Scans that never report back expire (checked
 hourly). Scan history: `GET /api/v1/compliance/baselines/{id}/scans?computer_id=&limit=`.
