@@ -42,3 +42,24 @@
     - Sidebar groups fold, Settings and the computer record use Jamf-style grouped section lists (one panel at a time; the record has Inventory, Management and History), FileVault and LAPS lead with one status sentence and a table with settings on their own tab, and the Dashboard shows four tiles and one tabbed Recent activity card.
 - [x] automatic installation of agent once a Mac enrolls
     - After MDM enrollment VibeMDM sends a temporary bootstrap profile (package-signing root plus a single-use, Mac-bound token) and InstallEnterpriseApplication for a signed agent package built once on any Mac with deploy/macos/build-agent-pkg.sh; the postinstall enrolls with `vibemdm-agent enroll --from-mdm` and the profile is removed afterwards (simulator-tested; untested on a real Mac).
+
+## iOS and iPadOS (plan: docs/plans/ios-ipados.md)
+Test hardware: iPhone 13 mini, iPad (8th generation), supervised with Apple Configurator. No ABM/ASM account: items marked **Blocked: ABM/ASM** are built against Apple's docs and the simulator, then stay untested and off by default.
+
+- [ ] Mobile Devices as a separate, Jamf-style area: `mobile_devices` table routed by platform at enrollment (migrate iOS rows out of `computers`), its own groups, searches, profiles, apps and API, a Mobile Devices sidebar group, and an Inventory / Management / History device record
+- [ ] Simulator iOS mode (`vibemdm-sim -platform iphone|ipad`): iOS DeviceInformation, supervision, passcode, Lost Mode, app lists, UnlockToken
+- [ ] Mobile enrollment page: Apple Configurator (supervised) step by step, and profile enrollment in Safari with a QR code
+- [ ] Automated Device Enrollment with NanoDEP: token upload, device sync, enrollment profiles, Await Configuration and DeviceConfigured
+    - Blocked: ABM/ASM (Apple declined a test account).
+- [ ] Mobile inventory: scheduled DeviceInformation, SecurityInfo, installed and managed app lists, profiles, certificates; cellular, battery, storage, supervision, Activation Lock, Lost Mode and passcode fields; server-side extension attributes
+- [ ] Mobile commands: Lock, Clear Passcode (UnlockToken), Erase (Return to Service), Restart/Shut Down, Lost Mode with location and sound, Settings (name, wallpaper, Bluetooth, roaming, hotspot, time zone), refresh cellular plans, OS updates via DDM plans
+- [ ] Activation Lock bypass code: collect from supervised devices, store sealed, audited reveal with a reason
+- [ ] Mobile Device Configuration Profiles with GUI editors: Restrictions, Passcode, Wi-Fi, VPN, Web Clips, Home Screen Layout, Notifications, Single App Mode, Content Filter, Certificates, AirPrint, Lock Screen message; DDM declarations for iOS 17+
+- [ ] Mobile apps: App Store apps by Store ID (user signs in), install/update/remove with status from ManagedApplicationList, Managed App Configuration via the JSON-schema form engine
+- [ ] Apps and Books: content token, licence sync, device-based licences, token-expiry and licence-shortage Health checks
+    - Blocked: ABM/ASM.
+- [ ] Classes and the Education configuration profile for Apple's Classroom app (classes defined in VibeMDM; teacher on the Mac, iPad as student)
+- [ ] Apple School Manager roster sync, Managed Apple Accounts and Shared iPad
+    - Blocked: ABM/ASM (Shared iPad also needs ADE).
+- [ ] Mobile Health checks: no passcode, not supervised, out-of-date OS, Lost Mode on, Activation Lock without a bypass code
+- [ ] Mobile Devices manual chapter with ACSP/ACITP study notes, and a real-device test pass on the iPhone 13 mini and iPad (8th generation)
