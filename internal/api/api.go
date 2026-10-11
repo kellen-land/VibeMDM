@@ -103,6 +103,11 @@ func (h *Handler) fail(w http.ResponseWriter, err error, what string) {
 		writeErr(w, 404, what+" not found")
 		return
 	}
+	var invalid invalidErr
+	if errors.As(err, &invalid) {
+		writeErr(w, 400, err.Error())
+		return
+	}
 	var tooOld *policy.ErrAgentTooOld
 	if errors.Is(err, mdmsvc.ErrNotEnrolled) || errors.As(err, &tooOld) {
 		writeErr(w, 409, err.Error())
