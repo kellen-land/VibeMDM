@@ -38,6 +38,19 @@ func Handler() http.Handler {
 			fileServer.ServeHTTP(w, r)
 			return
 		}
+		switch {
+		case strings.HasPrefix(p, "api/") || strings.HasPrefix(p, "agent/"):
+			// An unknown API route must not look like success (the app page with 200).
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error":"not found"}`))
+			return
+		case strings.HasPrefix(p, "assets/"):
+			// A missing hashed asset (an old page after a deploy) must fail as a 404, not
+			// load the HTML page as a script.
+			http.NotFound(w, r)
+			return
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Write(index)
