@@ -29,3 +29,7 @@
     - In progress: man pages (docs/man/vibemdm.8, vibemdm-agent.8), a per-command `vibemdm-agent help <command>` menu and a `vibemdm-agent status` command are done; the full manual (docs/manual/, with ACSP/ACITP study notes) is being written.
 - [x] Securely implemented MCP server for AI agents with support for Claude.
     - Added a Streamable HTTP MCP server at /mcp (off by default, API-token only, Origin-checked, rate-limited, fully audited) with 12 read tools and 6 opt-in non-destructive write tools, a Settings card with the claude mcp add snippet, a Health check for MCP without HTTPS, and docs/mcp.md covering Claude Code, Claude Desktop and the Claude API.
+- [ ] vibemdm-agent binary LAPS solution
+- [ ] Remove Caddy, I will be using NGinx Proxy Manager with my own certificate from Let's Encrypt.
+- [ ] Better logging from vibemdm-agent needed on device (e.g. what is shown under reports in Console) right now the logging is very sparse and unhelpful
+- [ ] Policies and Mac Apps are broken with JSON errors. Cannot save any policies.
