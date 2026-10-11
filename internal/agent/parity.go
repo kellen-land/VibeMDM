@@ -41,7 +41,8 @@ func (e *Executor) ensureInstallomator(ctx context.Context) (string, error) {
 }
 
 // InstallApp runs an app-catalog install through Installomator and reports the result.
-func (e *Executor) InstallApp(ctx context.Context, app model.AgentAppInstall) {
+// InstallApp runs an app-catalog install and reports it; it returns whether it succeeded.
+func (e *Executor) InstallApp(ctx context.Context, app model.AgentAppInstall) bool {
 	log := e.log.With("component", "apps", "app", app.Name, "label", app.Label, "log_id", app.LogID)
 	log.Info("app install started")
 	start := time.Now()
@@ -64,6 +65,7 @@ func (e *Executor) InstallApp(ctx context.Context, app model.AgentAppInstall) {
 	if err := e.client.SubmitAppInstallResult(ctx, app.LogID, status, logText); err != nil {
 		log.Error("submitting app install result", "err", err)
 	}
+	return status == "completed"
 }
 
 // ---- restricted software enforcement ----
