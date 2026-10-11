@@ -11,6 +11,7 @@ import (
 
 	"github.com/vibemdm/vibemdm/internal/config"
 	"github.com/vibemdm/vibemdm/internal/db"
+	"github.com/vibemdm/vibemdm/internal/logfmt"
 	"github.com/vibemdm/vibemdm/internal/secrets"
 	"github.com/vibemdm/vibemdm/internal/server"
 	"github.com/vibemdm/vibemdm/internal/store"
@@ -97,7 +98,8 @@ func main() {
 	if os.Getenv("VIBEMDM_LOG_FORMAT") == "json" {
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})
 	} else {
-		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level})
+		// Readable lines (internal/logfmt); VIBEMDM_LOG_FORMAT=json for log collectors.
+		handler = logfmt.NewHandler(os.Stdout, level, "server")
 	}
 	logger := slog.New(handler)
 	slog.SetDefault(logger)

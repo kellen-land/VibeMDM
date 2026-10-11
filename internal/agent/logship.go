@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vibemdm/vibemdm/internal/logfmt"
 	"github.com/vibemdm/vibemdm/internal/model"
 )
 
@@ -180,7 +181,7 @@ func (h *shipHandler) Handle(ctx context.Context, r slog.Record) error {
 		case slog.KindFloat64:
 			e.Attrs[a.Key] = v.Float64()
 		case slog.KindDuration:
-			e.Attrs[a.Key] = v.Duration().Round(time.Millisecond).String()
+			e.Attrs[a.Key] = logfmt.Duration(v.Duration())
 		default:
 			e.Attrs[a.Key] = fmt.Sprint(v.Any())
 		}
@@ -189,6 +190,8 @@ func (h *shipHandler) Handle(ctx context.Context, r slog.Record) error {
 		add(a)
 	}
 	r.Attrs(func(a slog.Attr) bool { add(a); return true })
+	_, hasErr := e.Attrs["err"]
+	e.Msg = logfmt.Readable(r.Level, e.Component, e.Msg, hasErr)
 	h.s.add(e)
 	return err
 }

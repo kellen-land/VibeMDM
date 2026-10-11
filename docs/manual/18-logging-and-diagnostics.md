@@ -5,7 +5,8 @@ VibeMDM keeps two searchable log streams in PostgreSQL (server and agent), write
 
 ## 18.1 Server logs
 
-Every server log line goes to **stdout** (text, or JSON with `VIBEMDM_LOG_FORMAT=json`) **and**, at or above
+Every server log line goes to **stdout** (readable lines, below, or JSON with `VIBEMDM_LOG_FORMAT=json` for log
+collectors) **and**, at or above
 `VIBEMDM_LOG_DB_LEVEL` (default `info`), into the `server_logs` table. Database writes are batched every second and
 never block request handling. If the database can't keep up, records are dropped and counted, and the count is
 logged hourly (`log records dropped because the database could not keep up`).
@@ -22,17 +23,36 @@ logged hourly (`log records dropped because the database could not keep up`).
 | `ddm` | Declarative management |
 | `compliance`, `super`, `onboarding`, `health`, `mcp`, `webhook` | Their features |
 
-HTTP access lines (`msg=http`) carry `method`, `path`, `status`, `dur` and `remote`. Successful `/api/…`,
-`/assets/…` and agent long-poll requests are logged at debug level; everything else, and every 4xx, at info; 5xx at
-warn. **Query strings are never logged**, and the Apple Configurator URL is logged as
+HTTP access lines use the `http` component and read `POST /agent/v1/checkin → 200 · dur=14ms remote=…`.
+Successful console (`/api/…`), asset and agent (`/agent/v1/…`, except enrollment) requests are routine and logged at
+debug level (the agent API logs what they did itself); MDM, SCEP and enrollment requests, and every 4xx, at info;
+5xx at warn. **Query strings are never logged**, and the Apple Configurator URL is logged as
 `/enroll/configurator/[redacted]`.
 
 Useful stdout commands:
 
 ```bash
 docker compose logs -f vibemdm
-docker compose logs vibemdm | grep 'component=nanomdm'
+docker compose logs vibemdm | grep ' nanomdm '
 ```
+
+### Line format (server stdout and the agent's log file)
+
+```
+2026-10-11 14:44:20.018 -05:00 INFO  agent       Agent enrolled · computer=SIM-Mac-01 serial=SIM1007919 · id=855213ec-…
+2026-10-11 14:44:20.034 -05:00 INFO  http        POST /agent/v1/enroll → 200 · dur=11ms remote=127.0.0.1
+2026-10-11 14:44:20.046 -05:00 ERROR mdm         Replace apps failed · computer=LAND-TESTMAC01 err="…"
+```
+
+Date, time and UTC offset; the level; the component in its own column; the message; then ` · ` and the details as
+`key=value`, in the order they were logged. Identifiers (`id`, `*_id`, UUIDs, sessions, fingerprints) come last
+after a second ` · `, so the values a person reads first are up front and nothing is dropped. Durations are
+shortened for reading (`430ms`, `1.23s`, `16.5s`, `1m10s`). Values with spaces, quotes or newlines are quoted, so
+every record is one line and `grep` works. Two readability rules apply to messages: a leading `component: ` that
+repeats the component column is dropped, and a warning or error that carries an `err` but is only a phrase
+("replace apps") reads "Replace apps failed". Secret-looking keys (`*token*`, `*password*`, `*secret*`,
+`*challenge*`, …) are written as `[redacted]` in every output, including the `server_logs` table. The console's log
+viewer shows the same messages.
 
 Set `VIBEMDM_DEBUG=true` for debug output (including MDM signature-verification errors) and
 `VIBEMDM_DUMP_MDM=true` to print every MDM request and response (very verbose; useful for studying the protocol).
@@ -58,14 +78,14 @@ empty unless the agent crashes, so a Go panic trace lands there. Agents before t
 ### Reading the log file
 
 ```
-2026-10-11T13:54:11.043Z INFO  [policy] policy started policy="Onboard tools" policy_id=481f… trigger=manual log_id=a360… scripts=1 packages=0 apps=0 command=true inventory=true
-2026-10-11T13:54:11.056Z INFO  [policy] policy step finished policy="Onboard tools" step=script name="Set up dock" status=completed exit=0 dur=4ms output=done
-2026-10-11T13:54:11.062Z WARN  [policy] policy step failed policy="Onboard tools" step=command name="Execute Command" status=failed exit=2 dur=5ms output="cmd ok | ls: cannot access '/nonexistent-dir': No such file or directory"
-2026-10-11T13:54:11.081Z WARN  [policy] policy finished policy="Onboard tools" status=failed steps=3 dur=38ms
+2026-10-11 13:54:11.043 -07:00 INFO  policy      Policy started · policy="Onboard tools" trigger=manual scripts=1 packages=0 apps=0 accounts=0 command=true inventory=true · policy_id=481f… log_id=a360…
+2026-10-11 13:54:11.056 -07:00 INFO  policy      Policy step finished · policy="Onboard tools" step=script name="Set up dock" status=completed exit=0 dur=4ms output=done · policy_id=481f…
+2026-10-11 13:54:11.062 -07:00 WARN  policy      Policy step failed · policy="Onboard tools" step=command name="Execute Command" status=failed exit=2 dur=5ms output="cmd ok | ls: cannot access '/nonexistent-dir': No such file or directory" · policy_id=481f…
+2026-10-11 13:54:11.081 -07:00 WARN  policy      Policy finished · policy="Onboard tools" status=failed steps=3 dur=38ms · policy_id=481f…
 ```
 
-Each line has a timestamp, a level, a `[component]` and a message, followed by `key=value` attributes. Values with
-spaces are quoted, and newlines are escaped, so every record stays on one line and `grep` works. `output=` holds
+The format is the one described in [§18.1](#line-format-server-stdout-and-the-agents-log-file). `vibemdm-agent logs`
+reads both this and the older `2026-10-11T13:54:11.043Z INFO  [policy] …` lines, so rotated files keep working. `output=` holds
 the last line of a step's output (the last three lines when it failed). With the log level at `debug`, a
 `policy step output` record also carries up to the last 4 KB.
 

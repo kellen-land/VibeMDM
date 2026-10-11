@@ -30,6 +30,7 @@ import (
 	"howett.net/plist"
 
 	"github.com/vibemdm/vibemdm/internal/agent"
+	"github.com/vibemdm/vibemdm/internal/logfmt"
 	"github.com/vibemdm/vibemdm/internal/model"
 )
 
@@ -104,7 +105,7 @@ func main() {
 	}
 	loadSimTokens()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := slog.New(logfmt.NewHandler(os.Stdout, slog.LevelInfo, "sim"))
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
