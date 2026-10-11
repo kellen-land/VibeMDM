@@ -216,11 +216,10 @@ edited under **Settings → General** (or `PUT /api/v1/settings`, admin only):
 | `log_retention_days` / `log_archive_enabled` | `30` / `false` | [Chapter 18](18-logging-and-diagnostics.md) |
 | `mcp_enabled` / `mcp_allow_writes` | `false` / `false` | [Chapter 19](19-users-roles-api.md) |
 | `filevault_auto_remediate` | `false` | Set through `PUT /api/v1/filevault` ([Chapter 11](11-filevault.md)) |
+| `auto_install_agent` | `false` | Install the agent through MDM after enrollment; set through `PUT /api/v1/agent-package/settings` ([§4.6](04-enrollment.md#46-automatic-agent-install-through-mdm)) |
 
 On first boot the server also generates the **agent enrollment secret** and the **static SCEP challenge**
 (24-byte random tokens) if they are empty.
-
-> The `auto_install_agent` field exists in the settings model but no code reads it. It has no effect.
 
 ## 2.5 First login and the forced password change
 
@@ -365,7 +364,7 @@ two replicas cannot migrate at the same time. Migrations are forward-only; there
 3. Check the log for `applied database migrations` and `VibeMDM listening`, then open **Health**.
 4. The new image contains new agent binaries. Agents do not update themselves; to roll out a new agent, re-run
    the install command on each Mac (a reinstall on the same Mac is allowed; see
-   [takeover protection](04-enrollment.md#47-takeover-protection-and-reset-agent)), or deploy it with a policy.
+   [takeover protection](04-enrollment.md#48-takeover-protection-and-reset-agent)), or deploy it with a policy.
 
 To roll back, restore the pre-upgrade database dump and run the previous image. Starting an old binary against a
 newer schema is not supported.

@@ -57,6 +57,11 @@ type device struct {
 	log      *slog.Logger
 	agentTok string
 	accounts *simAccounts // simulated local accounts for LAPS
+
+	// set for MDM-driven agent installs (InstallEnterpriseApplication)
+	ctx          context.Context
+	agentEvery   time.Duration
+	agentStarted bool
 }
 
 func main() {
@@ -84,6 +89,7 @@ func main() {
 	for i := 1; i <= *n; i++ {
 		d := newDevice(i, *prefix, *server, *topic, logger)
 		wg.Add(1)
+		d.ctx, d.agentEvery = ctx, *checkin
 		go func() {
 			defer wg.Done()
 			if !*noMDM {
@@ -98,6 +104,7 @@ func main() {
 				}
 			}
 			if *token != "" {
+				d.agentStarted = true
 				if err := d.enrollAgent(ctx, *token); err != nil {
 					d.log.Error("agent enrollment failed", "err", err)
 					return
@@ -409,6 +416,12 @@ func (d *device) respond(uuid, rt string, cmd map[string]any) map[string]any {
 		} else if id != "com.vibemdm.enrollment" {
 			r["Status"] = "Error"
 			r["ErrorChain"] = []any{map[string]any{"ErrorCode": 4001, "ErrorDomain": "MCProfileErrorDomain", "LocalizedDescription": "The profile “" + id + "” is not installed."}}
+		}
+	case "InstallEnterpriseApplication":
+		if err := d.installAgentPackage(str(cmd["ManifestURL"])); err != nil {
+			d.log.Warn("simulated agent package install failed", "err", err)
+			r["Status"] = "Error"
+			r["ErrorChain"] = []any{map[string]any{"ErrorCode": 12001, "ErrorDomain": "MDMClientError", "LocalizedDescription": err.Error()}}
 		}
 	case "CertificateList":
 		r["CertificateList"] = []any{map[string]any{"CommonName": "VibeMDM Device Identity", "IsIdentity": true, "Data": d.cert.Raw}}

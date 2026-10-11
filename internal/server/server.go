@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/vibemdm/vibemdm/internal/agentinstall"
 	"log/slog"
 	"net"
 	"net/http"
@@ -178,7 +179,9 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 		nanomdmsvc.WithGetToken(nanomdmsvc.NewTokenMux()),
 		nanomdmsvc.WithDeclarativeManagement(ddmsvc.New(st, logger.With("component", "ddm"))),
 	)
-	var mdmService service.CheckinAndCommandService = mdmsvc.New(st, core, commander, hooks, logger.With("component", "mdm")).WithEscrow(escrowID)
+	agentInstaller := agentinstall.New(st, commander, cfg.DataDir, logger.With("component", "agentinstall"))
+	agentInstaller.Register(s.mux)
+	var mdmService service.CheckinAndCommandService = mdmsvc.New(st, core, commander, hooks, logger.With("component", "mdm")).WithEscrow(escrowID).WithAgentInstall(agentInstaller)
 	mdmService = certauth.New(mdmService, mdmStorage, certauth.WithLogger(nlog.With("service", "certauth")))
 	if cfg.DumpMDM {
 		mdmService = dump.New(mdmService, os.Stdout)
@@ -209,11 +212,19 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	s.superSvc = superwf.New(st, notifier.Notify, logger.With("component", "super"))
 	s.onboarding = onboarding.New(st, engine, notifier.Notify, logger.With("component", "onboarding"))
 	agentHandler.WithOnboarding(s.onboarding)
+	agentHandler.OnAgentEnrolled = agentInstaller.AgentEnrolled
 	agentHandler.Register(s.mux)
 
 	// Health: misconfiguration detection, remediation and self-healing.
 	s.health = health.NewEngine(health.Builtin(health.Deps{
 		St: st, Cmdr: commander, EncryptionEnabled: box.Enabled(), Wake: notifier.Notify, AgentDir: cfg.AgentDir, Rescan: s.compliance.Rescan,
+		InstallAgent: func(ctx context.Context, id string) error {
+			c, err := st.GetComputer(ctx, id)
+			if err != nil {
+				return err
+			}
+			return agentInstaller.Install(ctx, c, "health")
+		},
 	}), st, hooks, logger.With("component", "health"))
 
 	// Admin API
@@ -227,7 +238,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	authn := auth.New(st, secure, cfg.SessionTTL)
 	adminAPI := api.New(api.Deps{
 		Cfg: cfg, Store: st, Auth: authn, Commander: commander, Engine: engine, Notifier: notifier, SCEP: scepServer,
-		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Health: s.health, Compliance: s.compliance, Super: s.superSvc, Onboarding: s.onboarding, Log: logger.With("component", "api"),
+		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Health: s.health, Compliance: s.compliance, Super: s.superSvc, Onboarding: s.onboarding, AgentInstall: agentInstaller, Log: logger.With("component", "api"),
 	})
 	adminAPI.Register(s.mux)
 

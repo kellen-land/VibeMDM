@@ -156,7 +156,7 @@ Viewers can never reveal keys, and MCP tools never return them.
 >   startup security settings and authorize software updates.
 > - The **bootstrap token** (macOS 10.15+, escrowed to MDM) lets macOS give a Secure Token to accounts that log in
 >   later, such as mobile or newly created accounts, so they can unlock FileVault. Without it, accounts created by
->   scripts or by tools such as XCreds may end up without a Secure Token. See [Chapter 4](04-enrollment.md#410-study-notes-supervision-user-approved-mdm-activation-lock-bootstrap-token).
+>   scripts or by tools such as XCreds may end up without a Secure Token. See [Chapter 4](04-enrollment.md#411-study-notes-supervision-user-approved-mdm-activation-lock-bootstrap-token).
 
 ## 11.6 Local administrator passwords (LAPS)
 

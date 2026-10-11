@@ -1932,3 +1932,34 @@ export interface LAPSReveal {
   unconfirmed_password?: string
   status: LAPSStatus
 }
+
+// ---- Automatic agent install through MDM (internal/agentinstall, internal/api/agentinstall.go) ----
+
+export interface AgentPackage {
+  file_name: string
+  version: string
+  size: number
+  sha256: string
+  md5_chunk: number
+  md5s: string[]
+  signed_by: string
+  uploaded_by: string
+  uploaded_at: string
+}
+
+export interface AgentPackageStatus {
+  auto_install: boolean
+  package: AgentPackage | null
+  ca_fingerprint?: string
+}
+
+export interface AgentInstallAttempt {
+  id: number
+  computer_id: string
+  command_uuid: string
+  status: 'sent' | 'installed' | 'failed'
+  detail: string
+  created_by: string
+  created_at: string
+  updated_at: string
+}

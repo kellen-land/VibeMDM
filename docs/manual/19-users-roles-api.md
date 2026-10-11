@@ -96,7 +96,7 @@ Base path `/api/v1`. Lists return `{"items": [...], "total": n}` and accept `lim
 | Activity | `GET /commands`, `GET /commands/search`, `GET/DELETE /commands/{uuid}`, `GET /commands/{uuid}/inspect`, `GET /tasks`, `GET /tasks/{id}`, `POST /tasks/{id}/cancel` |
 | Logs | `GET /logs`, `GET /logs/components`, `GET /logs/export`, `GET /logs/archives`, `GET /logs/archives/{name}`, `GET /diagnostics/{id}/download` |
 | Remote shell | `GET /shell-sessions`, `GET /shell-sessions/{id}` |
-| Enrollment | `GET /enrollment/status`, `GET /enrollment/profile` (admin), `GET/POST /enrollment/invitations`, `PATCH/DELETE /enrollment/invitations/{id}` |
+| Enrollment | `GET /enrollment/status`, `GET /enrollment/profile` (admin), `GET/POST /enrollment/invitations`, `PATCH/DELETE /enrollment/invitations/{id}`; automatic agent install: `GET /agent-package`, `PUT /agent-package?version=` (admin, raw signed .pkg), `PUT /agent-package/settings`, `POST /agent-package/sign-csr` (admin), `GET/POST /computers/{id}/agent-install`; public `GET /agent/pkg/manifest.plist`, `GET /agent/pkg/VibeMDM-Agent.pkg` |
 | Settings | `GET/PUT /settings`, `POST /settings/rotate-enrollment-secret`, `GET/PUT /settings/apns`, `POST /settings/apns/{request,decrypt}`, `PUT /settings/apns/certificate`, `GET /settings/scep`, `POST /settings/scep/regenerate` |
 | Webhooks | `GET/POST /webhooks`, `POST /webhooks/test`, `GET /webhooks/deliveries`, `PUT/DELETE /webhooks/{id}` |
 | Admin | `GET/POST /users`, `PUT/DELETE /users/{id}`, `POST /users/{id}/password`, `GET/POST /api-tokens`, `DELETE /api-tokens/{id}`, `GET /audit` |

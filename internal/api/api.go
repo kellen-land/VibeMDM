@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/vibemdm/vibemdm/internal/agentinstall"
 	"io"
 	"log/slog"
 	"net/http"
@@ -51,6 +52,7 @@ type Handler struct {
 	compliance    *compliance.Service
 	superSvc      *superwf.Service
 	onboardingSvc *onboarding.Service
+	agentInstall  *agentinstall.Service
 	log           *slog.Logger
 }
 
@@ -67,20 +69,21 @@ type Deps struct {
 		storage.PushCertStore
 		storage.PushCertStorer
 	}
-	Profile    func(ctx context.Context) ([]byte, error)
-	ShellHub   *shell.Hub
-	Hooks      *webhook.Dispatcher
-	Escrow     *escrow.Identity
-	Health     *health.Engine
-	Compliance *compliance.Service
-	Super      *superwf.Service
-	Onboarding *onboarding.Service
-	Log        *slog.Logger
+	Profile      func(ctx context.Context) ([]byte, error)
+	ShellHub     *shell.Hub
+	Hooks        *webhook.Dispatcher
+	Escrow       *escrow.Identity
+	Health       *health.Engine
+	Compliance   *compliance.Service
+	Super        *superwf.Service
+	Onboarding   *onboarding.Service
+	AgentInstall *agentinstall.Service
+	Log          *slog.Logger
 }
 
 // New creates the handler.
 func New(d Deps) *Handler {
-	return &Handler{cfg: d.Cfg, st: d.Store, auth: d.Auth, cmdr: d.Commander, engine: d.Engine, notifier: d.Notifier, scep: d.SCEP, pushStore: d.PushStore, profile: d.Profile, shellHub: d.ShellHub, hooks: d.Hooks, escrow: d.Escrow, health: d.Health, compliance: d.Compliance, superSvc: d.Super, onboardingSvc: d.Onboarding, log: d.Log}
+	return &Handler{cfg: d.Cfg, st: d.Store, auth: d.Auth, cmdr: d.Commander, engine: d.Engine, notifier: d.Notifier, scep: d.SCEP, pushStore: d.PushStore, profile: d.Profile, shellHub: d.ShellHub, hooks: d.Hooks, escrow: d.Escrow, health: d.Health, compliance: d.Compliance, superSvc: d.Super, onboardingSvc: d.Onboarding, agentInstall: d.AgentInstall, log: d.Log}
 }
 
 // ---- helpers ----
@@ -323,6 +326,14 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("GET /api/v1/computers/{id}/filevault", h.computerFileVault)
 	adm("POST /api/v1/computers/{id}/filevault/reveal", h.revealFileVaultKey)
 	adm("POST /api/v1/computers/{id}/filevault/remediate", h.remediateFileVault)
+
+	// Automatic agent installation through MDM
+	r("GET /api/v1/agent-package", h.agentPackage)
+	adm("PUT /api/v1/agent-package", h.uploadAgentPackage)
+	adm("PUT /api/v1/agent-package/settings", h.agentPackageSettings)
+	adm("POST /api/v1/agent-package/sign-csr", h.signAgentPackageCSR)
+	r("GET /api/v1/computers/{id}/agent-install", h.computerAgentInstall)
+	adm("POST /api/v1/computers/{id}/agent-install", h.installAgentMDM)
 
 	// Local administrator password (LAPS)
 	r("GET /api/v1/laps", h.lapsOverview)

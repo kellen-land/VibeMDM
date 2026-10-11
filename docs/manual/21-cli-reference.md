@@ -87,6 +87,7 @@ vibemdm-agent help <command>        detailed help for one command
 
 ```
 vibemdm-agent enroll --server URL [--token TOKEN] [--mdm] [--allow-insecure-http]
+vibemdm-agent enroll --from-mdm [--wait 10m]
 ```
 
 | Flag | Default | Meaning |
@@ -95,12 +96,14 @@ vibemdm-agent enroll --server URL [--token TOKEN] [--mdm] [--allow-insecure-http
 | `--token TOKEN` | `$VIBEMDM_ENROLL_TOKEN` | Enrollment token (invitation or enrollment secret). Prefer the environment variable: arguments are visible to other users in `ps` |
 | `--mdm` | `false` | Also download the MDM enrollment profile to `/Users/Shared/VibeMDM-Enrollment-*.mobileconfig` and open it and the Device Management pane for the logged-in user (skipped if the Mac is already MDM-enrolled) |
 | `--allow-insecure-http` | `false` | Accept a plain `http://` server (isolated labs only) |
+| `--from-mdm` | `false` | Read the server URL and a single-use token from the managed preferences (`com.vibemdm.agent`) that the MDM bootstrap profile installs; used by the agent package's postinstall ([§4.6](04-enrollment.md#46-automatic-agent-install-through-mdm)) |
+| `--wait DURATION` | `10m` | With `--from-mdm`, how long to wait for those preferences to appear |
 
 Steps: collects system info → `POST /agent/v1/enroll` (sending the previous device token if `agent.json` exists, so a
 reinstall is recognized) → writes `agent.json` (0600) → creates the Downloads and tmp directories (0700) → copies the
 binary to `/usr/local/bin/vibemdm-agent` if run from elsewhere → installs and loads the launchd jobs → optionally
 opens the MDM profile. Errors: missing server or token, non-HTTPS URL, not root, `enrollment failed: …` (403 invalid
-or expired token, 409 an active agent already exists, see [takeover protection](04-enrollment.md#47-takeover-protection-and-reset-agent)).
+or expired token, 409 an active agent already exists, see [takeover protection](04-enrollment.md#48-takeover-protection-and-reset-agent)).
 
 ```bash
 sudo VIBEMDM_ENROLL_TOKEN=… vibemdm-agent enroll --server https://mdm.example.com --mdm

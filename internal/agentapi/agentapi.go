@@ -47,6 +47,9 @@ type Handler struct {
 
 	compliance *compliance.Service
 	onboarding *onboarding.Service
+
+	// OnAgentEnrolled runs after a successful agent enrollment (removes the MDM bootstrap profile).
+	OnAgentEnrolled func(ctx context.Context, comp *model.Computer)
 }
 
 // WithOnboarding enables white-glove onboarding.
@@ -162,9 +165,19 @@ func (h *Handler) requireDevice(next http.HandlerFunc) http.Handler {
 	})
 }
 
-func (h *Handler) validateEnrollmentToken(ctx context.Context, token string) error {
+func (h *Handler) validateEnrollmentToken(ctx context.Context, token string, req model.AgentEnrollRequest) error {
 	if token == "" {
 		return errors.New("enrollment token required")
+	}
+	// A bootstrap token from the MDM-installed profile works once, and only for its own Mac.
+	if strings.HasPrefix(token, "vmbt_") {
+		if _, err := h.st.ConsumeBootstrapToken(ctx, store.HashToken(token), req.UDID, req.SerialNumber); err != nil {
+			if errors.Is(err, store.ErrBootstrapDevice) {
+				return err
+			}
+			return errors.New("invalid or expired enrollment token")
+		}
+		return nil
 	}
 	settings, err := h.st.GetSettings(ctx)
 	if err != nil {
@@ -185,7 +198,7 @@ func (h *Handler) enroll(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "invalid JSON")
 		return
 	}
-	if err := h.validateEnrollmentToken(r.Context(), req.Token); err != nil {
+	if err := h.validateEnrollmentToken(r.Context(), req.Token, req); err != nil {
 		h.log.Warn("agent enroll rejected", "err", err, "serial", req.SerialNumber, "remote", r.RemoteAddr)
 		writeErr(w, 403, err.Error())
 		return
@@ -212,6 +225,9 @@ func (h *Handler) enroll(w http.ResponseWriter, r *http.Request) {
 		"reinstall": req.PreviousDeviceToken != "", "ip": auth.ClientIP(r)})
 	h.log.Info("agent enrolled", "computer", comp.Name, "serial", comp.SerialNumber, "id", comp.ID)
 	h.hooks.Fire(webhook.AgentEnrolled, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "serial": comp.SerialNumber, "udid": comp.UDID})
+	if h.OnAgentEnrolled != nil {
+		go h.OnAgentEnrolled(context.WithoutCancel(r.Context()), comp)
+	}
 	writeJSON(w, 200, model.AgentEnrollResponse{
 		ComputerID: comp.ID, DeviceToken: devTok, CheckinIntervalSeconds: settings.AgentCheckinIntervalSeconds,
 		ServerURL: settings.ServerURL, OrgName: settings.OrgName, MDMEnrolled: comp.MDMEnrolled,

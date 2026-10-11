@@ -40,4 +40,5 @@
     - The console's blank forms sent `created_at`/`updated_at` as empty strings, which Go cannot parse into `time.Time`, so the shared request decoder now ignores empty server-owned timestamps (fixing policies, Mac Apps and the other editors that do the same), with regression tests using the UI's exact bodies.
 - [ ] Declutter the admin console: Jamf-style grouped, nested menus and sub-pages for a calm, ADHD-friendly layout ("simplicity is beautiful"). Applies to every UI change from now on.
     - Started: sidebar groups now fold (the active one opens itself) and security features sit under one Security group; the LAPS page follows the pattern (one sentence of status, one table, options tucked in "More options"). Still to do: apply the same treatment to the other busy pages (Policies, Profiles, Settings, FileVault, Computer detail tabs).
-- [ ] automatic installation of agent once a Mac enrolls
+- [x] automatic installation of agent once a Mac enrolls
+    - After MDM enrollment VibeMDM sends a temporary bootstrap profile (package-signing root plus a single-use, Mac-bound token) and InstallEnterpriseApplication for a signed agent package built once on any Mac with deploy/macos/build-agent-pkg.sh; the postinstall enrolls with `vibemdm-agent enroll --from-mdm` and the profile is removed afterwards (simulator-tested; untested on a real Mac).

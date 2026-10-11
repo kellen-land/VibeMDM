@@ -21,6 +21,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { LoadingBlock } from '../components/ui/Spinner'
 import { useToast } from '../components/ui/Toast'
 import { absoluteTime } from '../lib/format'
+import { AgentAutoInstallCard } from '../components/AgentAutoInstallCard'
 
 const CONFIGURATOR_HELP =
   "For iPhone and iPad: Apple Configurator → Prepare → Manual Configuration → Supervise → Enroll in MDM Server → New server, paste this URL. Macs can't be supervised by Configurator without Apple Business Manager; enroll them with the profile link or the agent installer."
@@ -141,7 +142,7 @@ export function EnrollmentPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-ink">2. Install the agent</p>
-                  <p className="mt-0.5 text-xs text-ink-muted">Run this in Terminal on the Mac. It downloads the agent for the Mac's architecture and enrolls with the shared secret.</p>
+                  <p className="mt-0.5 text-xs text-ink-muted">Run this in Terminal on the Mac. It downloads the agent for the Mac's architecture and enrolls with the shared secret. Or let VibeMDM install it automatically (below).</p>
                   {isAdmin && s.install_command ? (
                     <CodeBlock text={s.install_command} className="mt-2" filename="Terminal" />
                   ) : (
@@ -163,6 +164,8 @@ export function EnrollmentPage() {
               </CardBody>
             </Card>
           </div>
+
+          <AgentAutoInstallCard isAdmin={isAdmin} serverURL={s.server_url} />
 
           <Card>
             <CardHeader

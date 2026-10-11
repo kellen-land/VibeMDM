@@ -37,6 +37,8 @@ type Deps struct {
 	AgentDir string
 	// Rescan queues a compliance scan of a baseline on a computer (optional).
 	Rescan func(ctx context.Context, baselineID, computerID string) error
+	// InstallAgent installs the agent through MDM (optional; needs an uploaded package).
+	InstallAgent func(ctx context.Context, computerID string) error
 }
 
 const actor = "health"
@@ -551,11 +553,23 @@ func (c *checks) agentMissing(ctx context.Context) ([]Finding, error) {
 	}
 	var out []Finding
 	for _, comp := range comps {
+		rems := []Remediation{link("enroll", "Agent install command", "", "/enrollment")}
+		if c.d.InstallAgent != nil {
+			id := comp.ID
+			rems = append([]Remediation{{ID: "mdm_install", Label: "Install the agent through MDM",
+				Description: "Sends the signed agent package with InstallEnterpriseApplication (at most once a day).", Safe: true,
+				Run: func(ctx context.Context) error {
+					if n, err := c.d.St.AgentInstallsSince(ctx, id, time.Now().Add(-24*time.Hour)); err != nil || n > 0 {
+						return err
+					}
+					return c.d.InstallAgent(ctx, id)
+				}}}, rems...)
+		}
 		out = append(out, Finding{ObjectType: "computer", ObjectID: comp.ID, ObjectName: comp.Name, Severity: Info,
 			Summary:      "MDM enrolled without the agent",
-			Detail:       "Policies, scripts, Self Service and extended inventory need the agent. Install it with the command from Settings → Enrollment.",
+			Detail:       "Policies, scripts, Self Service and extended inventory need the agent. Install it through MDM (needs a signed agent package) or with the command from Settings → Enrollment.",
 			Facts:        map[string]any{"mdm_enrolled_at": comp.MDMEnrolledAt},
-			Remediations: []Remediation{link("enroll", "Agent install command", "", "/enrollment")}})
+			Remediations: rems})
 	}
 	return out, nil
 }

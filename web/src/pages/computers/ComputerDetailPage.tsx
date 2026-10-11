@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Laptop, RefreshCw, Trash2, Wifi, WifiOff } from 'lucide-react'
+import { Download, Laptop, RefreshCw, Trash2, Wifi, WifiOff } from 'lucide-react'
 import { useComputer, qk, useInvalidate, useSettings } from '../../api/queries'
 import { api, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
@@ -91,6 +91,20 @@ export function ComputerDetailPage() {
     }
   }
 
+  const [installing, setInstalling] = useState(false)
+  const installAgent = async () => {
+    setInstalling(true)
+    try {
+      await api.post(`/api/v1/computers/${id}/agent-install`)
+      toast.success('Agent install sent', 'The Mac installs the agent package and enrolls it in a minute or two.')
+      await invalidate(qk.computer(id), qk.computerCommands(id))
+    } catch (e) {
+      toast.error('Could not install the agent', errorMessage(e))
+    } finally {
+      setInstalling(false)
+    }
+  }
+
   const doDelete = async () => {
     try {
       await api.del(`/api/v1/computers/${id}`)
@@ -134,6 +148,11 @@ export function ComputerDetailPage() {
         actions={
           isAdmin && (
             <>
+              {c.mdm_enrolled && !c.agent_enrolled && (
+                <Button icon={<Download />} loading={installing} onClick={installAgent}>
+                  Install agent
+                </Button>
+              )}
               <Button icon={<RefreshCw />} loading={refreshing} onClick={updateInventory}>
                 Update inventory
               </Button>

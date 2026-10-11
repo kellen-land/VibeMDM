@@ -50,6 +50,7 @@ Most commands need root: run them with sudo.
 // commandHelp is the detailed help for "vibemdm-agent help <command>".
 var commandHelp = map[string]string{
 	"enroll": `vibemdm-agent enroll --server URL [--token TOKEN] [--mdm] [--allow-insecure-http]
+vibemdm-agent enroll --from-mdm [--wait 10m]
 
 Enrolls this Mac with a VibeMDM server, saves the device credentials to
 /Library/Application Support/VibeMDM/agent.json (mode 0600) and installs the
@@ -66,6 +67,11 @@ launchd daemon and login agent. Run as root.
 Re-enrolling a Mac that already has an active agent works when run on the same
 Mac (the existing credentials prove it); otherwise an administrator must click
 "Reset agent" on the computer in the console first.
+
+  --from-mdm              Read the server URL and a one-time token from the profile
+                          VibeMDM installs through MDM (used by the agent package's
+                          postinstall when the agent is installed automatically).
+  --wait DURATION         With --from-mdm, how long to wait for that profile (10m).
 
 Example:
   sudo VIBEMDM_ENROLL_TOKEN=… vibemdm-agent enroll --server https://mdm.example.com --mdm`,
@@ -386,7 +392,16 @@ func cmdEnroll(ctx context.Context, args []string, logger *slog.Logger) error {
 	token := fs.String("token", "", "enrollment token (prefer the VIBEMDM_ENROLL_TOKEN environment variable: arguments are visible in ps)")
 	mdm := fs.Bool("mdm", false, "also open the MDM enrollment profile")
 	insecure := fs.Bool("allow-insecure-http", false, "allow a plain-http server URL (lab use only: commands would travel unencrypted)")
+	fromMDM := fs.Bool("from-mdm", false, "take the server URL and a one-time token from the MDM-installed bootstrap profile")
+	wait := fs.Duration("wait", 10*time.Minute, "with --from-mdm, how long to wait for the bootstrap profile")
 	fs.Parse(args)
+	if *fromMDM {
+		b, err := agent.WaitForMDMBootstrap(ctx, *wait, nil)
+		if err != nil {
+			return err
+		}
+		*server, *token = b.ServerURL, b.EnrollToken
+	}
 	if *token == "" {
 		*token = os.Getenv("VIBEMDM_ENROLL_TOKEN")
 	}

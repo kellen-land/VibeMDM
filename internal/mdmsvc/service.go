@@ -27,6 +27,20 @@ type Service struct {
 	hooks  *webhook.Dispatcher
 	escrow *escrow.Identity
 	log    *slog.Logger
+
+	agentInstall AgentInstaller
+}
+
+// AgentInstaller installs the agent through MDM after enrollment (internal/agentinstall).
+type AgentInstaller interface {
+	AutoInstall(ctx context.Context, comp *model.Computer)
+	CommandResult(ctx context.Context, commandUUID, status, errText string)
+}
+
+// WithAgentInstall enables automatic agent installation after MDM enrollment.
+func (s *Service) WithAgentInstall(a AgentInstaller) *Service {
+	s.agentInstall = a
+	return s
 }
 
 // WithEscrow enables FileVault PRK decryption from SecurityInfo responses.
@@ -112,6 +126,9 @@ func (s *Service) TokenUpdate(r *mdm.Request, m *mdm.TokenUpdate) error {
 			}
 			if err := s.cmdr.SyncDDM(ctx, &c, "system"); err != nil {
 				s.log.Warn("enabling declarative management", "err", err)
+			}
+			if s.agentInstall != nil {
+				s.agentInstall.AutoInstall(ctx, &c)
 			}
 		}(*comp)
 	}
@@ -232,6 +249,10 @@ func (s *Service) processResult(ctx context.Context, results *mdm.CommandResults
 			"request_type": requestType, "status": results.Status, "error": errText})
 	}
 	switch requestType {
+	case "InstallEnterpriseApplication":
+		if s.agentInstall != nil {
+			s.agentInstall.CommandResult(ctx, results.CommandUUID, results.Status, errText)
+		}
 	case "DeviceInformation":
 		if q, ok := doc["QueryResponses"].(map[string]any); ok {
 			if err := s.st.ApplyMDMDeviceInformation(ctx, results.UDID, q); err != nil {

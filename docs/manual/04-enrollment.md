@@ -161,7 +161,54 @@ the script adds `--allow-insecure-http`.
 The agent is not code-signed or notarized by default. If you have a Developer ID, sign and notarize the binaries
 and place them in `VIBEMDM_AGENT_DIR`.
 
-## 4.6 iPhone and iPad with Apple Configurator
+## 4.6 Automatic agent install through MDM
+
+Like Jamf Pro after user-initiated enrollment, VibeMDM can install the agent itself as soon as a Mac finishes MDM
+enrollment, so nobody runs a Terminal command. Turn it on under **Enrollment → Install the agent automatically**.
+
+**One-time setup: build the signed package.** macOS installs packages sent with `InstallEnterpriseApplication` only
+if they are signed by a certificate it trusts. On any Mac (the build Mac does not need to be enrolled):
+
+```bash
+VIBEMDM_URL=https://mdm.example.com VIBEMDM_API_TOKEN=<admin API token> ./deploy/macos/build-agent-pkg.sh
+```
+
+The script downloads both agent binaries from your server, builds a product archive (`pkgbuild` + `productbuild`)
+whose postinstall copies the right binary to `/usr/local/bin/vibemdm-agent` and runs
+`vibemdm-agent enroll --from-mdm`, creates a key and a certificate request on that Mac, has VibeMDM's
+**package-signing CA** sign it (`POST /api/v1/agent-package/sign-csr`; the private key never leaves the Mac), signs
+with `productsign` from a throwaway keychain, and uploads the result (`PUT /api/v1/agent-package?version=…`). The
+server refuses unsigned packages. Set `SIGN_IDENTITY` to sign with your own Developer ID Installer certificate
+instead. Re-run the script after upgrading VibeMDM.
+
+**What happens at enrollment** (and when you click **Install agent** on a computer, or the Health finding
+*Agent not installed* offers *Install the agent through MDM*):
+
+1. VibeMDM sends a temporary **bootstrap profile** (`com.vibemdm.agent.bootstrap`) with the package-signing root
+   (`com.apple.security.root`) and managed preferences for `com.vibemdm.agent`: the server URL and a **single-use
+   token** that expires in 24 hours and only works for that Mac's UDID or serial number.
+2. It sends `InstallEnterpriseApplication` pointing at `/agent/pkg/manifest.plist` (chunked MD5s of the package).
+3. macOS downloads `/agent/pkg/VibeMDM-Agent.pkg`, checks the signature against the root it now trusts and installs.
+4. The postinstall enrolls the agent with the token (log: `/Library/Logs/VibeMDM/install.log`).
+5. When the agent enrolls, VibeMDM removes the bootstrap profile, so the Mac trusts the package-signing root only for
+   the minutes the install takes.
+
+The package-signing CA can only issue code-signing certificates: its path length is 0 and its name constraints
+permit only the DNS name `invalid.`, so it cannot vouch for a web server even while a Mac trusts it. It is created
+on first use, sealed with `VIBEMDM_ENCRYPTION_KEY` and never replaced automatically.
+
+> **Untested on a real Mac.** The simulator exercises the whole protocol (profile, manifest, MD5 chunks, signature
+> presence, single-use token, profile removal), but whether macOS accepts a package signed by a root delivered this
+> way, `productsign` with a non-Apple certificate, and the postinstall timing must be confirmed on hardware.
+> Jamf Pro uses the same mechanism (packages signed by its built-in CA, trusted through the MDM profile).
+
+> **Study note:** `InstallEnterpriseApplication` takes a `ManifestURL` (or an inline `Manifest`) in the same format
+> as iOS enterprise app manifests: `items[0].assets[0]` with `kind` `software-package`, `url`, and `md5-size` plus
+> `md5s` for chunked integrity, and `metadata` with `bundle-identifier` and `bundle-version`. The package must be a
+> signed product archive (`productbuild`), not a bare component package. Automated Device Enrollment can also run
+> such packages during Setup Assistant (`InstallApplication` with `PrestageEnrollment` in Jamf terms).
+
+## 4.7 iPhone and iPad with Apple Configurator
 
 VibeMDM's console and agent focus on Macs. iPhones and iPads enrolled this way get MDM-level management
 (profiles, commands, `DeviceInformation` inventory) but none of the agent features.
@@ -180,7 +227,7 @@ VibeMDM's console and agent focus on Macs. iPhones and iPads enrolled this way g
 The profile served at this URL embeds a SCEP challenge that can be reused for 24 hours, because one profile
 prepares a whole batch.
 
-## 4.7 Takeover protection and Reset agent
+## 4.8 Takeover protection and Reset agent
 
 UDIDs and serial numbers are not secrets. Without protection, anyone with an enrollment token could enroll a fake
 agent with a victim Mac's serial number and receive its tasks. VibeMDM therefore lets a new agent enrollment
@@ -203,7 +250,7 @@ A refused attempt returns **HTTP 409** and is audited as `agent.enroll_refused`.
 After a reset, the old agent's requests return 401 and it logs `device token rejected by server; re-enroll the
 agent`. Re-run the install command.
 
-## 4.8 Unenrolling
+## 4.9 Unenrolling
 
 | Goal | How |
 | --- | --- |
@@ -215,7 +262,7 @@ On a User Approved Mac, the user **can** remove the enrollment profile. VibeMDM 
 (`ComputerUnenrolled` webhook) and the agent keeps reporting until it is removed too, so you can detect and
 re-enroll such Macs (for example with a smart group *MDM enrolled is false* and *Agent enrolled is true*).
 
-## 4.9 Verify enrollment on the Mac
+## 4.10 Verify enrollment on the Mac
 
 ```bash
 profiles status -type enrollment
@@ -228,7 +275,7 @@ sudo vibemdm-agent check-connection          # agent → server reachability wit
 log stream --info --predicate 'process == "mdmclient"'   # live MDM traffic
 ```
 
-## 4.10 Study notes: supervision, User Approved MDM, Activation Lock, bootstrap token
+## 4.11 Study notes: supervision, User Approved MDM, Activation Lock, bootstrap token
 
 > **Study note (User Approved MDM):** on macOS 10.13.4 and later, an MDM enrollment is *user approved* if the user
 > approved it in the Profiles/Device Management pane, or if it came from ADE (which is implicitly approved). UAMDM

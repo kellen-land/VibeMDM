@@ -1147,3 +1147,28 @@ type LAPSSummary struct {
 	Missing int `json:"missing"`
 	Failing int `json:"failing"`
 }
+
+// AgentPackage describes the signed agent package served to mdmclient for automatic installs.
+type AgentPackage struct {
+	FileName   string    `json:"file_name"`
+	Version    string    `json:"version"`
+	Size       int64     `json:"size"`
+	SHA256     string    `json:"sha256"`
+	MD5Chunk   int64     `json:"md5_chunk"`
+	MD5s       []string  `json:"md5s"`
+	SignedBy   string    `json:"signed_by"`
+	UploadedBy string    `json:"uploaded_by"`
+	UploadedAt time.Time `json:"uploaded_at"`
+}
+
+// AgentInstallAttempt is one MDM-driven agent install on a Mac.
+type AgentInstallAttempt struct {
+	ID          int64     `json:"id"`
+	ComputerID  string    `json:"computer_id"`
+	CommandUUID string    `json:"command_uuid"`
+	Status      string    `json:"status"` // sent | installed | failed
+	Detail      string    `json:"detail"`
+	CreatedBy   string    `json:"created_by"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}

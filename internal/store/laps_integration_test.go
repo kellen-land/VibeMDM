@@ -160,3 +160,34 @@ func TestLAPSStageCommitLifecycle(t *testing.T) {
 		t.Fatalf("disabled: %+v", ac)
 	}
 }
+
+func TestAgentBootstrapTokens(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	stamp := time.Now().Format("150405.000")
+	comp, err := s.EnrollAgent(ctx, model.AgentEnrollRequest{SerialNumber: "BOOT" + stamp, UDID: "b" + stamp, Hostname: "b.local",
+		ComputerName: "boot-test", OSVersion: "15.0", Architecture: "arm64"}, HashToken("boot-"+stamp))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { s.DeleteComputer(ctx, comp.ID) })
+	if err := s.CreateBootstrapToken(ctx, comp.ID, HashToken("vmbt_a"+stamp), time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ConsumeBootstrapToken(ctx, HashToken("vmbt_a"+stamp), "other-udid", "OTHER"); !errors.Is(err, ErrBootstrapDevice) {
+		t.Fatalf("another Mac must not use the token: %v", err)
+	}
+	if id, err := s.ConsumeBootstrapToken(ctx, HashToken("vmbt_a"+stamp), "", "BOOT"+stamp); err != nil || id != comp.ID {
+		t.Fatalf("own Mac: %q %v", id, err)
+	}
+	if _, err := s.ConsumeBootstrapToken(ctx, HashToken("vmbt_a"+stamp), "", "BOOT"+stamp); err == nil {
+		t.Fatal("token used twice")
+	}
+	// Install attempts are never downgraded once the agent enrolled.
+	s.RecordAgentInstall(ctx, comp.ID, "CMD-"+stamp, "test")
+	s.MarkAgentInstalled(ctx, comp.ID)
+	s.UpdateAgentInstall(ctx, "CMD-"+stamp, "sent", "late reply")
+	if a, _ := s.LatestAgentInstall(ctx, comp.ID); a == nil || a.Status != "installed" {
+		t.Fatalf("attempt: %+v", a)
+	}
+}
