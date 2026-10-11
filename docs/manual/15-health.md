@@ -76,7 +76,7 @@ There are **26** built-in checks (`internal/health/checks.go`).
 | `platform.apns_certificate` | APNs push certificate | warning / critical | Missing (warning); expires in < 30 days; critical < 7 days or expired | Link: renew at the Apple Push Certificates Portal with the same Apple Account, upload in Settings → APNs |
 | `platform.server_url` | Server URL | warning / critical | Not set or invalid (critical); not HTTPS (warning) | Link: Settings → General |
 | `platform.scep_ca` | SCEP CA certificate | warning / critical | Expires in < 90 days (critical < 14) | Plan re-enrollment ([Chapter 3](03-apns-and-certificates.md)) |
-| `platform.signing_certificate` | Profile signing certificate | warning / critical | Stored certificate unparseable, or expires in < 30 days | Link: replace in Settings → General |
+| `platform.signing_certificate` | Profile signing certificate | warning / critical | Stored certificate unparseable, or expires in < 30 days | Link: replace in Settings → Profile signing |
 | `platform.push_failures` | APNs push failures | warning / critical | Last hour: ≥ 3 pushes and ≥ 50 % failed (critical if none succeeded). Grace 10 min | Link: server logs |
 | `platform.webhook_failures` | Failing webhooks | warning | An enabled webhook's last 5 deliveries all failed, the latest within 24 h | Link: review the webhook; *Disable the webhook* (not safe) |
 | `platform.agent_binaries` | Agent binaries | warning | No prebuilt agent binaries in `VIBEMDM_AGENT_DIR`; the installer would fail | Link: Enrollment |

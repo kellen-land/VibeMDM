@@ -201,7 +201,7 @@ The agent sets `VIBEMDM_SERVER_URL`, `VIBEMDM_COMPUTER_ID`, `VIBEMDM_SCRIPT_NAME
 ## 2.4 Server settings stored in the database
 
 Most behaviour is configured in the console, not the environment. These are stored in the `settings` table and
-edited under **Settings → General** (or `PUT /api/v1/settings`, admin only):
+edited in the console's **Settings** pages (General, Enrollment, Logging, Profile signing, Remote shell, AI assistants), or with `PUT /api/v1/settings` (admin only):
 
 | Setting (`json`) | Default | Notes |
 | --- | --- | --- |
@@ -241,7 +241,7 @@ On first boot the server also generates the **agent enrollment secret** and the 
 
 5. Complete the initial configuration:
    1. **Settings → General**: check the server URL and set the organization name.
-   2. **Settings → APNs**: obtain the push certificate ([Chapter 3](03-apns-and-certificates.md)). Macs cannot
+   2. **Settings → Push certificate**: obtain the push certificate ([Chapter 3](03-apns-and-certificates.md)). Macs cannot
       enroll without it.
    3. **Health**: review the findings. A new server typically shows *APNs push certificate missing*.
    4. **Enrollment**: create an invitation ([Chapter 4](04-enrollment.md)).

@@ -8,7 +8,7 @@ on the Mac. Because it is the most powerful capability in the product, it is loc
 
 Remote shell is **off** until an admin turns it on:
 
-- **Console:** Settings → General → Remote Shell → *Enable remote shell* (admin only).
+- **Console:** Settings → Access → Remote shell → *Enable remote shell* (admin only).
 - **API:** `PUT /api/v1/settings` `{"remote_shell_enabled": true}`, optionally
   `{"remote_shell_idle_timeout_secs": 600}` (minimum 30; default 600).
 

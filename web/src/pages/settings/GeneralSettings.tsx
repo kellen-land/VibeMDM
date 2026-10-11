@@ -17,7 +17,10 @@ import { CodeBlock, CopyButton } from '../../components/ui/CopyButton'
 import { useToast } from '../../components/ui/Toast'
 import { statusKey } from '../../auth/AuthContext'
 
-export function GeneralSettings() {
+/** The parts of the server settings form, each shown on its own Settings page. */
+export type GeneralSection = 'general' | 'enrollment' | 'remote-shell' | 'ai' | 'logging' | 'signing'
+
+export function GeneralSettings({ section = 'general' }: { section?: GeneralSection }) {
   const { isAdmin } = useAuth()
   const toast = useToast()
   const invalidate = useInvalidate()
@@ -91,6 +94,8 @@ export function GeneralSettings() {
 
   return (
     <div className="flex flex-col gap-6">
+      {section === 'general' && (
+        <>
       <Card>
         <CardHeader title="Organization and server" />
         <CardBody>
@@ -133,7 +138,10 @@ export function GeneralSettings() {
           className="border-b-0"
         />
       </Card>
+        </>
+      )}
 
+      {section === 'enrollment' && (
       <Card>
         <CardHeader title="Enrollment" />
         <CardBody className="flex flex-col gap-5">
@@ -160,8 +168,9 @@ export function GeneralSettings() {
           )}
         </CardBody>
       </Card>
+      )}
 
-      {isAdmin && (
+      {section === 'remote-shell' && isAdmin && (
         <Card>
           <CardHeader title="Remote shell" description="Interactive terminal access to online Macs from the console." actions={form.remote_shell_enabled ? <Badge tone="good" dot>Enabled</Badge> : <Badge>Disabled</Badge>} />
           <CardBody className="flex flex-col gap-5">
@@ -188,10 +197,11 @@ export function GeneralSettings() {
         </Card>
       )}
 
-      <MCPCard form={form} set={set} readOnly={ro} />
+      {section === 'ai' && <MCPCard form={form} set={set} readOnly={ro} />}
 
-      <LoggingCard settings={settings.data} readOnly={ro} />
+      {section === 'logging' && <LoggingCard settings={settings.data} readOnly={ro} />}
 
+      {section === 'signing' && (
       <Card>
         <CardHeader
           title="Profile signing"
@@ -223,15 +233,17 @@ export function GeneralSettings() {
             </>
           )}
         </CardBody>
-        {isAdmin && (
-          <CardFooter>
-            <span className="mr-auto text-xs text-ink-muted">Server version {form.version}</span>
-            <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-              Save settings
-            </Button>
-          </CardFooter>
-        )}
       </Card>
+      )}
+
+      {isAdmin && section !== 'logging' && (
+        <div className="flex items-center justify-end gap-3">
+          {section === 'general' && <span className="mr-auto text-xs text-ink-muted">Server version {form.version}</span>}
+          <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
+            Save
+          </Button>
+        </div>
+      )}
 
       <ConfirmDialog
         open={rotateOpen}

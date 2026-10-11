@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { HelpCircle, KeyRound, LockKeyholeOpen, RefreshCw, Save, ShieldCheck, ShieldAlert, Wrench } from 'lucide-react'
+import { KeyRound, RefreshCw, Save, ShieldCheck, Wrench } from 'lucide-react'
 import { qk, useFileVault } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { normalizeScope, emptyScope, type BuiltinProfileView, type FileVaultEnforceOptions, type FileVaultOverview, type FileVaultRow, type FileVaultUpdate, type Scope } from '../api/types'
 import { PageHeader } from '../components/ui/PageHeader'
+import { Tabs } from '../components/ui/Tabs'
 import { Card, CardBody, CardFooter, CardHeader } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge, BoolBadge, StatusBadge, statusTone } from '../components/ui/Badge'
@@ -20,7 +21,6 @@ import { LoadingBlock } from '../components/ui/Spinner'
 import { SearchInput } from '../components/ui/SearchInput'
 import { useToast } from '../components/ui/Toast'
 import { ScopeEditor, ScopeSummary } from '../components/pickers/ScopeEditor'
-import { StatTile } from './DashboardPage'
 import { shortDate } from '../lib/format'
 
 const defaultEnforceOptions = (): FileVaultEnforceOptions => ({ DeferAtLogout: true, DeferDontAskAtLogout: false, MaxBypassAttempts: 0, ShowRecoveryKey: false })
@@ -28,6 +28,16 @@ const defaultEnforceOptions = (): FileVaultEnforceOptions => ({ DeferAtLogout: t
 /** Remediation applies to Macs with FileVault on and no escrowed key. */
 export function needsRemediation(fv: { filevault_enabled?: boolean | null; escrowed: boolean }): boolean {
   return fv.filevault_enabled === true && !fv.escrowed
+}
+
+/** One sentence instead of a row of tiles: says whether anything needs attention. */
+function fileVaultSummary(d: FileVaultOverview): string {
+  const s = d.summary
+  if (s.total === 0) return 'No computers enrolled yet.'
+  const parts = [`${s.escrowed} of ${s.total} ${s.total === 1 ? 'Mac has' : 'Macs have'} an escrowed recovery key.`]
+  if (s.missing_key > 0) parts.push(`${s.missing_key} ${s.missing_key === 1 ? 'needs' : 'need'} a new key.`)
+  if (!d.escrow_profile.deployed) parts.push('Escrow is off: turn it on under Settings.')
+  return parts.join(' ')
 }
 
 export function FileVaultPage() {
@@ -38,6 +48,7 @@ export function FileVaultPage() {
   const d = q.data
   const [checking, setChecking] = useState(false)
   const [filter, setFilter] = useState('')
+  const [view, setView] = useState<'computers' | 'settings'>('computers')
 
   /** PUT /filevault returns the refreshed overview; write it straight into the cache. */
   const update = async (body: FileVaultUpdate, success: string) => {
@@ -84,7 +95,7 @@ export function FileVaultPage() {
     <>
       <PageHeader
         title="FileVault"
-        description="Escrow each Mac's FileVault personal recovery key, enforce FileVault, and repair Macs that are missing a key."
+        description={fileVaultSummary(d)}
         actions={
           isAdmin && (
             <Button icon={<RefreshCw />} loading={checking} onClick={checkNow}>
@@ -93,14 +104,18 @@ export function FileVaultPage() {
           )
         }
       />
+      <Tabs
+        items={[
+          { key: 'computers', label: 'Computers' },
+          { key: 'settings', label: 'Settings' },
+        ]}
+        value={view}
+        onChange={(k) => setView(k as 'computers' | 'settings')}
+        className="mb-5"
+      />
       <div className="flex flex-col gap-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile label="Escrowed" value={d.summary.escrowed} icon={ShieldCheck} />
-          <StatTile label="Missing key" value={d.summary.missing_key} icon={ShieldAlert} tone="warn" />
-          <StatTile label="Not encrypted" value={d.summary.not_encrypted} icon={LockKeyholeOpen} />
-          <StatTile label="Unknown" value={d.summary.unknown} icon={HelpCircle} />
-        </div>
-
+        {view === 'settings' && (
+          <>
         <EscrowProfileCard view={d.escrow_profile} cert={d.escrow_certificate} readOnly={!isAdmin} onSave={(enabled, scope) => update({ escrow: { enabled, scope } }, enabled ? 'Escrow profile saved' : 'Escrow profile turned off')} />
         <EnforceProfileCard view={d.enforce_profile} readOnly={!isAdmin} onSave={(enabled, scope, options) => update({ enforce: { enabled, scope, options } }, enabled ? 'Enforcement profile saved' : 'Enforcement profile turned off')} />
 
@@ -126,6 +141,10 @@ export function FileVaultPage() {
           </CardFooter>
         </Card>
 
+          </>
+        )}
+
+        {view === 'computers' && (
         <Card>
           <CardHeader
             title="Computers"
@@ -186,6 +205,7 @@ export function FileVaultPage() {
             ]}
           />
         </Card>
+        )}
       </div>
     </>
   )

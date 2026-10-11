@@ -67,7 +67,7 @@ Each lab lists what you need, the steps and what to look for. The simulator labs
 `http://localhost:8080` set up as in [§2.10](02-installation.md#210-running-without-docker-development) or the Docker
 deployment, with any certificate that has a `UID` attribute uploaded as the "push certificate" so enrollment profiles
 can be generated ([§21.3](21-cli-reference.md#213-vibemdm-sim)). Copy the **static SCEP challenge** from Settings →
-SCEP CA and the **agent enrollment secret** from Settings → General (both admin-only).
+SCEP CA and the **agent enrollment secret** from Settings → Enrollment (both admin-only).
 
 ### Lab 1 (simulator): an enrollment and a command on the wire
 
@@ -94,7 +94,7 @@ SCEP CA and the **agent enrollment secret** from Settings → General (both admi
 
 *Exam links: APNs certificate lifecycle, topic, renewal.*
 
-1. Open Settings → APNs (`GET /api/v1/settings/apns`) and note the certificate's `topic`, `not_after` and the Health
+1. Open Settings → Push certificate (`GET /api/v1/settings/apns`) and note the certificate's `topic`, `not_after` and the Health
    finding `platform.apns_certificate` if it is close to expiry.
 2. Download an enrollment profile (Enrollment page) and open it in a text editor. Find `Topic` in the `com.apple.mdm`
    payload and the `Challenge` in the SCEP payload. Confirm the topic equals the certificate's `UID`.

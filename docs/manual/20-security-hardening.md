@@ -15,9 +15,9 @@ an operational checklist.
 | 5 | Change the bootstrap admin password (enforced) and delete `/data/initial-admin-password` | The generated password sits in that file until removed | `docker compose exec vibemdm ls /data` |
 | 6 | Create named admin accounts; give read-only staff the **viewer** role | Accountability and least privilege | Settings → Users |
 | 7 | Use invitations (single-use or limited, expiring) instead of the master enrollment secret | Limits exposure if a link leaks | Enrollment page |
-| 8 | Leave **Open enrollment** off | Otherwise anyone who can reach `/enroll` can download a profile | Settings → General |
-| 9 | Leave **Remote shell** off unless needed; consider the device-side veto file on sensitive Macs | With it on, an admin can open a root shell on any Mac with the agent | Settings → General |
-| 10 | Leave **MCP** off unless needed; use viewer tokens; keep *Allow write tools* off unless required | AI agents act with the token's rights | Settings → General, Settings → API Tokens |
+| 8 | Leave **Open enrollment** off | Otherwise anyone who can reach `/enroll` can download a profile | Settings → Enrollment |
+| 9 | Leave **Remote shell** off unless needed; consider the device-side veto file on sensitive Macs | With it on, an admin can open a root shell on any Mac with the agent | Settings → Remote shell |
+| 10 | Leave **MCP** off unless needed; use viewer tokens; keep *Allow write tools* off unless required | AI agents act with the token's rights | Settings → AI assistants (MCP), Settings → API tokens |
 | 11 | Give API tokens an expiry and the viewer role where possible; revoke unused ones | Long-lived admin tokens are attractive targets | Settings → API Tokens (`last_used_at`) |
 | 12 | Sign webhook deliveries with a secret and verify the signature | Receivers can authenticate VibeMDM | Webhook config |
 | 13 | Back up the database, `/data` and the key; test a restore | Recovery from loss or ransomware | [§2.7](02-installation.md#27-backups) |

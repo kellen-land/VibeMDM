@@ -43,7 +43,7 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
   const [saving, setSaving] = useState(false)
   const buildings = useBuildings({ enabled: editing })
   const departments = useDepartments({ enabled: editing })
-  /** Options from Settings → Network Organization, always including the computer's current value so nothing is lost. */
+  /** Options from Settings → Buildings and networks, always including the computer's current value so nothing is lost. */
   const listOptions = (list: 'building' | 'department', current: string) => {
     const names = ((list === 'building' ? buildings.data : departments.data)?.items ?? []).map((i) => i.name)
     if (current && !names.includes(current)) names.unshift(current)
@@ -134,7 +134,7 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
         {editing ? (
           <FormGrid cols={3}>
             {editableFields.map((e) => (
-              <Field key={e.key} label={e.label} className={e.textarea ? 'md:col-span-3' : undefined} hint={e.list ? 'Managed under Settings → Network Organization.' : undefined}>
+              <Field key={e.key} label={e.label} className={e.textarea ? 'md:col-span-3' : undefined} hint={e.list ? 'Managed under Settings → Buildings and networks.' : undefined}>
                 {e.textarea ? (
                   <Textarea value={form[e.key] ?? ''} onChange={(ev) => setForm({ ...form, [e.key]: ev.target.value })} rows={3} />
                 ) : e.list ? (

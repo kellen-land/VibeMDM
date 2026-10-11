@@ -9,7 +9,7 @@ locked down by default.
 
 Off until an administrator turns it on, in two equivalent ways:
 
-- **Web UI**: Settings → General (Remote Shell) → *Enable remote shell*, admin role only.
+- **Web UI**: Settings → Access → Remote shell → *Enable remote shell*, admin role only.
 - **API**: `PUT /api/v1/settings` with `{"remote_shell_enabled": true}` (optionally
   `{"remote_shell_idle_timeout_secs": 600}`). Toggling it is written to the audit log.
 

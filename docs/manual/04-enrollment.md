@@ -37,7 +37,7 @@ number.
 | Check | Where | Why |
 | --- | --- | --- |
 | Server URL is `https://…` | Settings → General | Macs refuse plain-HTTP MDM servers |
-| APNs push certificate uploaded | Settings → APNs | The enrollment profile needs the topic |
+| APNs push certificate uploaded | Settings → Push certificate | The enrollment profile needs the topic |
 | Agent binaries present | Enrollment page status (`GET /api/v1/enrollment/status`), Health → *Agent binaries* | The installer downloads `vibemdm-agent-darwin-{arm64,amd64}` from the server |
 | TLS certificate trusted by macOS | Browse to the URL in Safari on a Mac | Enrollment fails with an untrusted certificate |
 
@@ -84,7 +84,7 @@ route (`install.sh` with `--mdm`) uses one. Set `max_uses` accordingly.
 
 ### Open enrollment
 
-With `open_enrollment` on (Settings → General), anyone who can reach `/enroll` can download an enrollment profile
+With `open_enrollment` on (Settings → Enrollment), anyone who can reach `/enroll` can download an enrollment profile
 without a token. The agent still needs a token. Leave it off unless the server is reachable only from a trusted
 network.
 

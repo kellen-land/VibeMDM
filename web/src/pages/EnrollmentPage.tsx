@@ -120,7 +120,7 @@ export function EnrollmentPage() {
               <CardHeader title="Readiness" description="Everything a Mac needs to enroll." />
               <CardBody className="flex flex-col gap-3">
                 <Check ok={!!s.server_url && s.server_url.startsWith('https://')} label="Public HTTPS server URL" detail={s.server_url || 'Not set'} />
-                <Check ok={s.apns_configured} label="APNs push certificate" detail={s.apns_configured ? `Topic: ${(s.topics ?? []).join(', ')}` : 'Upload one under Settings → APNs'} />
+                <Check ok={s.apns_configured} label="APNs push certificate" detail={s.apns_configured ? `Topic: ${(s.topics ?? []).join(', ')}` : 'Upload one under Settings → Push certificate'} />
                 <Check ok={s.scep_ok} label="SCEP certificate authority" detail="Issues device identity certificates" />
                 <Check ok={Object.values(s.agent_binaries).some(Boolean)} label="Agent binaries" detail={Object.entries(s.agent_binaries).map(([k, v]) => `${k}: ${v ? 'present' : 'missing'}`).join(' · ')} />
                 <Check ok={true} label={s.open_enrollment ? 'Open enrollment is on' : 'Open enrollment is off'} detail={s.open_enrollment ? 'Any Mac with the profile or install command can enroll.' : 'Agents need the enrollment secret or an invitation token.'} />

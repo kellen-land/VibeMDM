@@ -7,7 +7,7 @@ self-hosters use a vendor that signs requests on their behalf. VibeMDM supports 
 ## Path A — mdmcert.download (recommended for self-hosters)
 
 [mdmcert.download](https://mdmcert.download) is a free community service run by the MicroMDM maintainers.
-VibeMDM automates the exchange from **Settings → APNs**:
+VibeMDM automates the exchange from **Settings → Enrollment → Push certificate**:
 
 1. **Generate request** – enter the e-mail address registered at mdmcert.download and tick *Submit*.
    VibeMDM creates a private key and CSR and sends it to mdmcert.download.

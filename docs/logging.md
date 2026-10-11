@@ -45,7 +45,7 @@ The console's **Logs** page and each computer's **Logs** tab use these, with a 2
 ## Export, retention and archives
 
 - **Export** (`GET /api/v1/logs/export`, admin, audited): matching entries as gzipped NDJSON.
-- **Retention**: entries older than `log_retention_days` (default 30, Settings → General) are pruned hourly.
+- **Retention**: entries older than `log_retention_days` (default 30, Settings → Logging) are pruned hourly.
 - **Archives**: with `log_archive_enabled`, the previous UTC day is written to
   `<data>/log-archive/YYYY-MM-DD-{server,agent}.ndjson.gz` before pruning. List and download them under
   `GET /api/v1/logs/archives`.

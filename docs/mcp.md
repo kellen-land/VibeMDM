@@ -10,7 +10,7 @@ Macs fail the CIS benchmark and why?", "What health issues are open?" or "Run th
 
 ## Turning it on
 
-1. **Settings → General → MCP server**: enable it. While it is off, `/mcp` returns 404.
+1. **Settings → Integrations → AI assistants (MCP)**: enable it. While it is off, `/mcp` returns 404.
 2. **Settings → API Tokens**: create a token for the agent. A **viewer** token can only use the read tools.
 3. Optional: enable **Allow write tools** to give **admin** tokens the write tools below. Viewer tokens never get them.
 

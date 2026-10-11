@@ -170,7 +170,7 @@ GET /api/v1/logs?source=server&q=push&from=2026-10-10T08:00:00Z
 | Feature | Details |
 | --- | --- |
 | **Export** | `GET /api/v1/logs/export` (admin, audited) with the same filters: matching entries as gzipped NDJSON |
-| **Retention** | Entries older than `log_retention_days` (default 30, range 1–3650, Settings → General) are pruned hourly |
+| **Retention** | Entries older than `log_retention_days` (default 30, range 1–3650, Settings → Logging) are pruned hourly |
 | **Archives** | With `log_archive_enabled`, the previous UTC day is written to `<data>/log-archive/YYYY-MM-DD-{server,agent}.ndjson.gz` before pruning. List and download with `GET /api/v1/logs/archives` and `GET /api/v1/logs/archives/{name}` (admin) |
 
 Include `/data/log-archive` in your backups if you need long-term logs.

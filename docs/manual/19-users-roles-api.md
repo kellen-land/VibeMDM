@@ -226,7 +226,7 @@ allow it, take a few safe actions.
 
 ### Turn it on
 
-1. **Settings → General → MCP server for AI agents**: enable it (`PUT /api/v1/settings` `{"mcp_enabled": true}`).
+1. **Settings → AI assistants (MCP)**: enable it (`PUT /api/v1/settings` `{"mcp_enabled": true}`).
    While it is off, `/mcp` returns **404**. The card also shows the endpoint and a ready-made `claude mcp add` snippet.
 2. **Settings → API Tokens**: create a token for the agent. A **viewer** token can only use the read tools.
 3. Optional: enable **Allow write tools** (`{"mcp_allow_writes": true}`) so **admin** tokens get the write tools.

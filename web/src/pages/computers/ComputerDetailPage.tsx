@@ -8,6 +8,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Tabs } from '../../components/ui/Tabs'
+import { SectionNav } from '../../components/ui/SectionNav'
 import { Card } from '../../components/ui/Card'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { Alert } from '../../components/ui/Alert'
@@ -48,32 +49,53 @@ export function ComputerDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
-  const tabs = useMemo(
-    () => [
-      { key: 'general' as TabKey, label: 'General' },
-      { key: 'hardware' as TabKey, label: 'Hardware' },
-      { key: 'os' as TabKey, label: 'Operating System' },
-      { key: 'security' as TabKey, label: 'Security' },
-      { key: 'applications' as TabKey, label: 'Applications', count: c?.apps?.length },
-      { key: 'profiles' as TabKey, label: 'Profiles', count: c?.profiles?.length },
-      { key: 'extension-attributes' as TabKey, label: 'Extension Attributes', count: c?.extension_attributes?.length },
-      { key: 'local-users' as TabKey, label: 'Local Users', count: c?.local_users?.length },
-      { key: 'groups' as TabKey, label: 'Groups', count: c?.groups?.length },
-      { key: 'policy-logs' as TabKey, label: 'Policy Logs' },
-      { key: 'app-installs' as TabKey, label: 'App Installs' },
-      { key: 'restricted-events' as TabKey, label: 'Restricted Events' },
-      { key: 'tasks' as TabKey, label: 'Tasks' },
-      { key: 'commands' as TabKey, label: 'MDM Commands' },
-      { key: 'timeline' as TabKey, label: 'Timeline' },
-      { key: 'logs' as TabKey, label: 'Logs' },
-      { key: 'updates' as TabKey, label: 'Updates' },
-      { key: 'compliance' as TabKey, label: 'Compliance' },
-      { key: 'onboarding' as TabKey, label: 'Onboarding' },
-      { key: 'management' as TabKey, label: 'Management' },
-      ...(shellEnabled && isAdmin && c?.agent_enrolled ? [{ key: 'shell' as TabKey, label: 'Shell', icon: <TerminalSquare /> }] : []),
-    ],
+  // Jamf-style record: three top tabs, each with a short list of sections.
+  const sections = useMemo(
+    () => ({
+      inventory: [
+        {
+          items: [
+            { key: 'general', label: 'General' },
+            { key: 'hardware', label: 'Hardware' },
+            { key: 'os', label: 'Operating system' },
+            { key: 'security', label: 'Security' },
+            { key: 'applications', label: 'Applications', count: c?.apps?.length },
+            { key: 'profiles', label: 'Profiles', count: c?.profiles?.length },
+            { key: 'extension-attributes', label: 'Extension attributes', count: c?.extension_attributes?.length },
+            { key: 'local-users', label: 'Local users', count: c?.local_users?.length },
+            { key: 'groups', label: 'Groups', count: c?.groups?.length },
+          ],
+        },
+      ],
+      management: [
+        {
+          items: [
+            { key: 'management', label: 'Actions' },
+            { key: 'updates', label: 'Software updates' },
+            { key: 'compliance', label: 'Compliance' },
+            { key: 'onboarding', label: 'Onboarding' },
+            ...(shellEnabled && isAdmin && c?.agent_enrolled ? [{ key: 'shell', label: 'Shell', icon: <TerminalSquare /> }] : []),
+          ],
+        },
+      ],
+      history: [
+        {
+          items: [
+            { key: 'timeline', label: 'Timeline' },
+            { key: 'policy-logs', label: 'Policy logs' },
+            { key: 'app-installs', label: 'App installs' },
+            { key: 'tasks', label: 'Agent tasks' },
+            { key: 'commands', label: 'MDM commands' },
+            { key: 'restricted-events', label: 'Restricted software' },
+            { key: 'logs', label: 'Agent logs' },
+          ],
+        },
+      ],
+    }),
     [c, shellEnabled, isAdmin],
   )
+  type Area = keyof typeof sections
+  const area: Area = (Object.keys(sections) as Area[]).find((k) => sections[k][0].items.some((i) => i.key === active)) ?? 'inventory'
 
   const updateInventory = async () => {
     setRefreshing(true)
@@ -164,8 +186,19 @@ export function ComputerDetailPage() {
         }
       />
       <ComputerHealthStrip computerId={c.id} className="mb-5" />
-      <Tabs items={tabs} value={active} onChange={setTab} className="mb-5" />
-      <Card>
+      <Tabs
+        items={[
+          { key: 'inventory', label: 'Inventory' },
+          { key: 'management', label: 'Management' },
+          { key: 'history', label: 'History' },
+        ]}
+        value={area}
+        onChange={(k) => setTab(sections[k as Area][0].items[0].key as TabKey)}
+        className="mb-5"
+      />
+      <div className="flex flex-col gap-6 lg:flex-row">
+      <SectionNav label={`${area} sections`} groups={sections[area]} value={active} onChange={(k) => setTab(k as TabKey)} />
+      <Card className="min-w-0 flex-1">
         {active === 'general' && <GeneralTab c={c} />}
         {active === 'hardware' && <HardwareTab c={c} />}
         {active === 'os' && <OSTab c={c} />}
@@ -192,6 +225,7 @@ export function ComputerDetailPage() {
           </div>
         )}
       </Card>
+      </div>
       <ConfirmDialog
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}

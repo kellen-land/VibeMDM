@@ -4,7 +4,7 @@ MDM rests on public-key infrastructure. Four certificates matter in VibeMDM:
 
 | Certificate | Issued by | Used for | Lifetime | Where in VibeMDM |
 | --- | --- | --- | --- | --- |
-| **APNs MDM push certificate** | Apple (Apple Push Certificates Portal) | Authenticating the server to APNs; its topic identifies your MDM | 1 year | Settings → APNs |
+| **APNs MDM push certificate** | Apple (Apple Push Certificates Portal) | Authenticating the server to APNs; its topic identifies your MDM | 1 year | Settings → Push certificate |
 | **SCEP CA** | VibeMDM itself (generated on first boot) | Signing device identity certificates | 10 years | Settings → SCEP CA |
 | **Device identity certificate** | The SCEP CA | Authenticating each device on `/mdm` (`Mdm-Signature`) | 3 years | Issued at enrollment |
 | **TLS server certificate** | A public CA (e.g. Let's Encrypt) | HTTPS for devices, browsers and agents | 90 days (Let's Encrypt) | Your reverse proxy (e.g. Nginx Proxy Manager) |
@@ -13,7 +13,7 @@ Two optional ones:
 
 | Certificate | Purpose | Where |
 | --- | --- | --- |
-| **Profile-signing identity** | Signs the enrollment profile so macOS shows it as verified | Settings → General (`signing_cert_pem`, `signing_key_pem`) |
+| **Profile-signing identity** | Signs the enrollment profile so macOS shows it as verified | Settings → Profile signing (`signing_cert_pem`, `signing_key_pem`) |
 | **FileVault escrow certificate** | Macs encrypt their FileVault recovery key to it | Generated on first boot ([Chapter 11](11-filevault.md)) |
 
 ## 3.1 The APNs push certificate
@@ -38,7 +38,7 @@ maintainers, as the signing vendor. VibeMDM automates its side of the exchange.
 ### Path A: mdmcert.download (recommended)
 
 1. Register your e-mail address at mdmcert.download (one-time).
-2. In the console, open **Settings → APNs** and choose **Generate request**. Enter that e-mail address and tick
+2. In the console, open **Settings → Push certificate** and choose **Generate request**. Enter that e-mail address and tick
    **Submit**. VibeMDM creates a private key and CSR, stores the key (sealed if the encryption key is set) and
    posts the request to mdmcert.download.
    API: `POST /api/v1/settings/apns/request` `{"email": "you@example.com", "submit": true}`.
@@ -51,7 +51,7 @@ maintainers, as the signing vendor. VibeMDM automates its side of the exchange.
 5. Back in VibeMDM, choose **Upload Apple's certificate**. VibeMDM pairs it with the pending private key, checks
    that they match and stores both.
    API: `PUT /api/v1/settings/apns/certificate` `{"cert_pem": "-----BEGIN CERTIFICATE-----…"}`.
-6. **Settings → APNs** now shows the topic, subject and expiry (`GET /api/v1/settings/apns`). New enrollment
+6. **Settings → Push certificate** now shows the topic, subject and expiry (`GET /api/v1/settings/apns`). New enrollment
    profiles embed the topic automatically.
 
 > Use a **shared, documented Apple Account** that your organization controls (for example `mdm-push@example.com`),
@@ -164,7 +164,7 @@ To sign the enrollment profile:
 
 1. Get a code- or S/MIME-capable certificate and its private key. Any identity that chains to a root macOS trusts
    gives the "Verified" label. A certificate from your own CA shows as verified only on Macs that trust that CA.
-2. In **Settings → General**, paste the certificate PEM (the leaf first, then any intermediates) and the private
+2. In **Settings → Profile signing**, paste the certificate PEM (the leaf first, then any intermediates) and the private
    key PEM.
    API: `PUT /api/v1/settings` `{"signing_cert_pem": "…", "signing_key_pem": "…"}`. To remove: `{"clear_signing": true}`.
 3. Download a new enrollment profile; it is now a PKCS#7 SignedData file.

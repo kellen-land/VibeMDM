@@ -64,8 +64,8 @@ function ArchivesTab() {
         description={
           <>
             Daily gzipped NDJSON files written to the server&apos;s data volume before old entries are pruned. Retention and archiving are set under{' '}
-            <Link to="/settings" className="text-ink hover:underline">
-              Settings → General
+            <Link to="/settings/logging" className="text-ink hover:underline">
+              Settings → Logging
             </Link>
             . Downloads are audited.
           </>

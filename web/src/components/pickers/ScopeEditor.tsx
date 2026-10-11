@@ -49,13 +49,13 @@ function SelectionEditor({ value, onChange, disabled, vocab, withUsers, prefix }
         <GroupPicker value={value.group_ids} onChange={(ids) => set({ group_ids: ids })} disabled={disabled} />
       </Field>
       <Field label={`${prefix} buildings`}>
-        <NamedPicker value={value.buildings} onChange={(v) => set({ buildings: v })} options={vocab.buildingOpts} loading={vocab.buildings.isPending} disabled={disabled} icon={<Building2 />} placeholder="Search buildings…" emptyText="No buildings defined. Add them under Settings → Network Organization." />
+        <NamedPicker value={value.buildings} onChange={(v) => set({ buildings: v })} options={vocab.buildingOpts} loading={vocab.buildings.isPending} disabled={disabled} icon={<Building2 />} placeholder="Search buildings…" emptyText="No buildings defined. Add them under Settings → Buildings and networks." />
       </Field>
       <Field label={`${prefix} departments`}>
-        <NamedPicker value={value.departments} onChange={(v) => set({ departments: v })} options={vocab.departmentOpts} loading={vocab.departments.isPending} disabled={disabled} icon={<Briefcase />} placeholder="Search departments…" emptyText="No departments defined. Add them under Settings → Network Organization." />
+        <NamedPicker value={value.departments} onChange={(v) => set({ departments: v })} options={vocab.departmentOpts} loading={vocab.departments.isPending} disabled={disabled} icon={<Briefcase />} placeholder="Search departments…" emptyText="No departments defined. Add them under Settings → Buildings and networks." />
       </Field>
       <Field label={`${prefix} network segments`} hint="Matched against the computer's last reported IP address.">
-        <NamedPicker value={value.network_segments} onChange={(v) => set({ network_segments: v })} options={vocab.segmentOpts} loading={vocab.segments.isPending} disabled={disabled} icon={<Network />} placeholder="Search network segments…" emptyText="No network segments defined. Add them under Settings → Network Organization." />
+        <NamedPicker value={value.network_segments} onChange={(v) => set({ network_segments: v })} options={vocab.segmentOpts} loading={vocab.segments.isPending} disabled={disabled} icon={<Network />} placeholder="Search network segments…" emptyText="No network segments defined. Add them under Settings → Buildings and networks." />
       </Field>
       {withUsers && (
         <Field label={`${prefix} users`} hint="Console or assigned username. Press Enter after each one.">
@@ -122,7 +122,7 @@ export function ScopeEditor({ value: raw, onChange, disabled }: { value: Scope; 
               <ChipInput value={value.limitations.users} onChange={(users) => set({ limitations: { ...value.limitations, users } })} disabled={disabled} icon={<UserRound />} placeholder="e.g. jappleseed" mono />
             </Field>
             <Field label="Network segments" hint="Only computers whose last IP falls inside one of these ranges stay in scope.">
-              <NamedPicker value={value.limitations.network_segments} onChange={(network_segments) => set({ limitations: { ...value.limitations, network_segments } })} options={vocab.segmentOpts} loading={vocab.segments.isPending} disabled={disabled} icon={<Network />} placeholder="Search network segments…" emptyText="No network segments defined. Add them under Settings → Network Organization." />
+              <NamedPicker value={value.limitations.network_segments} onChange={(network_segments) => set({ limitations: { ...value.limitations, network_segments } })} options={vocab.segmentOpts} loading={vocab.segments.isPending} disabled={disabled} icon={<Network />} placeholder="Search network segments…" emptyText="No network segments defined. Add them under Settings → Buildings and networks." />
             </Field>
           </div>
         </FormSection>

@@ -289,7 +289,7 @@ func (c *checks) signingCert(ctx context.Context) ([]Finding, error) {
 	if err != nil || s.SigningCertPEM == "" {
 		return nil, err
 	}
-	fix := link("settings", "Replace the signing certificate", "", "/settings/general")
+	fix := link("settings", "Replace the signing certificate", "", "/settings/signing")
 	cert, err := parseCert(s.SigningCertPEM)
 	if err != nil {
 		return []Finding{{ObjectType: "server", ObjectID: "signing_cert", ObjectName: "Profile signing certificate", Severity: Warning,
@@ -390,7 +390,7 @@ func (c *checks) mcpTransport(ctx context.Context) ([]Finding, error) {
 		Detail:  "AI agents send VibeMDM API tokens with every request. Put the server behind TLS, or turn the MCP server off.",
 		Facts:   map[string]any{"allow_writes": s.MCPAllowWrites},
 		Remediations: []Remediation{
-			link("settings", "Open settings", "", "/settings/general"),
+			link("settings", "Open settings", "", "/settings/ai"),
 			{ID: "disable", Label: "Turn the MCP server off", Description: "Stops serving /mcp until it is re-enabled.",
 				Run: func(ctx context.Context) error {
 					s, err := c.d.St.GetSettings(ctx)
@@ -419,7 +419,7 @@ func (c *checks) remoteShell(ctx context.Context) ([]Finding, error) {
 		Summary: "Remote shell is enabled without HTTPS",
 		Detail:  "Root shell sessions travel over an unencrypted WebSocket. Put the server behind TLS or turn remote shell off.",
 		Remediations: []Remediation{
-			link("settings", "Open settings", "", "/settings/general"),
+			link("settings", "Open settings", "", "/settings/remote-shell"),
 			{ID: "disable", Label: "Turn remote shell off", Description: "Disables new remote shell sessions server-wide.",
 				Run: func(ctx context.Context) error {
 					s, err := c.d.St.GetSettings(ctx)

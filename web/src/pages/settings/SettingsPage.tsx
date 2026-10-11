@@ -1,9 +1,9 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { Tabs } from '../../components/ui/Tabs'
 import { Alert } from '../../components/ui/Alert'
-import { GeneralSettings } from './GeneralSettings'
+import { SectionNav } from '../../components/ui/SectionNav'
+import { GeneralSettings, type GeneralSection } from './GeneralSettings'
 import { APNsSettings } from './APNsSettings'
 import { SCEPSettings } from './SCEPSettings'
 import { UsersSettings } from './UsersSettings'
@@ -12,47 +12,82 @@ import { AuditLog } from './AuditLog'
 import { NetworkOrgSettings } from './NetworkOrgSettings'
 import { WebhooksSettings } from './WebhooksSettings'
 
-const tabs = ['general', 'network', 'apns', 'scep', 'webhooks', 'users', 'tokens', 'audit'] as const
-type Tab = (typeof tabs)[number]
+interface Item {
+  key: string
+  label: string
+  adminOnly?: boolean
+}
+
+/** Settings are grouped like Jamf Pro's: one short list on the left, one panel at a time. */
+const groups: { heading: string; items: Item[] }[] = [
+  {
+    heading: 'Server',
+    items: [
+      { key: 'general', label: 'General' },
+      { key: 'logging', label: 'Logging' },
+      { key: 'audit', label: 'Audit log', adminOnly: true },
+    ],
+  },
+  {
+    heading: 'Enrollment',
+    items: [
+      { key: 'enrollment', label: 'Enrollment' },
+      { key: 'apns', label: 'Push certificate' },
+      { key: 'scep', label: 'SCEP CA' },
+      { key: 'signing', label: 'Profile signing' },
+    ],
+  },
+  { heading: 'Organization', items: [{ key: 'network', label: 'Buildings and networks' }] },
+  {
+    heading: 'Access',
+    items: [
+      { key: 'users', label: 'Users', adminOnly: true },
+      { key: 'tokens', label: 'API tokens', adminOnly: true },
+      { key: 'remote-shell', label: 'Remote shell', adminOnly: true },
+    ],
+  },
+  {
+    heading: 'Integrations',
+    items: [
+      { key: 'webhooks', label: 'Webhooks', adminOnly: true },
+      { key: 'ai', label: 'AI assistants (MCP)' },
+    ],
+  },
+]
+const all = groups.flatMap((g) => g.items)
+const generalSections: readonly string[] = ['general', 'enrollment', 'remote-shell', 'ai', 'logging', 'signing']
 
 export function SettingsPage() {
   const { tab } = useParams()
   const navigate = useNavigate()
   const { isAdmin } = useAuth()
-  const active: Tab = (tabs as readonly string[]).includes(tab ?? '') ? (tab as Tab) : 'general'
-  const adminOnly = active === 'users' || active === 'tokens' || active === 'audit' || active === 'webhooks'
+  const active = all.find((i) => i.key === tab) ?? all[0]
+  const go = (key: string) => navigate(`/settings${key === 'general' ? '' : `/${key}`}`, { replace: true })
+  const visible = (i: Item) => isAdmin || !i.adminOnly
+
   return (
     <>
-      <PageHeader title="Settings" description="Server configuration, network organization, certificates, webhooks, console users and audit history." />
-      <Tabs
-        className="mb-5"
-        value={active}
-        onChange={(t) => navigate(`/settings${t === 'general' ? '' : `/${t}`}`, { replace: true })}
-        items={[
-          { key: 'general', label: 'General' },
-          { key: 'network', label: 'Network Organization' },
-          { key: 'apns', label: 'APNs Push Certificate' },
-          { key: 'scep', label: 'SCEP CA' },
-          { key: 'webhooks', label: 'Webhooks', disabled: !isAdmin },
-          { key: 'users', label: 'Users', disabled: !isAdmin },
-          { key: 'tokens', label: 'API Tokens', disabled: !isAdmin },
-          { key: 'audit', label: 'Audit Log', disabled: !isAdmin },
-        ]}
-      />
-      {adminOnly && !isAdmin ? (
-        <Alert tone="info">This section is only available to administrators.</Alert>
-      ) : (
-        <>
-          {active === 'general' && <GeneralSettings />}
-          {active === 'network' && <NetworkOrgSettings />}
-          {active === 'apns' && <APNsSettings />}
-          {active === 'webhooks' && <WebhooksSettings />}
-          {active === 'scep' && <SCEPSettings />}
-          {active === 'users' && <UsersSettings />}
-          {active === 'tokens' && <TokensSettings />}
-          {active === 'audit' && <AuditLog />}
-        </>
-      )}
+      <PageHeader title="Settings" />
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <SectionNav label="Settings sections" groups={groups.map((g) => ({ heading: g.heading, items: g.items.filter(visible) }))} value={active.key} onChange={go} />
+        <div className="min-w-0 flex-1">
+          {active.adminOnly && !isAdmin ? (
+            <Alert tone="info">This section is only available to administrators.</Alert>
+          ) : generalSections.includes(active.key) ? (
+            <GeneralSettings key={active.key} section={active.key as GeneralSection} />
+          ) : (
+            <>
+              {active.key === 'network' && <NetworkOrgSettings />}
+              {active.key === 'apns' && <APNsSettings />}
+              {active.key === 'webhooks' && <WebhooksSettings />}
+              {active.key === 'scep' && <SCEPSettings />}
+              {active.key === 'users' && <UsersSettings />}
+              {active.key === 'tokens' && <TokensSettings />}
+              {active.key === 'audit' && <AuditLog />}
+            </>
+          )}
+        </div>
+      </div>
     </>
   )
 }

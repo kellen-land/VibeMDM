@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, Clock, Cpu, Laptop, ListChecks, Radio, ShieldCheck, Timer, Wifi, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, Clock, Laptop, Radio, type LucideIcon } from 'lucide-react'
 import { useDashboard } from '../api/queries'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
@@ -8,6 +9,7 @@ import { LoadingBlock } from '../components/ui/Spinner'
 import { BarList } from '../components/charts/BarList'
 import { OutcomeBar } from '../components/charts/OutcomeBar'
 import { Table } from '../components/ui/Table'
+import { Tabs } from '../components/ui/Tabs'
 import { RelativeTime } from '../components/ui/RelativeTime'
 import { StatusBadge, Badge } from '../components/ui/Badge'
 import { compactNumber, titleCase } from '../lib/format'
@@ -51,6 +53,7 @@ export function DashboardPage() {
   const dash = useDashboard()
   const navigate = useNavigate()
   const d = dash.data
+  const [recent, setRecent] = useState<'checkins' | 'policies' | 'tasks'>('checkins')
 
   return (
     <>
@@ -60,16 +63,29 @@ export function DashboardPage() {
       {d && (
         <div className="flex flex-col gap-6">
           <HealthCard />
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-            <StatTile label="Computers" value={d.computers} icon={Laptop} to="/computers" />
-            <StatTile label="MDM enrolled" value={d.mdm_enrolled} icon={ShieldCheck} />
-            <StatTile label="Agent installed" value={d.agent_enrolled} icon={Cpu} />
-            <StatTile label="Agents online" value={d.agents_online ?? 0} icon={Wifi} />
-            <StatTile label="Checked in (24h)" value={d.checked_in_24h} icon={Radio} />
-            <StatTile label="Not seen in 30 days" value={d.not_seen_30d} icon={Clock} tone="warn" />
-            <StatTile label="Pending MDM commands" value={d.pending_commands} icon={Timer} to="/activity/commands" />
-            <StatTile label="Pending agent tasks" value={d.pending_tasks} icon={ListChecks} to="/activity/tasks" />
-            <StatTile label="Failed policies (7d)" value={d.failed_policies_7d} icon={AlertTriangle} to="/activity/policy-logs" tone="bad" />
+          <div>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatTile label="Computers" value={d.computers} icon={Laptop} to="/computers" />
+              <StatTile label="Checked in (24h)" value={d.checked_in_24h} icon={Radio} />
+              <StatTile label="Not seen in 30 days" value={d.not_seen_30d} icon={Clock} tone="warn" />
+              <StatTile label="Failed policies (7d)" value={d.failed_policies_7d} icon={AlertTriangle} to="/activity/policy-logs" tone="bad" />
+            </div>
+            <p className="mt-3 text-xs text-ink-muted">
+              {d.mdm_enrolled} with MDM · {d.agent_enrolled} with the agent · {d.agents_online ?? 0} online now
+              {d.pending_commands + d.pending_tasks > 0 && (
+                <>
+                  {' · '}
+                  <Link to="/activity/commands" className="hover:text-ink hover:underline">
+                    {d.pending_commands} MDM {d.pending_commands === 1 ? 'command' : 'commands'}
+                  </Link>{' '}
+                  and{' '}
+                  <Link to="/activity/tasks" className="hover:text-ink hover:underline">
+                    {d.pending_tasks} agent {d.pending_tasks === 1 ? 'task' : 'tasks'}
+                  </Link>{' '}
+                  waiting
+                </>
+              )}
+            </p>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
@@ -107,16 +123,27 @@ export function DashboardPage() {
             </Card>
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-2">
-            <Card>
-              <CardHeader
-                title="Recent check-ins"
-                actions={
-                  <Link to="/computers" className="text-xs text-accent-700 hover:underline dark:text-accent-300">
-                    View all
-                  </Link>
-                }
+          <Card>
+            <CardHeader
+              title="Recent activity"
+              actions={
+                <Link to={recent === 'checkins' ? '/computers' : recent === 'policies' ? '/activity/policy-logs' : '/activity/tasks'} className="text-xs text-accent-700 hover:underline dark:text-accent-300">
+                  View all
+                </Link>
+              }
+            />
+            <div className="px-4 pt-2">
+              <Tabs
+                items={[
+                  { key: 'checkins', label: 'Check-ins' },
+                  { key: 'policies', label: 'Policy runs' },
+                  { key: 'tasks', label: 'Agent tasks' },
+                ]}
+                value={recent}
+                onChange={(k) => setRecent(k as typeof recent)}
               />
+            </div>
+            {recent === 'checkins' && (
               <Table<Computer>
                 rows={d.recent_checkins}
                 rowKey={(c) => c.id}
@@ -130,16 +157,8 @@ export function DashboardPage() {
                   { key: 'last', header: 'Last check-in', render: (c) => <RelativeTime value={latest(c.agent_last_checkin, c.mdm_last_checkin)} className="text-ink-muted" /> },
                 ]}
               />
-            </Card>
-            <Card>
-              <CardHeader
-                title="Recent policy runs"
-                actions={
-                  <Link to="/activity/policy-logs" className="text-xs text-accent-700 hover:underline dark:text-accent-300">
-                    View all
-                  </Link>
-                }
-              />
+            )}
+            {recent === 'policies' && (
               <Table<PolicyLog>
                 rows={d.recent_policy_logs}
                 rowKey={(l) => l.id}
@@ -154,16 +173,8 @@ export function DashboardPage() {
                   { key: 'at', header: 'When', render: (l) => <RelativeTime value={l.completed_at ?? l.created_at} className="text-ink-muted" /> },
                 ]}
               />
-            </Card>
-            <Card className="xl:col-span-2">
-              <CardHeader
-                title="Recent agent tasks"
-                actions={
-                  <Link to="/activity/tasks" className="text-xs text-accent-700 hover:underline dark:text-accent-300">
-                    View all
-                  </Link>
-                }
-              />
+            )}
+            {recent === 'tasks' && (
               <Table<AgentTask>
                 rows={d.recent_tasks}
                 rowKey={(t) => t.id}
@@ -178,8 +189,8 @@ export function DashboardPage() {
                   { key: 'at', header: 'When', render: (t) => <RelativeTime value={t.completed_at ?? t.created_at} className="text-ink-muted" /> },
                 ]}
               />
-            </Card>
-          </div>
+            )}
+          </Card>
         </div>
       )}
     </>

@@ -54,7 +54,7 @@ docker compose up -d --build     # serves plain HTTP on host port 13031 for the 
 
 Configure the proxy host (below), open `https://mdm.example.com`, sign in as `admin`, then:
 
-1. **Settings → APNs** – obtain an Apple push certificate (see [docs/apns.md](docs/apns.md)). Without it Macs cannot enroll.
+1. **Settings → Push certificate** – obtain an Apple push certificate (see [docs/apns.md](docs/apns.md)). Without it Macs cannot enroll.
 2. **Enrollment** – create an invitation link, or copy the install command.
 3. On a Mac: open the enrollment link, install the profile, approve it in *System Settings → Device Management*, and run the agent install command in Terminal.
 
@@ -93,7 +93,7 @@ No Mac handy? Point the simulator at the server — it performs real SCEP + MDM 
 
 ```bash
 go run ./cmd/vibemdm-sim -server http://localhost:8080 -n 5 \
-    -scep-challenge "$(Settings → SCEP CA → challenge)" -token "$(Settings → General → agent enrollment secret)"
+    -scep-challenge "$(Settings → SCEP CA → challenge)" -token "$(Settings → Enrollment → agent enrollment secret)"
 ```
 
 Upload any certificate that has a `UID` attribute as the "push certificate" to unlock enrollment-profile generation
