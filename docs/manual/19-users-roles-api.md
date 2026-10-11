@@ -88,6 +88,7 @@ Base path `/api/v1`. Lists return `{"items": [...], "total": n}` and accept `lim
 | Restricted software | `GET/POST /restricted-software`, `GET /restricted-software/events`, `GET/PUT/DELETE /restricted-software/{id}` |
 | Software updates | `GET/POST /updates/plans`, `GET/PUT/DELETE /updates/plans/{id}`, `GET /updates/overview`, `GET /updates/catalog`, `GET/PUT /updates/super`, `GET /updates/super/status`, `POST /updates/super/install` |
 | FileVault | `GET/PUT /filevault`, `POST /filevault/check` |
+| Local admin passwords | `GET/PUT /laps`, `GET /computers/{id}/laps`, `POST /computers/{id}/laps/{reveal,rotate}` |
 | Compliance | `GET /compliance/catalog`, `GET /compliance/catalog/rules`, `GET /compliance/catalog/rules/{rule}`, `GET/POST /compliance/baselines`, `GET/PUT/DELETE /compliance/baselines/{id}`, `GET /compliance/baselines/{id}/{report,scans,profile,export.csv}`, `GET /compliance/baselines/{id}/computers/{cid}`, `POST /compliance/baselines/{id}/scan` |
 | Identity | `GET/PUT /identity/xcreds` |
 | Onboarding | `GET/POST /onboarding/workflows`, `GET/PUT/DELETE /onboarding/workflows/{id}`, `GET /onboarding/workflows/{id}/runs`, `POST /onboarding/workflows/{id}/run` |
@@ -193,6 +194,8 @@ The Health check **Failing webhooks** opens when an enabled hook's last 5 delive
 | `ShellSessionOpened` | Remote shell opened | `computer_id`, `computer`, `actor`, `ip`, `session` |
 | `FileVaultKeyEscrowed` | A new PRK escrowed | `computer_id`, `computer`, `serial`, `fingerprint` |
 | `FileVaultKeyViewed` | An admin revealed a key | `computer_id`, `computer`, `serial`, `actor`, `reason` |
+| `LAPSPasswordRotated` | A new local admin password was applied and escrowed | `computer_id`, `computer`, `serial` |
+| `LAPSPasswordViewed` | An admin revealed a local admin password | `computer_id`, `computer`, `serial`, `actor`, `reason` |
 | `HealthIssueOpened` / `HealthIssueResolved` | [§15.6](15-health.md#156-webhooks) | `finding_id`, `check_id`, `check`, `severity`, `summary`, `object_type`, `object_id`, `object_name` |
 | `Test` | `POST /webhooks/test` | `message`, `fired_by`, `at` |
 

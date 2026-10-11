@@ -158,4 +158,11 @@ Viewers can never reveal keys, and MCP tools never return them.
 >   later, such as mobile or newly created accounts, so they can unlock FileVault. Without it, accounts created by
 >   scripts or by tools such as XCreds may end up without a Secure Token. See [Chapter 4](04-enrollment.md#410-study-notes-supervision-user-approved-mdm-activation-lock-bootstrap-token).
 
+## 11.6 Local administrator passwords (LAPS)
+
+The same escrow pattern also manages a local administrator account's password: a random password per Mac, rotated
+on a schedule and after each view, sealed on the server, and revealed to admins with an audited reason. It lives
+under **Security → Local Admin Passwords** and is documented in [docs/laps.md](../laps.md), including the
+stage → apply → verify → commit protocol that keeps the Mac and the server in agreement when something fails.
+
 Next: [Chapter 12 — Compliance](12-compliance.md).

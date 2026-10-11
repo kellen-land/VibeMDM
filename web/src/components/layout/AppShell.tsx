@@ -99,7 +99,7 @@ const navGroups: { heading: string; items: NavItem[] }[] = [
       { to: '/onboarding', label: 'Onboarding', icon: HandHelping },
     ],
   },
-  { heading: 'System', items: [{ to: '/settings', label: 'Settings', icon: Settings }] },
+  { heading: '', items: [{ to: '/settings', label: 'Settings', icon: Settings }] },
 ]
 
 /** Open critical + warning findings; hidden when zero so a healthy system stays quiet. */
@@ -192,8 +192,8 @@ export function AppShell() {
         </button>
       </div>
       <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
-        {navGroups.map((g) => (
-          <div key={g.heading || 'top'}>
+        {navGroups.map((g, gi) => (
+          <div key={g.heading || `top-${gi}`}>
             {g.heading && (
               <button
                 type="button"

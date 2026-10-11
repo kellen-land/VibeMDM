@@ -90,6 +90,7 @@ There are **26** built-in checks (`internal/health/checks.go`).
 | `security.remote_shell_transport` | Remote shell over plain HTTP | warning | Remote shell enabled while the server URL is not HTTPS | Link: settings; *Turn remote shell off* (not safe) |
 | `security.device_posture` | Security features disabled | warning | SIP or Gatekeeper off on a Mac | Link: computer |
 | `security.filevault_key_missing` | FileVault key not escrowed | warning | FileVault on, escrow profile installed > 24 h, no key | *Generate a new key with Escrow Buddy* (**safe**, needs the agent; at most once a day); link |
+| `security.laps_not_current` | Local admin password not current | warning | A Mac in the LAPS scope has no password, a failing rotation, an unconfirmed password for over an hour, or a rotation a day overdue | *Rotate now* (**safe**, needs the agent; at most once an hour); links |
 | `security.filevault_escrow_profile` | FileVault escrow not configured | warning | Macs with FileVault on and no key are not covered by the escrow profile | Link: FileVault |
 | `security.compliance_drift` | Compliance drift | warning | Rules that passed (or were remediated) now fail on a Mac | *Rescan affected Macs* (**safe**); link to the report |
 | `security.compliance_scan_failures` | Compliance scans failing | warning | ≥ 3 scans of a baseline failed or expired in 48 h | Link: report |
