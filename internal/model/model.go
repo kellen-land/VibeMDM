@@ -1214,17 +1214,21 @@ type MobileDevice struct {
 	DeviceInfo            map[string]any `json:"device_info"`
 	SecurityInfo          map[string]any `json:"security_info"`
 	LastInventoryAt       *time.Time     `json:"last_inventory_at"`
-	AssetTag              string         `json:"asset_tag"`
-	Site                  string         `json:"site"`
-	Department            string         `json:"department"`
-	Building              string         `json:"building"`
-	Room                  string         `json:"room"`
-	AssignedUser          string         `json:"assigned_user"`
-	AssignedRealName      string         `json:"assigned_real_name"`
-	AssignedEmail         string         `json:"assigned_email"`
-	Notes                 string         `json:"notes"`
-	CreatedAt             time.Time      `json:"created_at"`
-	UpdatedAt             time.Time      `json:"updated_at"`
+	// Location is the last DeviceLocation answer (only available in Lost Mode).
+	Location *DeviceLocation `json:"location"`
+	// ActivationLockBypassAt is when the bypass code was collected (nil: none stored).
+	ActivationLockBypassAt *time.Time `json:"activation_lock_bypass_at"`
+	AssetTag               string     `json:"asset_tag"`
+	Site                   string     `json:"site"`
+	Department             string     `json:"department"`
+	Building               string     `json:"building"`
+	Room                   string     `json:"room"`
+	AssignedUser           string     `json:"assigned_user"`
+	AssignedRealName       string     `json:"assigned_real_name"`
+	AssignedEmail          string     `json:"assigned_email"`
+	Notes                  string     `json:"notes"`
+	CreatedAt              time.Time  `json:"created_at"`
+	UpdatedAt              time.Time  `json:"updated_at"`
 }
 
 // MobileDeviceApp is an app installed on a mobile device.
@@ -1256,4 +1260,12 @@ type MobileExtensionAttribute struct {
 	PopupChoices []string  `json:"popup_choices"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// DeviceLocation is a position reported by a device in Lost Mode.
+type DeviceLocation struct {
+	Latitude  float64   `json:"latitude"`
+	Longitude float64   `json:"longitude"`
+	Accuracy  *float64  `json:"accuracy"` // meters
+	At        time.Time `json:"at"`
 }

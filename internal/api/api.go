@@ -409,6 +409,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("GET /api/v1/mobile-devices/{id}/commands", h.mobileDeviceCommands)
 	r("POST /api/v1/mobile-devices/{id}/update-inventory", h.mobileUpdateInventory)
 	r("PUT /api/v1/mobile-devices/{id}/ea-values/{ea}", h.setMobileEAValue)
+	adm("POST /api/v1/mobile-devices/{id}/actions", h.mobileCommand)
+	adm("POST /api/v1/mobile-devices/{id}/activation-lock-bypass/reveal", h.revealActivationLockBypass)
 	r("GET /api/v1/mobile-extension-attributes", h.listMobileEAs)
 	adm("POST /api/v1/mobile-extension-attributes", h.saveMobileEA)
 	adm("PUT /api/v1/mobile-extension-attributes/{id}", h.saveMobileEA)

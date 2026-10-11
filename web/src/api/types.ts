@@ -2009,6 +2009,10 @@ export interface MobileDevice {
   device_info: Record<string, unknown>
   security_info: Record<string, unknown>
   last_inventory_at: string | null
+  /** Last DeviceLocation answer (only available in Lost Mode). */
+  location: { latitude: number; longitude: number; accuracy: number | null; at: string } | null
+  /** When the Activation Lock bypass code was collected (null: none stored). */
+  activation_lock_bypass_at: string | null
   asset_tag: string
   site: string
   department: string

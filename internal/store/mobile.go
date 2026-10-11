@@ -182,7 +182,9 @@ c.capacity_gb, c.available_gb, c.battery_level, c.wifi_mac, c.bluetooth_mac, c.i
 c.is_roaming, c.is_supervised, c.is_shared_ipad, c.activation_lock_enabled, c.find_my_enabled, c.lost_mode_enabled, c.passcode_present,
 c.passcode_compliant, c.hardware_encryption, c.last_backup_at, c.mdm_enrolled, c.mdm_enrolled_at, c.mdm_last_checkin, c.mdm_unenrolled_at,
 c.device_info, c.security_info, c.last_inventory_at, c.asset_tag, c.site, c.department, c.building, c.room, c.assigned_user,
-c.assigned_real_name, c.assigned_email, c.notes, c.created_at, c.updated_at`
+c.assigned_real_name, c.assigned_email, c.notes, c.created_at, c.updated_at,
+c.last_latitude, c.last_longitude, c.last_location_accuracy, c.last_location_at,
+(SELECT al.collected_at FROM mobile_device_activation_lock al WHERE al.mobile_device_id = c.id)`
 
 func scanMobile(row interface{ Scan(...any) error }) (*model.MobileDevice, error) {
 	var d model.MobileDevice
@@ -191,14 +193,24 @@ func scanMobile(row interface{ Scan(...any) error }) (*model.MobileDevice, error
 	var hwEnc sql.NullInt64
 	var backup, enrAt, last, unenr, inv sql.NullTime
 	var devInfo, secInfo db.JSON[map[string]any]
+	var lat, lon, acc sql.NullFloat64
+	var locAt, alAt sql.NullTime
 	err := row.Scan(&d.ID, &d.UDID, &d.SerialNumber, &d.Name, &d.DeviceType, &d.Model, &d.ModelName, &d.ProductName, &d.OSVersion, &d.OSBuild,
 		&capGB, &availGB, &battery, &d.WiFiMAC, &d.BluetoothMAC, &d.IMEI, &d.MEID, &d.PhoneNumber, &d.Carrier, &d.CellularTechnology,
 		&roaming, &sup, &shared, &al, &findMy, &lost, &pcPresent, &pcCompliant, &hwEnc, &backup, &d.MDMEnrolled, &enrAt, &last, &unenr,
 		&devInfo, &secInfo, &inv, &d.AssetTag, &d.Site, &d.Department, &d.Building, &d.Room, &d.AssignedUser,
-		&d.AssignedRealName, &d.AssignedEmail, &d.Notes, &d.CreatedAt, &d.UpdatedAt)
+		&d.AssignedRealName, &d.AssignedEmail, &d.Notes, &d.CreatedAt, &d.UpdatedAt, &lat, &lon, &acc, &locAt, &alAt)
 	if err != nil {
 		return nil, wrapNotFound(err)
 	}
+	if lat.Valid && lon.Valid && locAt.Valid {
+		d.Location = &model.DeviceLocation{Latitude: lat.Float64, Longitude: lon.Float64, At: locAt.Time}
+		if acc.Valid {
+			v := acc.Float64
+			d.Location.Accuracy = &v
+		}
+	}
+	d.ActivationLockBypassAt = db.TimePtr(alAt)
 	f := func(n sql.NullFloat64) *float64 {
 		if !n.Valid {
 			return nil
@@ -791,4 +803,67 @@ func (s *Store) ListMobileEAValues(ctx context.Context, deviceID string) ([]mode
 		out = append(out, v)
 	}
 	return out, rows.Err()
+}
+
+// ---- commands support ----
+
+// MobileUnlockToken returns the UnlockToken NanoMDM stored for a device (nil if none).
+func (s *Store) MobileUnlockToken(ctx context.Context, udid string) ([]byte, error) {
+	var tok []byte
+	err := s.DB.QueryRowContext(ctx, `SELECT unlock_token FROM devices WHERE id = $1`, udid).Scan(&tok)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return tok, err
+}
+
+// SetMobileLocation stores a DeviceLocation answer.
+func (s *Store) SetMobileLocation(ctx context.Context, udid string, lat, lon float64, accuracy *float64) error {
+	_, err := s.DB.ExecContext(ctx, `UPDATE mobile_devices SET last_latitude = $2, last_longitude = $3, last_location_accuracy = $4,
+		last_location_at = now(), updated_at = now() WHERE udid = $1`, udid, lat, lon, accuracy)
+	return err
+}
+
+// SetMobileLostMode records the Lost Mode state after an Enable/DisableLostMode command.
+func (s *Store) SetMobileLostMode(ctx context.Context, udid string, on bool) error {
+	_, err := s.DB.ExecContext(ctx, `UPDATE mobile_devices SET lost_mode_enabled = $2, updated_at = now() WHERE udid = $1`, udid, on)
+	return err
+}
+
+// SaveActivationLockBypass stores a device's Activation Lock bypass code, sealed.
+func (s *Store) SaveActivationLockBypass(ctx context.Context, deviceID, code string) error {
+	sealed, err := s.Box.Seal(code)
+	if err != nil {
+		return err
+	}
+	_, err = s.DB.ExecContext(ctx, `INSERT INTO mobile_device_activation_lock (mobile_device_id, bypass_code_encrypted) VALUES ($1, $2)
+		ON CONFLICT (mobile_device_id) DO UPDATE SET bypass_code_encrypted = EXCLUDED.bypass_code_encrypted, collected_at = now()`, deviceID, sealed)
+	return err
+}
+
+// ActivationLockBypass returns a device's bypass code (ErrNotFound if none).
+func (s *Store) ActivationLockBypass(ctx context.Context, deviceID string) (string, error) {
+	var sealed string
+	if err := s.DB.QueryRowContext(ctx, `SELECT bypass_code_encrypted FROM mobile_device_activation_lock WHERE mobile_device_id::text = $1`, deviceID).Scan(&sealed); err != nil {
+		return "", wrapNotFound(err)
+	}
+	return s.Box.Open(sealed)
+}
+
+// ScrubCommandResult replaces a secret in a stored command result (NanoMDM keeps the raw plist),
+// once VibeMDM has sealed it elsewhere.
+func (s *Store) ScrubCommandResult(ctx context.Context, commandUUID, secret, replacement string) error {
+	if secret == "" {
+		return nil
+	}
+	_, err := s.DB.ExecContext(ctx, `UPDATE command_results SET result = replace(result, $2, $3) WHERE command_uuid = $1`, commandUUID, secret, replacement)
+	return err
+}
+
+// MobileCommandSentSince reports whether a command of this request type was queued for the device since t.
+func (s *Store) MobileCommandSentSince(ctx context.Context, deviceID, requestType string, t time.Time) (bool, error) {
+	var n int
+	err := s.DB.QueryRowContext(ctx, `SELECT count(*) FROM mdm_commands_meta WHERE mobile_device_id::text = $1 AND request_type = $2 AND created_at > $3`,
+		deviceID, requestType, t).Scan(&n)
+	return n > 0, err
 }

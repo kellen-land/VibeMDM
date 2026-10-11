@@ -6,6 +6,7 @@ import (
 
 	"github.com/micromdm/nanomdm/mdm"
 
+	"github.com/vibemdm/vibemdm/internal/commands"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/webhook"
 )
@@ -51,7 +52,44 @@ func (s *Service) processMobileResult(ctx context.Context, d *model.MobileDevice
 			if err := s.st.ApplyMobileDeviceInformation(ctx, d.UDID, q); err != nil {
 				s.log.Error("apply mobile DeviceInformation", "err", err)
 			}
+			if sup, _ := q["IsSupervised"].(bool); sup {
+				s.collectActivationLockBypass(ctx, d)
+			}
 		}
+	case "DeviceLocation":
+		lat, okLat := doc["Latitude"].(float64)
+		lon, okLon := doc["Longitude"].(float64)
+		if okLat && okLon {
+			var acc *float64
+			if v, ok := doc["HorizontalAccuracy"].(float64); ok {
+				acc = &v
+			}
+			if err := s.st.SetMobileLocation(ctx, d.UDID, lat, lon, acc); err != nil {
+				s.log.Error("store mobile location", "err", err)
+			}
+		}
+	case "EnableLostMode", "DisableLostMode":
+		s.st.SetMobileLostMode(ctx, d.UDID, requestType == "EnableLostMode")
+		s.mobileRefresh(ctx, d, commands.MobileDeviceInformation)
+	case "Settings":
+		s.mobileRefresh(ctx, d, commands.MobileDeviceInformation)
+	case "ClearPasscode", "DeviceLock":
+		s.mobileRefresh(ctx, d, commands.SecurityInfo)
+	case "ActivationLockBypassCode":
+		code, _ := doc["ActivationLockBypassCode"].(string)
+		if code == "" {
+			return // the device has no code (Activation Lock not allowed or already handled)
+		}
+		if err := s.st.SaveActivationLockBypass(ctx, d.ID, code); err != nil {
+			s.log.Error("store Activation Lock bypass code", "err", err, "mobile_device", d.Name)
+			return
+		}
+		// The raw result in NanoMDM's command_results would otherwise keep the code in clear text.
+		if err := s.st.ScrubCommandResult(ctx, results.CommandUUID, code, "[sealed by VibeMDM]"); err != nil {
+			s.log.Warn("scrubbing the bypass code from the command result", "err", err)
+		}
+		s.st.Audit(ctx, "system", "mobile_device.activation_lock_bypass_collected", "mobile_device", d.ID, nil)
+		s.log.Info("Activation Lock bypass code collected", "mobile_device", d.Name)
 	case "SecurityInfo":
 		if sec, ok := doc["SecurityInfo"].(map[string]any); ok {
 			if err := s.st.ApplyMobileSecurityInfo(ctx, d.UDID, sec); err != nil {
@@ -103,4 +141,31 @@ func (s *Service) processMobileResult(ctx context.Context, d *model.MobileDevice
 			}
 		}
 	}
+}
+
+// mobileRefresh asks the device for fresh state after a command changed it.
+func (s *Service) mobileRefresh(ctx context.Context, d *model.MobileDevice, build func() (*mdm.Command, error)) {
+	if s.cmdr == nil {
+		return
+	}
+	cmd, err := build()
+	if err != nil {
+		return
+	}
+	if _, err := s.cmdr.EnqueueMobile(ctx, d, cmd, "inventory", "", "system"); err != nil {
+		s.log.Debug("mobile refresh", "err", err, "mobile_device", d.Name)
+	}
+}
+
+// collectActivationLockBypass asks a supervised device for its Activation Lock bypass code when
+// none is stored (at most once a day). Without it, an Activation-Locked device that is erased can
+// only be unlocked with the user's Apple Account.
+func (s *Service) collectActivationLockBypass(ctx context.Context, d *model.MobileDevice) {
+	if s.cmdr == nil || d.ActivationLockBypassAt != nil {
+		return
+	}
+	if sent, err := s.st.MobileCommandSentSince(ctx, d.ID, "ActivationLockBypassCode", time.Now().Add(-24*time.Hour)); err != nil || sent {
+		return
+	}
+	s.mobileRefresh(ctx, d, commands.ActivationLockBypassCode)
 }

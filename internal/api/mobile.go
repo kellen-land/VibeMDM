@@ -2,12 +2,17 @@ package api
 
 import (
 	"encoding/csv"
+	"errors"
 	"net/http"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/micromdm/nanomdm/mdm"
+
+	"github.com/vibemdm/vibemdm/internal/auth"
+	"github.com/vibemdm/vibemdm/internal/commands"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/store"
 )
@@ -520,4 +525,129 @@ func (h *Handler) setMobileEAValue(w http.ResponseWriter, r *http.Request) {
 	}
 	h.st.Audit(r.Context(), actor(r), "mobile_device.ea_value", "mobile_device", r.PathValue("id"), map[string]any{"ea": ea.Name})
 	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+// ---- mobile device commands ----
+
+// mobileAction is a remote command from the device record.
+type mobileAction struct {
+	Action                 string                   `json:"action"`
+	Message                string                   `json:"message"`
+	Phone                  string                   `json:"phone"`
+	Footnote               string                   `json:"footnote"`
+	PreserveDataPlan       bool                     `json:"preserve_data_plan"`
+	DisallowProximitySetup bool                     `json:"disallow_proximity_setup"`
+	ConfirmName            string                   `json:"confirm_name"`
+	Settings               []commands.MobileSetting `json:"settings"`
+	ESIMServerURL          string                   `json:"esim_server_url"`
+}
+
+// mobileCommand sends one remote command to an iPhone or iPad (admin).
+func (h *Handler) mobileCommand(w http.ResponseWriter, r *http.Request) {
+	var req mobileAction
+	if err := decode(r, &req); err != nil {
+		writeErr(w, 400, "invalid JSON")
+		return
+	}
+	d, err := h.st.GetMobileDevice(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "mobile device")
+		return
+	}
+	if !d.MDMEnrolled {
+		writeErr(w, 409, "the device is not enrolled in MDM")
+		return
+	}
+	supervised := d.IsSupervised != nil && *d.IsSupervised
+	var cmd *mdm.Command
+	switch req.Action {
+	case "lock":
+		cmd, err = commands.MobileLock(req.Message, req.Phone)
+	case "clear_passcode":
+		var tok []byte
+		if tok, err = h.st.MobileUnlockToken(r.Context(), d.UDID); err == nil {
+			cmd, err = commands.ClearPasscode(tok)
+		}
+	case "erase":
+		if strings.TrimSpace(req.ConfirmName) == "" || (req.ConfirmName != d.Name && req.ConfirmName != d.SerialNumber) {
+			writeErr(w, 400, "type the device name or serial number to confirm erasing it")
+			return
+		}
+		cmd, err = commands.MobileErase(req.PreserveDataPlan, req.DisallowProximitySetup)
+	case "restart":
+		cmd, err = commands.RestartDevice()
+	case "shutdown":
+		cmd, err = commands.ShutDownDevice()
+	case "enable_lost_mode":
+		cmd, err = commands.EnableLostMode(req.Message, req.Phone, req.Footnote)
+	case "disable_lost_mode":
+		cmd, err = commands.DisableLostMode()
+	case "locate":
+		if d.LostModeEnabled == nil || !*d.LostModeEnabled {
+			writeErr(w, 409, "a device can only be located while it is in Lost Mode")
+			return
+		}
+		cmd, err = commands.DeviceLocation()
+	case "play_sound":
+		cmd, err = commands.PlayLostModeSound()
+	case "settings":
+		for _, it := range req.Settings {
+			if commands.SettingNeedsSupervision[it.Item] && !supervised {
+				writeErr(w, 409, "changing "+it.Item+" needs a supervised device")
+				return
+			}
+		}
+		cmd, err = commands.Settings(req.Settings)
+	case "refresh_cellular_plans":
+		cmd, err = commands.RefreshCellularPlans(req.ESIMServerURL)
+	case "collect_bypass_code":
+		cmd, err = commands.ActivationLockBypassCode()
+	default:
+		writeErr(w, 400, "unknown action")
+		return
+	}
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	if commands.MobileNeedsSupervision[cmd.Command.RequestType] && !supervised {
+		writeErr(w, 409, cmd.Command.RequestType+" needs a supervised device (prepare it with Apple Configurator)")
+		return
+	}
+	if _, err := h.cmdr.EnqueueMobile(r.Context(), d, cmd, "mobile_action", "", actor(r)); err != nil {
+		writeErr(w, 409, err.Error())
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "mobile_device.command", "mobile_device", d.ID, map[string]any{"request_type": cmd.Command.RequestType, "command_uuid": cmd.CommandUUID})
+	writeJSON(w, 200, map[string]string{"command_uuid": cmd.CommandUUID, "request_type": cmd.Command.RequestType})
+}
+
+// revealActivationLockBypass returns a device's Activation Lock bypass code (admin, reason, audited).
+func (h *Handler) revealActivationLockBypass(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	decode(r, &req)
+	if strings.TrimSpace(req.Reason) == "" {
+		writeErr(w, 400, "a reason is required")
+		return
+	}
+	d, err := h.st.GetMobileDevice(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "mobile device")
+		return
+	}
+	code, err := h.st.ActivationLockBypass(r.Context(), d.ID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			writeErr(w, 404, "no Activation Lock bypass code is stored for this device")
+			return
+		}
+		h.fail(w, err, "activation lock")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "mobile_device.activation_lock_bypass_viewed", "mobile_device", d.ID, map[string]any{"reason": req.Reason, "ip": auth.ClientIP(r)})
+	h.log.Info("Activation Lock bypass code viewed", "mobile_device", d.Name, "actor", actor(r))
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 200, map[string]string{"code": code})
 }

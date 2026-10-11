@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Pencil, RefreshCw, Save, Trash2, X } from 'lucide-react'
+import { KeyRound, Pencil, RefreshCw, Save, X } from 'lucide-react'
 import { qk, useBuildings, useDepartments, useInvalidate, useMobileDevice, useMobileEAs } from '../../api/queries'
 import { api, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
@@ -19,10 +19,12 @@ import { Input, Select, Textarea } from '../../components/ui/Input'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { RelativeTime } from '../../components/ui/RelativeTime'
+import { CopyButton } from '../../components/ui/CopyButton'
 import { useToast } from '../../components/ui/Toast'
 import { absoluteTime } from '../../lib/format'
 import { ComputerCommandsTab } from '../computers/ActivityTabs'
 import { DeviceIcon, MobileStatusBadges } from './MobileDevicesPage'
+import { MobileActions } from './MobileActions'
 
 type Section = 'general' | 'hardware' | 'network' | 'security' | 'apps' | 'profiles' | 'attributes' | 'groups' | 'actions' | 'commands'
 const sectionKeys: readonly string[] = ['general', 'hardware', 'network', 'security', 'apps', 'profiles', 'attributes', 'groups', 'actions', 'commands']
@@ -141,7 +143,7 @@ export function MobileDeviceDetailPage() {
           {active === 'profiles' && <ProfilesSection d={d} />}
           {active === 'groups' && <GroupsSection d={d} />}
           {active === 'attributes' && <AttributesSection d={d} />}
-          {active === 'actions' && <ActionsSection d={d} onDelete={() => setDeleteOpen(true)} />}
+          {active === 'actions' && <MobileActions d={d} onDelete={() => setDeleteOpen(true)} />}
           {active === 'commands' && <ComputerCommandsTab id={d.id} mobile />}
         </Card>
       </div>
@@ -349,6 +351,93 @@ function SecuritySection({ d }: { d: MobileDeviceDetail }) {
           ]}
         />
       </CardBody>
+      <BypassCode d={d} />
+    </>
+  )
+}
+
+/** The Activation Lock bypass code, collected automatically from supervised devices. */
+function BypassCode({ d }: { d: MobileDeviceDetail }) {
+  const { isAdmin } = useAuth()
+  const toast = useToast()
+  const [ask, setAsk] = useState(false)
+  const [reason, setReason] = useState('')
+  const [code, setCode] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  if (d.is_supervised !== true && !d.activation_lock_bypass_at) return null
+  const reveal = async () => {
+    setBusy(true)
+    try {
+      const r = await api.post<{ code: string }>(`/api/v1/mobile-devices/${d.id}/activation-lock-bypass/reveal`, { reason: reason.trim() })
+      setCode(r.code)
+      setAsk(false)
+      setReason('')
+    } catch (e) {
+      toast.error('Could not show the code', errorMessage(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const collect = async () => {
+    try {
+      await api.post(`/api/v1/mobile-devices/${d.id}/actions`, { action: 'collect_bypass_code' })
+      toast.success('Requested', 'The code is stored when the device answers.')
+    } catch (e) {
+      toast.error('Could not request the code', errorMessage(e))
+    }
+  }
+  return (
+    <>
+      <CardHeader
+        title="Activation Lock bypass code"
+        className="border-t border-line"
+        description={d.activation_lock_bypass_at ? undefined : 'Collected automatically from supervised devices; none stored yet.'}
+        actions={
+          isAdmin &&
+          (d.activation_lock_bypass_at ? (
+            !code && (
+              <Button size="xs" variant="ghost" icon={<KeyRound />} onClick={() => setAsk(true)}>
+                Show code
+              </Button>
+            )
+          ) : (
+            <Button size="xs" variant="ghost" onClick={collect}>
+              Collect now
+            </Button>
+          ))
+        }
+      />
+      {(d.activation_lock_bypass_at || code) && (
+        <CardBody>
+          {code ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="select-all font-mono text-lg tracking-wide text-ink">{code}</span>
+              <CopyButton text={code} />
+              <Button size="xs" variant="ghost" onClick={() => setCode(null)}>
+                Hide
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-ink-muted">
+              Stored, collected <RelativeTime value={d.activation_lock_bypass_at} />. Use it to activate the device after an erase if Activation Lock is on.
+            </p>
+          )}
+        </CardBody>
+      )}
+      <ConfirmDialog
+        open={ask}
+        onClose={() => setAsk(false)}
+        onConfirm={reveal}
+        loading={busy}
+        confirmDisabled={!reason.trim()}
+        title="Show the Activation Lock bypass code?"
+        description="Viewing it is recorded in the audit log with your reason."
+        confirmLabel="Show code"
+      >
+        <Field label="Reason" required>
+          <Input value={reason} onChange={(e) => setReason(e.target.value)} autoFocus placeholder="e.g. HELP-1234" />
+        </Field>
+      </ConfirmDialog>
     </>
   )
 }
@@ -409,27 +498,6 @@ function GroupsSection({ d }: { d: MobileDeviceDetail }) {
           { key: 'type', header: 'Type', render: (g) => <Badge tone={g.is_smart ? 'accent' : 'neutral'}>{g.is_smart ? 'Smart' : 'Static'}</Badge> },
         ]}
       />
-    </>
-  )
-}
-
-function ActionsSection({ d, onDelete }: { d: MobileDeviceDetail; onDelete: () => void }) {
-  const { isAdmin } = useAuth()
-  return (
-    <>
-      <CardHeader title="Actions" description="Remote commands for this device." />
-      <CardBody className="flex flex-col gap-4">
-        <p className="text-sm text-ink-muted">
-          {d.mdm_enrolled ? 'Lock, Lost Mode, erase and the other iPhone and iPad commands arrive in a later update.' : 'This device is not enrolled in MDM, so no commands can be sent.'}
-        </p>
-        {isAdmin && (
-          <div>
-            <Button variant="danger-outline" icon={<Trash2 />} onClick={onDelete}>
-              Delete record
-            </Button>
-          </div>
-        )}
-      </CardBody>
     </>
   )
 }

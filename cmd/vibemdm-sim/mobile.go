@@ -54,8 +54,53 @@ func (d *device) respondMobile(r map[string]any, rt string, cmd map[string]any) 
 		r["ManagedApplicationList"] = map[string]any{
 			"com.microsoft.skype.teams": map[string]any{"Status": "Managed", "ManagementFlags": 0},
 		}
+	case "ClearPasscode":
+		if _, ok := cmd["UnlockToken"].([]byte); !ok {
+			mobileError(r, "The unlock token is missing.")
+			break
+		}
+		d.passcode = false
+	case "EnableLostMode":
+		if !d.supervised {
+			mobileError(r, "The device is not supervised.")
+			break
+		}
+		d.lostMode = true
+	case "DisableLostMode":
+		d.lostMode = false
+	case "DeviceLocation":
+		if !d.lostMode {
+			mobileError(r, "The device is not in Lost Mode.")
+			break
+		}
+		r["Latitude"], r["Longitude"], r["HorizontalAccuracy"] = 41.8781+float64(d.idx)/1000, -87.6298-float64(d.idx)/1000, 15.0
+	case "PlayLostModeSound":
+		if !d.lostMode {
+			mobileError(r, "The device is not in Lost Mode.")
+		}
+	case "Settings":
+		items, _ := cmd["Settings"].([]any)
+		for _, it := range items {
+			m, _ := it.(map[string]any)
+			if str(m["Item"]) == "DeviceName" && str(m["DeviceName"]) != "" {
+				d.name = str(m["DeviceName"])
+			}
+		}
+	case "ActivationLockBypassCode":
+		if !d.supervised {
+			mobileError(r, "The device is not supervised.")
+			break
+		}
+		r["ActivationLockBypassCode"] = fmt.Sprintf("SIM%02d-ABCD-EFGH-JKLM-NPQR-STUV", d.idx)
+	case "RefreshCellularPlans", "DeviceLock", "EraseDevice", "RestartDevice", "ShutDownDevice":
+		// acknowledged
 	default:
 		return false
 	}
 	return true
+}
+
+func mobileError(r map[string]any, msg string) {
+	r["Status"] = "Error"
+	r["ErrorChain"] = []any{map[string]any{"ErrorCode": 12021, "ErrorDomain": "MCMDMErrorDomain", "LocalizedDescription": msg}}
 }

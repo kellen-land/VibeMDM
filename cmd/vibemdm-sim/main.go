@@ -266,6 +266,9 @@ func (d *device) enrollMDM(ctx context.Context, challenge string) error {
 		"MessageType": "TokenUpdate", "Topic": d.topic, "UDID": d.udid, "Token": tok, "PushMagic": fmt.Sprintf("SIM-%d-%x", d.idx, tok[:4]),
 		"AwaitingConfiguration": false,
 	}
+	if d.mobile {
+		tu["UnlockToken"] = []byte(fmt.Sprintf("sim-unlock-token-%d", d.idx)) // iOS sends one so MDM can clear the passcode
+	}
 	if err := d.checkin(ctx, tu); err != nil {
 		return fmt.Errorf("TokenUpdate: %w", err)
 	}

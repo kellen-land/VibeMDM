@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/vibemdm/vibemdm/internal/model"
+	"github.com/vibemdm/vibemdm/internal/secrets"
 )
 
 func TestMobileDevicesAreSeparateFromComputers(t *testing.T) {
@@ -132,5 +133,80 @@ func TestMobileExtensionAttributes(t *testing.T) {
 	s.SetMobileEAValue(ctx, d.ID, ea.ID, "")
 	if ids, _ := s.PreviewMobileCriteria(ctx, []model.Criterion{{Field: "ea:" + ea.ID, Operator: "has_value"}}); len(ids) != 0 {
 		t.Fatal("cleared value still matches")
+	}
+}
+
+func TestMobileLostModeAndActivationLockBypass(t *testing.T) {
+	s := testStore(t)
+	box, err := secrets.New("test passphrase for the store tests")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Box = box
+	ctx := context.Background()
+	stamp := time.Now().Format("150405.000")
+	udid := "LOST-" + stamp
+	d, _ := s.UpsertMobileFromAuthenticate(ctx, MDMAuthenticateInfo{UDID: udid, Model: "iPhone14,4", ProductName: "iPhone14,4", DeviceName: "lost phone"})
+	t.Cleanup(func() {
+		s.DeleteMobileDevice(ctx, d.ID)
+		s.DB.ExecContext(ctx, `DELETE FROM commands WHERE command_uuid = $1`, "cmd-"+udid)
+		s.DB.ExecContext(ctx, `DELETE FROM devices WHERE id = $1`, udid)
+	})
+
+	// Lost Mode and location.
+	acc := 12.5
+	if err := s.SetMobileLostMode(ctx, udid, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetMobileLocation(ctx, udid, 41.8781, -87.6298, &acc); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := s.GetMobileDevice(ctx, d.ID)
+	if got.LostModeEnabled == nil || !*got.LostModeEnabled || got.Location == nil || got.Location.Latitude != 41.8781 || got.Location.Accuracy == nil || *got.Location.Accuracy != 12.5 {
+		t.Fatalf("lost mode/location: %+v %+v", got.LostModeEnabled, got.Location)
+	}
+
+	// Bypass code: absent, then sealed at rest and readable through the store.
+	if _, err := s.ActivationLockBypass(ctx, d.ID); err != ErrNotFound {
+		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+	const code = "ABCD-EFGH-JKLM-NPQR-STUV-WXYZ"
+	if err := s.SaveActivationLockBypass(ctx, d.ID, code); err != nil {
+		t.Fatal(err)
+	}
+	var raw string
+	s.DB.QueryRowContext(ctx, `SELECT bypass_code_encrypted FROM mobile_device_activation_lock WHERE mobile_device_id = $1`, d.ID).Scan(&raw)
+	if raw == "" || raw == code {
+		t.Fatalf("bypass code not sealed: %q", raw)
+	}
+	if c, err := s.ActivationLockBypass(ctx, d.ID); err != nil || c != code {
+		t.Fatalf("bypass code: %q %v", c, err)
+	}
+	if got, _ := s.GetMobileDevice(ctx, d.ID); got.ActivationLockBypassAt == nil {
+		t.Fatal("activation_lock_bypass_at not set")
+	}
+
+	// The raw command result NanoMDM keeps loses the plaintext code.
+	if _, err := s.DB.ExecContext(ctx, `INSERT INTO devices (id, authenticate, authenticate_at) VALUES ($1, '<?xml auth', now())`, udid); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.DB.ExecContext(ctx, `INSERT INTO enrollments (id, device_id, type, topic, push_magic, token_hex, last_seen_at) VALUES ($1, $1, 'Device', 't', 'm', 'aa', now())`, udid); err != nil {
+		t.Fatal(err)
+	}
+	cmd := "cmd-" + udid
+	if _, err := s.DB.ExecContext(ctx, `INSERT INTO commands (command_uuid, request_type, command) VALUES ($1, 'ActivationLockBypassCode', '<?xml cmd')`, cmd); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.DB.ExecContext(ctx, `INSERT INTO command_results (id, command_uuid, status, result) VALUES ($1, $2, 'Acknowledged', $3)`,
+		udid, cmd, "<?xml <string>"+code+"</string>"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ScrubCommandResult(ctx, cmd, code, "[sealed by VibeMDM]"); err != nil {
+		t.Fatal(err)
+	}
+	var result string
+	s.DB.QueryRowContext(ctx, `SELECT result FROM command_results WHERE command_uuid = $1`, cmd).Scan(&result)
+	if result != "<?xml <string>[sealed by VibeMDM]</string>" {
+		t.Fatalf("result not scrubbed: %q", result)
 	}
 }

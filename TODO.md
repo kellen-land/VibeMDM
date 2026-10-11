@@ -56,8 +56,11 @@ Test hardware: iPhone 13 mini, iPad (8th generation), supervised with Apple Conf
     - Blocked: ABM/ASM (Apple declined a test account).
 - [x] Mobile inventory: scheduled DeviceInformation, SecurityInfo, installed and managed app lists, profiles, certificates; cellular, battery, storage, supervision, Activation Lock, Lost Mode and passcode fields; server-side extension attributes
     - Mobile devices report DeviceInformation (iOS queries), SecurityInfo, installed and managed app lists, profiles and certificates on a schedule, with cellular, battery, storage, supervision, Activation Lock, Lost Mode and passcode fields; mobile extension attributes are admin-entered text or pop-up fields usable in groups and searches.
-- [ ] Mobile commands: Lock, Clear Passcode (UnlockToken), Erase (Return to Service), Restart/Shut Down, Lost Mode with location and sound, Settings (name, wallpaper, Bluetooth, roaming, hotspot, time zone), refresh cellular plans, OS updates via DDM plans
-- [ ] Activation Lock bypass code: collect from supervised devices, store sealed, audited reveal with a reason
+- [x] Mobile commands: Lock, Clear Passcode (UnlockToken), Erase, Restart/Shut Down, Lost Mode with location and sound, Settings (name, Bluetooth, roaming, hotspot, time zone), refresh cellular plans
+    - Added an Actions panel on the mobile device record (rarer commands under *More actions*) backed by `POST /api/v1/mobile-devices/{id}/actions`, with supervision checks, typed-name erase confirmation, Lost Mode location and audit entries; untested on real hardware.
+- [ ] More mobile commands: Settings wallpaper, Erase with Return to Service (iOS 17+), `ClearRestrictionsPassword`, OS updates via DDM plans
+- [x] Activation Lock bypass code: collect from supervised devices, store sealed, audited reveal with a reason
+    - Supervised devices are asked for the code after inventory; it is sealed, scrubbed from NanoMDM's raw result and revealed from the Security section only with a reason recorded in the audit log.
 - [ ] Mobile Device Configuration Profiles with GUI editors: Restrictions, Passcode, Wi-Fi, VPN, Web Clips, Home Screen Layout, Notifications, Single App Mode, Content Filter, Certificates, AirPrint, Lock Screen message; DDM declarations for iOS 17+
 - [ ] Mobile apps: App Store apps by Store ID (user signs in), install/update/remove with status from ManagedApplicationList, Managed App Configuration via the JSON-schema form engine
 - [ ] Apps and Books: content token, licence sync, device-based licences, token-expiry and licence-shortage Health checks
