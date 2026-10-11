@@ -58,7 +58,7 @@ func (d *Daemon) runShell(ctx context.Context, invite shellInvite) {
 		shellPath = "/bin/zsh"
 	}
 	cmd := exec.Command(shellPath, "-il")
-	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "VIBEMDM_SHELL=1")
+	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "SHELL="+shellPath, "VIBEMDM_SHELL=1")
 	cmd.Dir = "/var/root"
 	if _, err := os.Stat(cmd.Dir); err != nil {
 		cmd.Dir = "/"
@@ -71,17 +71,20 @@ func (d *Daemon) runShell(ctx context.Context, invite shellInvite) {
 	defer func() { _ = ptmx.Close() }()
 	pty.Setsize(ptmx, &pty.Winsize{Rows: 24, Cols: 80})
 
-	sctx, scancel := context.WithCancel(ctx)
-	defer scancel()
+	// coder/websocket closes the connection when a pending Read's context is cancelled, so the
+	// loops are never cancelled to stop them: the session ends when the shell exits (or the
+	// admin leaves), the exit code is sent, and only then is the connection closed.
+	shellDone := make(chan struct{})
+	adminDone := make(chan struct{})
 
 	// PTY output -> server
 	go func() {
-		defer scancel()
+		defer close(shellDone)
 		buf := make([]byte, 32*1024)
 		for {
 			n, err := ptmx.Read(buf)
 			if n > 0 {
-				if werr := conn.WriteFrame(sctx, shell.EncodeData(buf[:n])); werr != nil {
+				if werr := conn.WriteFrame(ctx, shell.EncodeData(buf[:n])); werr != nil {
 					return
 				}
 			}
@@ -92,9 +95,9 @@ func (d *Daemon) runShell(ctx context.Context, invite shellInvite) {
 	}()
 	// server -> PTY (keystrokes / resize)
 	go func() {
-		defer scancel()
+		defer close(adminDone)
 		for {
-			f, err := conn.ReadFrame(sctx)
+			f, err := conn.ReadFrame(ctx)
 			if err != nil {
 				return
 			}
@@ -114,11 +117,21 @@ func (d *Daemon) runShell(ctx context.Context, invite shellInvite) {
 		}
 	}()
 
-	<-sctx.Done()
-	if cmd.Process != nil {
-		cmd.Process.Kill()
+	select {
+	case <-shellDone:
+	case <-adminDone:
+	case <-ctx.Done():
 	}
-	cmd.Wait()
+	exited := make(chan struct{})
+	go func() { cmd.Wait(); close(exited) }()
+	select {
+	case <-exited: // the shell ended by itself (exit, logout)
+	case <-time.After(500 * time.Millisecond):
+		if cmd.Process != nil {
+			cmd.Process.Kill()
+		}
+		<-exited
+	}
 	code := 0
 	if cmd.ProcessState != nil {
 		code = cmd.ProcessState.ExitCode()

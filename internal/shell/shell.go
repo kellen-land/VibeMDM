@@ -227,6 +227,10 @@ func (h *Hub) Run(ctx context.Context, sessionID, computerID, nonce string, admi
 		for {
 			f, err := agent.ReadFrame(relayCtx)
 			if err != nil {
+				if relayCtx.Err() == nil { // the agent went away without an exit frame
+					admin.WriteFrame(context.Background(), Frame{T: "e", Msg: "the Mac ended the session"})
+					admin.Close("session ended")
+				}
 				return
 			}
 			bump()
@@ -247,6 +251,9 @@ func (h *Hub) Run(ctx context.Context, sessionID, computerID, nonce string, admi
 				return
 			}
 			if f.T == "x" {
+				// Close cleanly before cancel(): cancelling the admin reader would drop the
+				// connection without a close frame.
+				admin.Close("shell exited")
 				return
 			}
 		}
