@@ -157,12 +157,13 @@ verified against its SHA-256 and cached by checksum for 14 days, so a re-run ins
 3. `before` scripts, in order.
 4. Packages, in order (after their downloads finish).
 5. Apps (Installomator), in order.
-6. **Execute Command**.
-7. `after` scripts, in order.
-8. **Update Inventory** (if enabled).
-9. The log is submitted; if submission fails it is spooled and replayed.
-10. `complete_message` notification.
-11. Restart (if enabled): a notification with the restart message, then `shutdown -r now` or `shutdown -r +N`.
+6. **Local Accounts** actions, in order (7.5.1).
+7. **Execute Command**.
+8. `after` scripts, in order.
+9. **Update Inventory** (if enabled).
+10. The log is submitted; if submission fails it is spooled and replayed.
+11. `complete_message` notification.
+12. Restart (if enabled): a notification with the restart message, then `shutdown -r now` or `shutdown -r +N`.
 
 A failed step does not stop later steps; it marks the run failed. Notifications use `osascript display
 notification` in the user's session.
@@ -171,6 +172,31 @@ Policy logs: `GET /api/v1/policies/{id}/logs`, `GET /api/v1/policy-logs`, `GET /
 computer's policy tab. Each log has the trigger, status, timestamps, a text log and per-step details (type,
 name, status, exit code, output, duration). Webhooks `PolicyCompleted` and `PolicyFailed` fire when a run is
 submitted.
+
+### 7.5.1 Local Accounts
+
+The *Local Accounts* tab of a policy is Jamf Pro's Local Accounts payload. Each action names a user and runs in
+order:
+
+| Action | What the agent does |
+| --- | --- |
+| **Create Account** | `sysadminctl -addUser` with the full name, password, optional hint and home directory (default `/Users/<username>`), as a standard user or, with *Allow user to administer computer*, an administrator; then `createhomedir`. An account that already exists is left unchanged, so the policy can run repeatedly. *Enable user for FileVault* grants a Secure Token with `sysadminctl -secureTokenOn` through the **LAPS account**, which must hold a Secure Token itself (Jamf Pro uses its management account the same way); without one, a Mac with an escrowed bootstrap token grants the token at the user's first login-window sign-in. |
+| **Reset Password** | Without a Secure Token: `dscl . -passwd`. With a Secure Token: `sysadminctl -resetPasswordFor … -adminUser <LAPS account>`, so FileVault keeps working; if the LAPS account has no Secure Token the action fails with that explanation instead of using dscl. The user's login keychain keeps the old password until they update it. |
+| **Delete Account** | `sysadminctl -deleteUser`, keeping the home folder unless *Delete home folder* is on. Never deletes the logged-in user or the only account with a Secure Token. Deleting an account that does not exist succeeds as a no-op. |
+| **Disable Account for FileVault** | `fdesetup remove -user`. Never removes the last FileVault user; does nothing when FileVault is off. |
+
+The LAPS account cannot be targeted (it is managed under Security → LAPS). Passwords are sealed with
+`VIBEMDM_ENCRYPTION_KEY` (set it, or they are stored as given), never returned by the API (`password_set` says one
+is stored; send an entry without `password` to keep it) and never part of the policy the agent receives or of
+stored tasks: during the run the agent fetches them from `POST /agent/v1/policy-logs/{log_id}/account-secrets`,
+which answers only while that computer's run is open and is audited (`policy.account_passwords_sent`). Command
+output is scrubbed of passwords before it is logged.
+
+API: `accounts` on `POST/PUT /api/v1/policies`:
+`[{"action": "create" | "reset_password" | "delete" | "disable_filevault", "username", "full_name", "password",
+"password_hint", "home_directory", "admin", "enable_filevault", "delete_home"}]`.
+
+**Untested on a real Mac:** every action above (the simulator only fetches the passwords and reports the steps).
 
 ## 7.6 Self Service
 

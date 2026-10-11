@@ -2,11 +2,13 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/vibemdm/vibemdm/internal/localaccount"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/store"
 )
@@ -47,6 +49,33 @@ func (h *Handler) getPolicy(w http.ResponseWriter, r *http.Request) {
 }
 
 // validPolicyApps checks Installomator steps.
+// validPolicyAccounts checks the Local Accounts payload. prev is the stored version, whose
+// passwords are kept when an entry for the same action and user is sent without one.
+func (h *Handler) validPolicyAccounts(ctx context.Context, accounts, prev []model.PolicyAccount) error {
+	if len(accounts) > 20 {
+		return errors.New("a policy can hold at most 20 local account actions")
+	}
+	lapsAccount := ""
+	if c, err := h.st.GetLAPSConfig(ctx); err == nil && c.Enabled {
+		lapsAccount = c.AccountName
+	}
+	for _, a := range accounts {
+		stored := false
+		for _, p := range prev {
+			if p.Action == a.Action && p.Username == a.Username && p.PasswordSet {
+				stored = true
+			}
+		}
+		if err := localaccount.Validate(a, a.Password != "" || stored); err != nil {
+			return err
+		}
+		if lapsAccount != "" && strings.EqualFold(a.Username, lapsAccount) {
+			return fmt.Errorf("%s is the LAPS account; manage it under Security → LAPS", a.Username)
+		}
+	}
+	return nil
+}
+
 func (h *Handler) validPolicyApps(apps []model.PolicyApp) error {
 	for _, a := range apps {
 		if !h.validAppLabel(a.Label) {
@@ -66,6 +95,10 @@ func (h *Handler) createPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.validPolicyApps(p.Apps); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	if err := h.validPolicyAccounts(r.Context(), p.Accounts, nil); err != nil {
 		writeErr(w, 400, err.Error())
 		return
 	}
@@ -91,6 +124,15 @@ func (h *Handler) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	}
 	p.ID = r.PathValue("id")
 	if err := h.validPolicyApps(p.Apps); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	existing, err := h.st.GetPolicy(r.Context(), p.ID)
+	if err != nil {
+		h.fail(w, err, "policy")
+		return
+	}
+	if err := h.validPolicyAccounts(r.Context(), p.Accounts, existing.Accounts); err != nil {
 		writeErr(w, 400, err.Error())
 		return
 	}

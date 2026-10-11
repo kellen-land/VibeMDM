@@ -133,6 +133,17 @@ func (c *Client) SubmitPolicyLog(ctx context.Context, logID string, sub model.Ag
 	return c.do(ctx, http.MethodPost, "/agent/v1/policy-logs/"+logID, sub, nil, 0)
 }
 
+// PolicyAccountSecrets fetches the Local Accounts passwords for an open policy run, by entry index.
+func (c *Client) PolicyAccountSecrets(ctx context.Context, logID string) ([]string, error) {
+	var out struct {
+		Passwords []string `json:"passwords"`
+	}
+	if err := c.do(ctx, http.MethodPost, "/agent/v1/policy-logs/"+logID+"/account-secrets", struct{}{}, &out, 0); err != nil {
+		return nil, err
+	}
+	return out.Passwords, nil
+}
+
 // ReconConfig fetches extension attribute scripts.
 func (c *Client) ReconConfig(ctx context.Context) (*model.AgentReconConfig, error) {
 	var out model.AgentReconConfig

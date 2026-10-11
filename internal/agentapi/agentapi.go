@@ -106,6 +106,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.Handle("GET /agent/v1/tasks", a(h.tasks))
 	mux.Handle("POST /agent/v1/tasks/{id}/result", a(h.taskResult))
 	mux.Handle("POST /agent/v1/policy-logs/{id}", a(h.policyLog))
+	mux.Handle("POST /agent/v1/policy-logs/{id}/account-secrets", a(h.policyAccountSecrets))
 	mux.Handle("GET /agent/v1/recon-config", a(h.reconConfig))
 	mux.Handle("POST /agent/v1/inventory", a(h.inventory))
 	mux.Handle("GET /agent/v1/packages/{id}", a(h.packageDownload))
@@ -403,6 +404,27 @@ func (h *Handler) taskResult(w http.ResponseWriter, r *http.Request) {
 		h.st.FailOnboardingRunByTask(r.Context(), r.PathValue("id"), firstNonEmptyStr(res.Error, res.Stderr, "agent task failed"))
 	}
 	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+// policyAccountSecrets gives the agent the Local Accounts passwords of a policy it is running.
+// They are never part of the policy itself (which is stored with tasks), and are only released
+// while that computer's run of the policy is still open.
+func (h *Handler) policyAccountSecrets(w http.ResponseWriter, r *http.Request) {
+	comp := computerFrom(r.Context())
+	policyID, err := h.st.PendingPolicyLog(r.Context(), r.PathValue("id"), comp.ID)
+	if err != nil {
+		writeErr(w, 404, "no open run of this policy on this computer")
+		return
+	}
+	pws, err := h.st.PolicyAccountPasswords(r.Context(), policyID)
+	if err != nil {
+		h.log.Error("reading policy account passwords", "err", err, "policy_id", policyID)
+		writeErr(w, 500, "could not read the account passwords")
+		return
+	}
+	h.st.Audit(r.Context(), "agent:"+comp.Name, "policy.account_passwords_sent", "policy", policyID, map[string]any{"computer_id": comp.ID, "log_id": r.PathValue("id")})
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 200, map[string]any{"passwords": pws})
 }
 
 func (h *Handler) policyLog(w http.ResponseWriter, r *http.Request) {

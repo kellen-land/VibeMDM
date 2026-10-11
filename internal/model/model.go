@@ -449,6 +449,7 @@ type Policy struct {
 	Scripts         []PolicyScript        `json:"scripts"`
 	Packages        []PolicyPackage       `json:"packages"`
 	Apps            []PolicyApp           `json:"apps"`
+	Accounts        []PolicyAccount       `json:"accounts"`
 	RunCommand      string                `json:"run_command"`
 	UpdateInventory bool                  `json:"update_inventory"`
 	Reboot          PolicyReboot          `json:"reboot"`
@@ -456,6 +457,21 @@ type Policy struct {
 	SelfService     PolicySelfService     `json:"self_service"`
 	CreatedAt       time.Time             `json:"created_at"`
 	UpdatedAt       time.Time             `json:"updated_at"`
+}
+
+// PolicyAccount is one Local Accounts action in a policy, like Jamf Pro's Local Accounts payload.
+type PolicyAccount struct {
+	Action   string `json:"action"` // create | reset_password | delete | disable_filevault
+	Username string `json:"username"`
+	FullName string `json:"full_name"`
+	// Password is write-only: the server seals it and never returns it; PasswordSet says one is stored.
+	Password        string `json:"password,omitempty"`
+	PasswordSet     bool   `json:"password_set"`
+	PasswordHint    string `json:"password_hint"`
+	HomeDirectory   string `json:"home_directory"` // default /Users/<username>
+	Admin           bool   `json:"admin"`
+	EnableFileVault bool   `json:"enable_filevault"`
+	DeleteHome      bool   `json:"delete_home"`
 }
 
 // PolicyStep is one executed step in a policy run.

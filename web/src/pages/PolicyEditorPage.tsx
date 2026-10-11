@@ -29,8 +29,9 @@ import { formatBytes } from '../lib/format'
 import { LabelCombobox, allLabels } from '../components/pickers/LabelCombobox'
 import { InstallomatorCommandPreview, InstallomatorOptionsEditor } from '../components/installomator/Installomator'
 import { InstallomatorFooter } from './AppsPage'
+import { LocalAccountsSection, accountProblem } from './policies/LocalAccountsSection'
 
-type Tab = 'general' | 'scope' | 'scripts' | 'packages' | 'apps' | 'files' | 'maintenance' | 'restart' | 'interaction' | 'selfservice' | 'logs'
+type Tab = 'general' | 'scope' | 'scripts' | 'packages' | 'apps' | 'accounts' | 'files' | 'maintenance' | 'restart' | 'interaction' | 'selfservice' | 'logs'
 
 const blank = (): Policy => ({
   id: '',
@@ -43,6 +44,7 @@ const blank = (): Policy => ({
   scripts: [],
   packages: [],
   apps: [],
+  accounts: [],
   run_command: '',
   update_inventory: false,
   reboot: { enabled: false, message: '', delay_minutes: 0 },
@@ -72,7 +74,7 @@ export function PolicyEditorPage() {
     if (policy.data) {
       const { status: _s, ...rest } = policy.data
       void _s
-      setP({ ...blank(), ...rest, scripts: rest.scripts ?? [], packages: rest.packages ?? [], apps: (rest.apps ?? []).map((a) => ({ ...a, options: { ...emptyInstallomatorOptions(), ...a.options } })), scope: normalizeScope(rest.scope) })
+      setP({ ...blank(), ...rest, scripts: rest.scripts ?? [], packages: rest.packages ?? [], accounts: rest.accounts ?? [], apps: (rest.apps ?? []).map((a) => ({ ...a, options: { ...emptyInstallomatorOptions(), ...a.options } })), scope: normalizeScope(rest.scope) })
     }
   }, [policy.data])
 
@@ -83,9 +85,15 @@ export function PolicyEditorPage() {
       toast.error('Name is required')
       return
     }
+    const problem = accountProblem(p.accounts ?? [])
+    if (problem) {
+      setTab('accounts')
+      toast.error('Check Local Accounts', problem)
+      return
+    }
     setSaving(true)
     try {
-      const body = { ...p, name: p.name.trim() }
+      const body = { ...p, name: p.name.trim(), accounts: (p.accounts ?? []).map(({ verify_password: _v, ...a }) => a) }
       const out = isNew ? await api.post<Policy>('/api/v1/policies', body) : await api.put<Policy>(`/api/v1/policies/${id}`, body)
       await invalidate(qk.policies, qk.policy(out.id), qk.dashboard)
       toast.success(isNew ? 'Policy created' : 'Policy saved', 'Scoped agents were asked to check in.')
@@ -119,6 +127,7 @@ export function PolicyEditorPage() {
     { key: 'scripts', label: 'Scripts', count: p.scripts?.length },
     { key: 'packages', label: 'Packages', count: p.packages?.length },
     { key: 'apps', label: 'Apps (Installomator)', count: p.apps?.length },
+    { key: 'accounts', label: 'Local Accounts', count: p.accounts?.length },
     { key: 'files', label: 'Files & Processes' },
     { key: 'maintenance', label: 'Maintenance' },
     { key: 'restart', label: 'Restart' },
@@ -210,6 +219,7 @@ export function PolicyEditorPage() {
       {tab === 'scripts' && <ScriptsSection value={p.scripts ?? []} onChange={(scripts) => set({ scripts })} disabled={ro} />}
       {tab === 'packages' && <PackagesSection value={p.packages ?? []} onChange={(packages) => set({ packages })} disabled={ro} />}
       {tab === 'apps' && <AppsSection value={p.apps ?? []} onChange={(apps) => set({ apps })} disabled={ro} />}
+      {tab === 'accounts' && <LocalAccountsSection value={p.accounts ?? []} onChange={(accounts) => set({ accounts })} disabled={ro} />}
 
       {tab === 'files' && (
         <Card>

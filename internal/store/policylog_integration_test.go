@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/vibemdm/vibemdm/internal/model"
+	"github.com/vibemdm/vibemdm/internal/secrets"
 )
 
 func TestPolicyLogAcceptsAnyToolOutput(t *testing.T) {
@@ -40,5 +41,52 @@ func TestPolicyLogAcceptsAnyToolOutput(t *testing.T) {
 	}
 	if !strings.Contains(l.Log, "nul and") || strings.ContainsRune(l.Log, 0) || !strings.Contains(l.Steps[0].Output, "invalid UTF-8") {
 		t.Fatalf("stored log: %q / %q", l.Log, l.Steps[0].Output)
+	}
+}
+
+func TestPolicyAccountPasswordsAreSealedAndKept(t *testing.T) {
+	s := testStore(t)
+	box, _ := secrets.New("test passphrase for the store tests")
+	s.Box = box
+	ctx := context.Background()
+	stamp := time.Now().Format("150405.000")
+	c, _ := s.UpsertComputerFromAuthenticate(ctx, MDMAuthenticateInfo{UDID: "ACCT-" + stamp, SerialNumber: "ACCT" + stamp, DeviceName: "acct", Model: "Mac14,2", ProductName: "Mac14,2"})
+	t.Cleanup(func() { s.DeleteComputer(ctx, c.ID) })
+	p, err := s.CreatePolicy(ctx, model.Policy{Name: "accounts " + stamp, Accounts: []model.PolicyAccount{
+		{Action: "create", Username: "student", Password: "Student-Pw-1"},
+		{Action: "delete", Username: "olduser"},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { s.DeletePolicy(ctx, p.ID) })
+	if p.Accounts[0].Password != "" || !p.Accounts[0].PasswordSet || p.Accounts[1].PasswordSet {
+		t.Fatalf("returned accounts: %+v", p.Accounts)
+	}
+	var raw string
+	s.DB.QueryRowContext(ctx, `SELECT accounts::text FROM policies WHERE id = $1`, p.ID).Scan(&raw)
+	if strings.Contains(raw, "Student-Pw-1") || !strings.Contains(raw, "enc:v1:") {
+		t.Fatalf("password not sealed at rest: %s", raw)
+	}
+	// Editing without resending the password keeps it; a new entry needs its own.
+	p.Accounts = []model.PolicyAccount{{Action: "create", Username: "student", FullName: "Student"}, {Action: "reset_password", Username: "teacher", Password: "Teacher-Pw-2"}}
+	if p, err = s.UpdatePolicy(ctx, *p); err != nil {
+		t.Fatal(err)
+	}
+	pws, err := s.PolicyAccountPasswords(ctx, p.ID)
+	if err != nil || len(pws) != 2 || pws[0] != "Student-Pw-1" || pws[1] != "Teacher-Pw-2" {
+		t.Fatalf("passwords: %v %v", pws, err)
+	}
+	// Released only for an open run on that computer.
+	logID, _ := s.CreatePendingPolicyLog(ctx, p.ID, c.ID, "manual")
+	if pid, err := s.PendingPolicyLog(ctx, logID, c.ID); err != nil || pid != p.ID {
+		t.Fatalf("open run: %v %v", pid, err)
+	}
+	if _, err := s.PendingPolicyLog(ctx, logID, "00000000-0000-0000-0000-000000000000"); err != ErrNotFound {
+		t.Fatalf("another computer: %v", err)
+	}
+	s.CompletePolicyLog(ctx, logID, c.ID, model.AgentPolicyLogSubmit{Status: "completed"})
+	if _, err := s.PendingPolicyLog(ctx, logID, c.ID); err != ErrNotFound {
+		t.Fatalf("finished run: %v", err)
 	}
 }

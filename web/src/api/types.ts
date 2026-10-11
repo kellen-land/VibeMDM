@@ -372,6 +372,8 @@ export interface Policy {
   packages: PolicyPackage[] | null
   /** Installomator steps; run after packages and before the run command. */
   apps: PolicyApp[] | null
+  /** Local Accounts payload; runs after Installomator apps. */
+  accounts: PolicyAccount[] | null
   run_command: string
   update_inventory: boolean
   reboot: PolicyReboot
@@ -864,6 +866,26 @@ export interface InstallomatorOptions {
 export const emptyInstallomatorOptions = (): InstallomatorOptions => ({ notify: '', blocking_process_action: '', reopen: '', ignore_app_store_apps: '', force_install: false })
 
 /** An Installomator step in a policy. `label` is a shipped label or "custom:<key>". */
+export type PolicyAccountAction = 'create' | 'reset_password' | 'delete' | 'disable_filevault'
+
+/** One Local Accounts action (Jamf Pro's Local Accounts payload). */
+export interface PolicyAccount {
+  action: PolicyAccountAction
+  username: string
+  full_name: string
+  /** Write-only: never returned by the server. Leave empty to keep a stored password. */
+  password?: string
+  /** Client-only confirmation field; stripped before saving. */
+  verify_password?: string
+  /** A password is stored for this entry. */
+  password_set: boolean
+  password_hint: string
+  home_directory: string
+  admin: boolean
+  enable_filevault: boolean
+  delete_home: boolean
+}
+
 export interface PolicyApp {
   label: string
   options: InstallomatorOptions

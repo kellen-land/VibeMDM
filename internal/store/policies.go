@@ -11,7 +11,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/model"
 )
 
-const policyCols = `id, name, enabled, category, triggers, frequency, scope, scripts, packages, apps, run_command, update_inventory, reboot, user_interaction, self_service, created_at, updated_at`
+const policyCols = `id, name, enabled, category, triggers, frequency, scope, scripts, packages, apps, accounts, run_command, update_inventory, reboot, user_interaction, self_service, created_at, updated_at`
 
 func scanPolicy(row interface{ Scan(...any) error }) (*model.Policy, error) {
 	var p model.Policy
@@ -20,10 +20,11 @@ func scanPolicy(row interface{ Scan(...any) error }) (*model.Policy, error) {
 	var scripts db.JSON[[]model.PolicyScript]
 	var pkgs db.JSON[[]model.PolicyPackage]
 	var apps db.JSON[[]model.PolicyApp]
+	var accounts db.JSON[[]storedAccount]
 	var reboot db.JSON[model.PolicyReboot]
 	var ui db.JSON[model.PolicyUserInteraction]
 	var ss db.JSON[model.PolicySelfService]
-	if err := row.Scan(&p.ID, &p.Name, &p.Enabled, &p.Category, &trig, &p.Frequency, &scope, &scripts, &pkgs, &apps, &p.RunCommand, &p.UpdateInventory, &reboot, &ui, &ss, &p.CreatedAt, &p.UpdatedAt); err != nil {
+	if err := row.Scan(&p.ID, &p.Name, &p.Enabled, &p.Category, &trig, &p.Frequency, &scope, &scripts, &pkgs, &apps, &accounts, &p.RunCommand, &p.UpdateInventory, &reboot, &ui, &ss, &p.CreatedAt, &p.UpdatedAt); err != nil {
 		return nil, wrapNotFound(err)
 	}
 	p.Triggers, p.Scope, p.Scripts, p.Packages, p.Reboot, p.UserInteraction, p.SelfService = trig.V, scope.V, scripts.V, pkgs.V, reboot.V, ui.V, ss.V
@@ -38,7 +39,73 @@ func scanPolicy(row interface{ Scan(...any) error }) (*model.Policy, error) {
 	if p.Apps == nil {
 		p.Apps = []model.PolicyApp{}
 	}
+	p.Accounts = make([]model.PolicyAccount, 0, len(accounts.V))
+	for _, a := range accounts.V {
+		acc := a.PolicyAccount
+		acc.Password, acc.PasswordSet = "", a.Sealed != ""
+		p.Accounts = append(p.Accounts, acc)
+	}
 	return &p, nil
+}
+
+// storedAccount is a Local Accounts entry as stored: the password only ever sealed.
+type storedAccount struct {
+	model.PolicyAccount
+	Sealed string `json:"password_sealed,omitempty"`
+}
+
+// sealAccounts prepares Local Accounts entries for storage. A new password is sealed; an
+// entry sent without one keeps the password already stored for the same action and user.
+func (s *Store) sealAccounts(in []model.PolicyAccount, prev []storedAccount) ([]storedAccount, error) {
+	out := make([]storedAccount, 0, len(in))
+	for _, a := range in {
+		st := storedAccount{PolicyAccount: a}
+		st.Password, st.PasswordSet = "", false
+		if a.Password != "" {
+			sealed, err := s.Box.Seal(a.Password)
+			if err != nil {
+				return nil, err
+			}
+			st.Sealed = sealed
+		} else {
+			for _, p := range prev {
+				if p.Action == a.Action && p.Username == a.Username && p.Sealed != "" {
+					st.Sealed = p.Sealed
+					break
+				}
+			}
+		}
+		out = append(out, st)
+	}
+	return out, nil
+}
+
+// PolicyAccountPasswords returns the Local Accounts passwords of a policy, by entry index
+// ("" where none is stored).
+func (s *Store) PolicyAccountPasswords(ctx context.Context, policyID string) ([]string, error) {
+	var accounts db.JSON[[]storedAccount]
+	if err := s.DB.QueryRowContext(ctx, `SELECT accounts FROM policies WHERE id = $1`, policyID).Scan(&accounts); err != nil {
+		return nil, wrapNotFound(err)
+	}
+	out := make([]string, len(accounts.V))
+	for i, a := range accounts.V {
+		if a.Sealed == "" {
+			continue
+		}
+		pw, err := s.Box.Open(a.Sealed)
+		if err != nil {
+			return nil, err
+		}
+		out[i] = pw
+	}
+	return out, nil
+}
+
+// PendingPolicyLog returns the policy of a log that is still open (pending or running) for this computer.
+func (s *Store) PendingPolicyLog(ctx context.Context, logID, computerID string) (policyID string, err error) {
+	err = s.DB.QueryRowContext(ctx, `SELECT policy_id FROM policy_logs WHERE id::text = $1 AND computer_id = $2 AND status IN ('pending','running')`,
+		logID, computerID).Scan(&policyID)
+	return policyID, wrapNotFound(err)
 }
 
 func normPolicy(p *model.Policy) {
@@ -73,6 +140,9 @@ func normPolicy(p *model.Policy) {
 	if p.Apps == nil {
 		p.Apps = []model.PolicyApp{}
 	}
+	if p.Accounts == nil {
+		p.Accounts = []model.PolicyAccount{}
+	}
 }
 
 // ListPolicies returns all policies.
@@ -101,19 +171,31 @@ func (s *Store) GetPolicy(ctx context.Context, id string) (*model.Policy, error)
 // CreatePolicy inserts a policy.
 func (s *Store) CreatePolicy(ctx context.Context, p model.Policy) (*model.Policy, error) {
 	normPolicy(&p)
-	return scanPolicy(s.DB.QueryRowContext(ctx, `INSERT INTO policies (name, enabled, category, triggers, frequency, scope, scripts, packages, run_command, update_inventory, reboot, user_interaction, self_service, apps)
-		VALUES ($1,$2,$3,$4::jsonb,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb) RETURNING `+policyCols,
+	accounts, err := s.sealAccounts(p.Accounts, nil)
+	if err != nil {
+		return nil, err
+	}
+	return scanPolicy(s.DB.QueryRowContext(ctx, `INSERT INTO policies (name, enabled, category, triggers, frequency, scope, scripts, packages, run_command, update_inventory, reboot, user_interaction, self_service, apps, accounts)
+		VALUES ($1,$2,$3,$4::jsonb,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15::jsonb) RETURNING `+policyCols,
 		p.Name, p.Enabled, p.Category, jsonArg(p.Triggers), p.Frequency, jsonArg(p.Scope), jsonArg(p.Scripts), jsonArg(p.Packages), p.RunCommand, p.UpdateInventory,
-		jsonArg(p.Reboot), jsonArg(p.UserInteraction), jsonArg(p.SelfService), jsonArg(p.Apps)))
+		jsonArg(p.Reboot), jsonArg(p.UserInteraction), jsonArg(p.SelfService), jsonArg(p.Apps), jsonArg(accounts)))
 }
 
 // UpdatePolicy updates a policy.
 func (s *Store) UpdatePolicy(ctx context.Context, p model.Policy) (*model.Policy, error) {
 	normPolicy(&p)
+	var prev db.JSON[[]storedAccount]
+	if err := s.DB.QueryRowContext(ctx, `SELECT accounts FROM policies WHERE id = $1`, p.ID).Scan(&prev); err != nil {
+		return nil, wrapNotFound(err)
+	}
+	accounts, err := s.sealAccounts(p.Accounts, prev.V)
+	if err != nil {
+		return nil, err
+	}
 	return scanPolicy(s.DB.QueryRowContext(ctx, `UPDATE policies SET name=$2, enabled=$3, category=$4, triggers=$5::jsonb, frequency=$6, scope=$7::jsonb, scripts=$8::jsonb, packages=$9::jsonb,
-		run_command=$10, update_inventory=$11, reboot=$12::jsonb, user_interaction=$13::jsonb, self_service=$14::jsonb, apps=$15::jsonb, updated_at=now() WHERE id=$1 RETURNING `+policyCols,
+		run_command=$10, update_inventory=$11, reboot=$12::jsonb, user_interaction=$13::jsonb, self_service=$14::jsonb, apps=$15::jsonb, accounts=$16::jsonb, updated_at=now() WHERE id=$1 RETURNING `+policyCols,
 		p.ID, p.Name, p.Enabled, p.Category, jsonArg(p.Triggers), p.Frequency, jsonArg(p.Scope), jsonArg(p.Scripts), jsonArg(p.Packages), p.RunCommand, p.UpdateInventory,
-		jsonArg(p.Reboot), jsonArg(p.UserInteraction), jsonArg(p.SelfService), jsonArg(p.Apps)))
+		jsonArg(p.Reboot), jsonArg(p.UserInteraction), jsonArg(p.SelfService), jsonArg(p.Apps), jsonArg(accounts)))
 }
 
 // DeletePolicy removes a policy.

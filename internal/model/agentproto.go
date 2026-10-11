@@ -70,13 +70,16 @@ type AgentAppStep struct {
 
 // AgentPolicy is a policy ready for execution.
 type AgentPolicy struct {
-	LogID           string                `json:"log_id"`
-	PolicyID        string                `json:"policy_id"`
-	Name            string                `json:"name"`
-	Trigger         string                `json:"trigger"`
-	Scripts         []AgentScriptStep     `json:"scripts"`
-	Packages        []AgentPackageStep    `json:"packages"`
-	Apps            []AgentAppStep        `json:"apps"`
+	LogID    string             `json:"log_id"`
+	PolicyID string             `json:"policy_id"`
+	Name     string             `json:"name"`
+	Trigger  string             `json:"trigger"`
+	Scripts  []AgentScriptStep  `json:"scripts"`
+	Packages []AgentPackageStep `json:"packages"`
+	Apps     []AgentAppStep     `json:"apps"`
+	// Accounts carry no passwords: the agent fetches them during the run from
+	// POST /agent/v1/policy-logs/{log_id}/account-secrets.
+	Accounts        []PolicyAccount       `json:"accounts"`
 	RunCommand      string                `json:"run_command"`
 	UpdateInventory bool                  `json:"update_inventory"`
 	Reboot          PolicyReboot          `json:"reboot"`

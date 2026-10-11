@@ -618,6 +618,21 @@ func (d *device) runPolicy(ctx context.Context, c *agent.Client, p model.AgentPo
 		sub.Steps = append(sub.Steps, model.PolicyStep{Type: "app", Name: a.Name, Status: "completed", Output: "[simulator] Installomator " + strings.Join(a.Args, " "), DurationMS: 4100})
 		fmt.Fprintf(&logb, "Installomator %q installed\n", a.Name)
 	}
+	if len(p.Accounts) > 0 {
+		// Fetch the passwords the way the agent does (exercises the server's release rules), never print them.
+		pws, err := c.PolicyAccountSecrets(ctx, p.LogID)
+		for i, a := range p.Accounts {
+			st, out := "completed", "[simulator] "+a.Action+" "+a.Username
+			if (a.Action == "create" || a.Action == "reset_password") && (err != nil || i >= len(pws) || pws[i] == "") {
+				st, out = "failed", fmt.Sprintf("[simulator] no password for %s: %v", a.Username, err)
+				sub.Status = "failed"
+			} else if a.Action == "create" || a.Action == "reset_password" {
+				out += fmt.Sprintf(" (password received, %d characters)", len(pws[i]))
+			}
+			sub.Steps = append(sub.Steps, model.PolicyStep{Type: "account", Name: a.Action + " " + a.Username, Status: st, ExitCode: map[string]int{"completed": 0, "failed": 1}[st], Output: out, DurationMS: 300})
+			fmt.Fprintf(&logb, "account %s %s %s\n", a.Action, a.Username, st)
+		}
+	}
 	if p.RunCommand != "" {
 		sub.Steps = append(sub.Steps, model.PolicyStep{Type: "command", Name: "Execute Command", Status: "completed", Output: "[simulator] " + p.RunCommand, DurationMS: 40})
 	}
