@@ -123,7 +123,22 @@ func Generate(length int) (string, error) {
 		j := n.Int64()
 		b[i], b[j] = b[j], b[i]
 	}
+	if strings.ContainsRune(symbols, rune(b[0])) || hasSimpleRun(string(b)) {
+		return Generate(length) // a leading "-" reads as an option; runs fail "no simple passwords" policies
+	}
 	return string(b), nil
+}
+
+// hasSimpleRun reports three repeated (aaa) or consecutive (abc, 321) characters, which
+// macOS password policies that disallow simple passwords reject.
+func hasSimpleRun(s string) bool {
+	for i := 2; i < len(s); i++ {
+		a, b, c := int(s[i-2]), int(s[i-1]), int(s[i])
+		if (a == b && b == c) || (b-a == 1 && c-b == 1) || (a-b == 1 && b-c == 1) {
+			return true
+		}
+	}
+	return false
 }
 
 // Runner executes a command and returns its combined output. The agent supplies
@@ -144,24 +159,29 @@ func Verify(ctx context.Context, run Runner, account, password string) bool {
 
 // Create creates the account as a hidden-from-login-window administrator.
 func Create(ctx context.Context, run Runner, account, password string) error {
-	if out, err := run(ctx, "/usr/sbin/sysadminctl", "-addUser", account, "-fullName", "Local Administrator",
-		"-password", password, "-admin"); err != nil {
-		return fmt.Errorf("creating account: %w: %s", err, Scrub(out, password))
+	out, err := run(ctx, "/usr/sbin/sysadminctl", "-addUser", account, "-fullName", "Local Administrator", "-password", password, "-admin")
+	// sysadminctl often exits 0 when it fails, so the account itself is what counts.
+	if Exists(ctx, run, account) && Verify(ctx, run, account, password) {
+		return nil
 	}
-	return nil
+	return toolError("creating the account", err, out, password)
 }
 
 // SetPassword changes the account password. With the old password it uses sysadminctl,
 // which keeps the Secure Token, FileVault unlock and keychain wrapping in step. Only an account
 // without a Secure Token may fall back to dscl as root (first adoption of an existing account
-// whose password is unknown): on a Secure Token account that would leave FileVault and the
-// login password out of sync, so it is refused.
+// whose password is unknown, or a stale escrowed password): on a Secure Token account that
+// would leave FileVault and the login password out of sync, so it is refused.
+//
+// sysadminctl regularly exits 0 when it did not change anything (wrong old password, password
+// policy), so success is decided by authenticating with the new password, and the tool's own
+// message is reported when it fails.
 func SetPassword(ctx context.Context, run Runner, account, oldPassword, newPassword string) error {
 	var out string
 	var err error
 	if oldPassword != "" {
 		out, err = run(ctx, "/usr/sbin/sysadminctl", "-resetPasswordFor", account, "-newPassword", newPassword, "-oldPassword", oldPassword)
-		if err == nil {
+		if Verify(ctx, run, account, newPassword) {
 			return nil
 		}
 	}
@@ -169,13 +189,57 @@ func SetPassword(ctx context.Context, run Runner, account, oldPassword, newPassw
 		if oldPassword == "" {
 			return errors.New("the account holds a Secure Token and its current password is unknown, so it cannot be changed safely; set the password with Set password in VibeMDM or reset it with a Secure Token administrator")
 		}
-		return fmt.Errorf("sysadminctl could not change the password of this Secure Token account: %s", Scrub(out, oldPassword, newPassword))
+		return toolError("sysadminctl could not change the password of this Secure Token account", err, out, oldPassword, newPassword)
 	}
 	out2, err2 := run(ctx, "/usr/bin/dscl", ".", "-passwd", "/Users/"+account, newPassword)
-	if err2 != nil {
-		return fmt.Errorf("setting password: %w: %s %s", err2, Scrub(out, oldPassword, newPassword), Scrub(out2, oldPassword, newPassword))
+	if Verify(ctx, run, account, newPassword) {
+		return nil
 	}
-	return nil
+	if err2 == nil {
+		err2 = err
+	}
+	return toolError("setting the password", err2, strings.TrimSpace(out+"\n"+out2), oldPassword, newPassword)
+}
+
+// toolError reports a failed sysadminctl/dscl call with its (scrubbed) output and, when the
+// output is recognisable, a plain explanation.
+func toolError(what string, err error, out string, secrets ...string) error {
+	msg := Scrub(out, secrets...)
+	if hint := explainToolOutput(msg); hint != "" {
+		msg = hint + " (" + firstLine(msg) + ")"
+	}
+	switch {
+	case msg == "" && err != nil:
+		return fmt.Errorf("%s failed: %w", what, err)
+	case msg == "":
+		return fmt.Errorf("%s failed: the new password did not authenticate afterwards", what)
+	}
+	return fmt.Errorf("%s failed: %s", what, msg)
+}
+
+// explainToolOutput turns well-known Directory Services errors into advice.
+func explainToolOutput(out string) string {
+	o := strings.ToLower(out)
+	switch {
+	case strings.Contains(o, "-14165") || strings.Contains(o, "quality") || strings.Contains(o, "policy") || strings.Contains(o, "requirement"):
+		return "the Mac's password policy rejected the new password; a configuration profile (for example an mSCP baseline) sets the rules, so choose a LAPS password format and length that meet them"
+	case strings.Contains(o, "-14090") || strings.Contains(o, "authentication") || strings.Contains(o, "old password"):
+		return "the current password VibeMDM has on record is not the account's password; use Set password to give it a new one"
+	case strings.Contains(o, "secure token") || strings.Contains(o, "not permitted"):
+		return "macOS refused the change because of the account's Secure Token"
+	}
+	return ""
+}
+
+func firstLine(s string) string {
+	s = strings.TrimSpace(s)
+	if i := strings.IndexByte(s, '\n'); i >= 0 {
+		s = s[:i]
+	}
+	if len(s) > 200 {
+		s = s[:200] + "…"
+	}
+	return s
 }
 
 // HasSecureToken reports whether the account holds a Secure Token
@@ -280,6 +344,9 @@ func GenerateFormat(format string, length int) (string, error) {
 			return "", err
 		}
 		b[i] = jamfAlphabet[n.Int64()]
+	}
+	if hasSimpleRun(string(b)) {
+		return GenerateFormat(format, length)
 	}
 	return string(b), nil
 }
