@@ -135,7 +135,7 @@ function AccountForm({ a, onChange, disabled }: { a: PolicyAccount; onChange: (p
         )}
         {needsPassword(a) && (
           <>
-            <Field label={a.action === 'reset_password' ? 'New password' : 'Password'} required={!a.password_set} hint={pwHint}>
+            <Field label={a.action === 'reset_password' ? 'New password' : 'Password'} required={!a.password_set} hint={pwHint ?? "Must meet the Mac's password policy (mSCP/CIS baselines usually require 15+ characters)."}>
               <Input type="password" value={a.password ?? ''} onChange={(e) => onChange({ password: e.target.value })} disabled={disabled} autoComplete="new-password" placeholder={a.password_set ? '••••••••' : undefined} />
             </Field>
             <Field label="Verify password" error={mismatch && a.verify_password ? 'The passwords do not match.' : undefined}>

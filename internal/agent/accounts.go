@@ -135,7 +135,7 @@ func (o *accountOps) apply(ctx context.Context, i int, a model.PolicyAccount) Ex
 		out.WriteString(res)
 		// sysadminctl often exits 0 when it fails: the account itself is what counts.
 		if !laps.Exists(ctx, o.run, a.Username) {
-			return fail("\nCreating the account failed%s.", because(err))
+			return fail("\nCreating the account failed%s.%s", because(err), passwordAdvice(out.String()))
 		}
 		if res, err := o.run(ctx, "/usr/sbin/createhomedir", "-c", "-u", a.Username); err != nil {
 			fmt.Fprintf(&out, "\nThe home folder could not be created now (%v); macOS creates it at the first login. %s", err, res)
@@ -169,13 +169,13 @@ func (o *accountOps) apply(ctx context.Context, i int, a model.PolicyAccount) Ex
 			res, err := o.run(ctx, "/usr/sbin/sysadminctl", "-resetPasswordFor", a.Username, "-newPassword", pw, "-adminUser", admin.user, "-adminPassword", admin.password)
 			if !laps.Verify(ctx, o.run, a.Username, pw) {
 				out.WriteString(res)
-				return fail("\nResetting the password failed%s.", because(err))
+				return fail("\nResetting the password failed%s.%s", because(err), passwordAdvice(out.String()))
 			}
 		} else {
 			res, err := o.run(ctx, "/usr/bin/dscl", ".", "-passwd", "/Users/"+a.Username, pw)
 			if err != nil || !laps.Verify(ctx, o.run, a.Username, pw) {
 				out.WriteString(res)
-				return fail("\nResetting the password failed%s.", because(err))
+				return fail("\nResetting the password failed%s.%s", because(err), passwordAdvice(out.String()))
 			}
 		}
 		return ok("Password reset for %s. Their login keychain still opens with the old password; macOS offers to update it at the next login.", a.Username)
@@ -299,4 +299,15 @@ func because(err error) string {
 		return ""
 	}
 	return " (" + err.Error() + ")"
+}
+
+// passwordAdvice explains a password rejected by the Mac's password policy. sysadminctl reports it
+// as "New account password error. (5402)"; dscl as eDSAuthPasswordQualityCheckFailed (-14165).
+func passwordAdvice(out string) string {
+	o := strings.ToLower(out)
+	if strings.Contains(o, "password error") || strings.Contains(o, "5402") || strings.Contains(o, "-14165") || strings.Contains(o, "quality") {
+		return " macOS rejected the password: it does not meet this Mac's password policy. Check the rules with " +
+			"`sudo pwpolicy -getaccountpolicies` (mSCP/CIS baselines usually require 15 or more characters) and change the password in the policy."
+	}
+	return ""
 }

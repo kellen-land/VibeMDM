@@ -233,3 +233,18 @@ func TestAccountsPasswordFetchFailure(t *testing.T) {
 		t.Fatalf("created an account without a password: %+v", r)
 	}
 }
+
+func TestAccountsExplainPasswordPolicyRejection(t *testing.T) {
+	m := &accountsMac{users: map[string]*fakeUser{}}
+	ops, _ := newOps(m, []string{"Short-1"}, nil)
+	ops.run = func(ctx context.Context, name string, args ...string) (string, error) {
+		if strings.HasSuffix(name, "sysadminctl") && args[0] == "-addUser" {
+			return "sysadminctl[4664:48486] New account password error.  (5402)", nil // exits 0, creates nothing
+		}
+		return m.run(ctx, name, args...)
+	}
+	r := ops.apply(context.Background(), 0, model.PolicyAccount{Action: localaccount.Create, Username: "testuser"})
+	if r.ExitCode == 0 || !strings.Contains(r.Combined, "password policy") || strings.Contains(r.Combined, "Short-1") {
+		t.Fatalf("%+v", r)
+	}
+}
