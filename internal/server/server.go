@@ -396,6 +396,32 @@ func (s *Server) filevaultKeySweep(ctx context.Context) {
 	}
 }
 
+// mobileInventorySweep asks iPhones and iPads for fresh inventory once their last report is older
+// than the inventory interval. Mobile devices have no agent, so the server has to ask.
+func (s *Server) mobileInventorySweep(ctx context.Context) {
+	settings, err := s.st.GetSettings(ctx)
+	if err != nil {
+		return
+	}
+	hours := settings.InventoryIntervalHours
+	if hours < 1 {
+		hours = 24
+	}
+	devs, err := s.st.MobileDevicesNeedingInventory(ctx, time.Duration(hours)*time.Hour, 200)
+	if err != nil {
+		s.log.Warn("mobile inventory sweep", "err", err)
+		return
+	}
+	for i := range devs {
+		if err := s.cmdr.RequestMobileInventory(ctx, &devs[i], "system"); err != nil {
+			s.log.Debug("mobile inventory sweep enqueue", "mobile_device", devs[i].Name, "err", err)
+		}
+	}
+	if len(devs) > 0 {
+		s.log.Info("requested inventory from mobile devices", "count", len(devs))
+	}
+}
+
 // loadEscrowIdentity returns the FileVault escrow identity, creating it only
 // when none is stored. A stored identity that cannot be read is fatal: replacing
 // it would make every previously escrowed key undecryptable.
@@ -568,6 +594,7 @@ func (s *Server) housekeeping(ctx context.Context) {
 			if tick%10 == 1 {
 				s.filevaultKeySweep(ctx)
 				s.st.LAPSExpireTokenGrants(ctx)
+				s.mobileInventorySweep(ctx)
 			}
 			if tick%30 == 1 {
 				if n, err := s.cmdr.ReconcileDDM(ctx); err != nil {

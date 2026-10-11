@@ -1,0 +1,113 @@
+{
+  "title": "Content Filter",
+  "description": "Filters websites in Safari and other apps using Apple's built-in filter. Supervised only. Third-party filter apps are not supported here yet.",
+  "__payloadtype": "com.apple.webcontent-filter",
+  "__category": "Security",
+  "__multiple": false,
+  "__order": 30,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "FilterType"
+  ],
+  "properties": {
+    "FilterType": {
+      "title": "Filter type",
+      "description": "The built-in web filter.",
+      "type": "string",
+      "enum": [
+        "BuiltIn"
+      ],
+      "options": {
+        "enum_titles": [
+          "Built-in"
+        ]
+      },
+      "property_order": 1,
+      "default": "BuiltIn"
+    },
+    "UserDefinedName": {
+      "title": "Name",
+      "description": "Name shown in Settings.",
+      "type": "string",
+      "property_order": 2
+    },
+    "AutoFilterEnabled": {
+      "title": "Limit adult websites",
+      "description": "On filters adult content automatically.",
+      "type": "boolean",
+      "property_order": 10
+    },
+    "PermittedURLs": {
+      "title": "Always allow",
+      "description": "Sites allowed even when adult content is limited.",
+      "type": "array",
+      "items": {
+        "title": "URL",
+        "type": "string",
+        "options": {
+          "inputAttributes": {
+            "placeholder": "https://example.com"
+          }
+        }
+      },
+      "property_order": 11
+    },
+    "DenyListURLs": {
+      "title": "Always block",
+      "description": "Sites that are always blocked (up to 500). iOS 14.5+.",
+      "type": "array",
+      "items": {
+        "title": "URL",
+        "type": "string",
+        "options": {
+          "inputAttributes": {
+            "placeholder": "https://example.com"
+          }
+        }
+      },
+      "property_order": 12
+    },
+    "HideDenyListURLs": {
+      "title": "Hide the block list in Settings",
+      "description": "On hides the blocked sites in the profile details. iOS 18+.",
+      "type": "boolean",
+      "property_order": 13
+    },
+    "AllowListBookmarks": {
+      "title": "Only allow these sites",
+      "description": "If set, the device can visit only these sites, shown as bookmarks. iOS 14.5+.",
+      "type": "array",
+      "property_order": 14,
+      "items": {
+        "title": "Site",
+        "type": "object",
+        "required": [
+          "URL",
+          "Title"
+        ],
+        "properties": {
+          "URL": {
+            "title": "URL",
+            "type": "string",
+            "property_order": 1,
+            "pattern": "^https?://",
+            "options": {
+              "inputAttributes": {
+                "placeholder": "https://example.com"
+              }
+            }
+          },
+          "Title": {
+            "title": "Title",
+            "description": "Bookmark name.",
+            "type": "string",
+            "property_order": 2
+          }
+        }
+      }
+    }
+  }
+}

@@ -504,7 +504,8 @@ type MDMCommand struct {
 	CommandUUID     string     `json:"command_uuid"`
 	EnrollmentID    string     `json:"enrollment_id"`
 	ComputerID      string     `json:"computer_id"`
-	ComputerName    string     `json:"computer_name,omitempty"`
+	MobileDeviceID  string     `json:"mobile_device_id,omitempty"`
+	ComputerName    string     `json:"computer_name,omitempty"` // the device's name (computer or mobile device)
 	RequestType     string     `json:"request_type"`
 	Kind            string     `json:"kind"`
 	Status          string     `json:"status"` // Pending | Acknowledged | Error | NotNow | CommandFormatError
@@ -1177,4 +1178,169 @@ type AgentInstallAttempt struct {
 	CreatedBy   string    `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// MobileDevice is an iPhone, iPad, iPod touch or Apple TV. Mobile devices are kept apart from
+// computers (their own tables, groups, profiles and apps), as in Jamf Pro.
+type MobileDevice struct {
+	ID                    string         `json:"id"`
+	UDID                  string         `json:"udid"`
+	SerialNumber          string         `json:"serial_number"`
+	Name                  string         `json:"name"`
+	DeviceType            string         `json:"device_type"` // iPhone | iPad | iPod | AppleTV
+	Model                 string         `json:"model"`
+	ModelName             string         `json:"model_name"`
+	ProductName           string         `json:"product_name"`
+	OSVersion             string         `json:"os_version"`
+	OSBuild               string         `json:"os_build"`
+	CapacityGB            *float64       `json:"capacity_gb"`
+	AvailableGB           *float64       `json:"available_gb"`
+	BatteryLevel          *float64       `json:"battery_level"` // 0..1
+	WiFiMAC               string         `json:"wifi_mac"`
+	BluetoothMAC          string         `json:"bluetooth_mac"`
+	IMEI                  string         `json:"imei"`
+	MEID                  string         `json:"meid"`
+	PhoneNumber           string         `json:"phone_number"`
+	Carrier               string         `json:"carrier"`
+	CellularTechnology    string         `json:"cellular_technology"`
+	IsRoaming             *bool          `json:"is_roaming"`
+	IsSupervised          *bool          `json:"is_supervised"`
+	IsSharedIPad          *bool          `json:"is_shared_ipad"`
+	ActivationLockEnabled *bool          `json:"activation_lock_enabled"`
+	FindMyEnabled         *bool          `json:"find_my_enabled"`
+	LostModeEnabled       *bool          `json:"lost_mode_enabled"`
+	PasscodePresent       *bool          `json:"passcode_present"`
+	PasscodeCompliant     *bool          `json:"passcode_compliant"`
+	HardwareEncryption    *int           `json:"hardware_encryption"`
+	LastBackupAt          *time.Time     `json:"last_backup_at"`
+	MDMEnrolled           bool           `json:"mdm_enrolled"`
+	MDMEnrolledAt         *time.Time     `json:"mdm_enrolled_at"`
+	MDMLastCheckin        *time.Time     `json:"mdm_last_checkin"`
+	MDMUnenrolledAt       *time.Time     `json:"mdm_unenrolled_at"`
+	DeviceInfo            map[string]any `json:"device_info"`
+	SecurityInfo          map[string]any `json:"security_info"`
+	LastInventoryAt       *time.Time     `json:"last_inventory_at"`
+	// Location is the last DeviceLocation answer (only available in Lost Mode).
+	Location *DeviceLocation `json:"location"`
+	// ActivationLockBypassAt is when the bypass code was collected (nil: none stored).
+	ActivationLockBypassAt *time.Time `json:"activation_lock_bypass_at"`
+	AssetTag               string     `json:"asset_tag"`
+	Site                   string     `json:"site"`
+	Department             string     `json:"department"`
+	Building               string     `json:"building"`
+	Room                   string     `json:"room"`
+	AssignedUser           string     `json:"assigned_user"`
+	AssignedRealName       string     `json:"assigned_real_name"`
+	AssignedEmail          string     `json:"assigned_email"`
+	Notes                  string     `json:"notes"`
+	CreatedAt              time.Time  `json:"created_at"`
+	UpdatedAt              time.Time  `json:"updated_at"`
+}
+
+// MobileDeviceApp is an app installed on a mobile device.
+type MobileDeviceApp struct {
+	Name          string `json:"name"`
+	Version       string `json:"version"`
+	BundleID      string `json:"bundle_id"`
+	Managed       bool   `json:"managed"`
+	ManagedStatus string `json:"managed_status"`
+}
+
+// MobileDeviceDetail is a mobile device with its related inventory.
+type MobileDeviceDetail struct {
+	MobileDevice
+	Apps                []MobileDeviceApp `json:"apps"`
+	Profiles            []ComputerProfile `json:"profiles"`
+	Groups              []ComputerGroup   `json:"groups"`
+	ExtensionAttributes []EAValue         `json:"extension_attributes"`
+}
+
+// MobileExtensionAttribute is a custom inventory field for mobile devices. Values are entered by an
+// administrator (there is no agent on iOS): a free text field or a pop-up menu.
+type MobileExtensionAttribute struct {
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	Description  string    `json:"description"`
+	DataType     string    `json:"data_type"`  // string | integer | date
+	InputType    string    `json:"input_type"` // text | popup
+	PopupChoices []string  `json:"popup_choices"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+// DeviceLocation is a position reported by a device in Lost Mode.
+type DeviceLocation struct {
+	Latitude  float64   `json:"latitude"`
+	Longitude float64   `json:"longitude"`
+	Accuracy  *float64  `json:"accuracy"` // meters
+	At        time.Time `json:"at"`
+}
+
+// MobileScope says which iPhones and iPads a mobile object applies to: the
+// targets minus the exclusions (exclusions always win).
+type MobileScope struct {
+	AllMobileDevices bool                 `json:"all_mobile_devices"`
+	Targets          MobileScopeSelection `json:"targets"`
+	Exclusions       MobileScopeSelection `json:"exclusions"`
+}
+
+// MobileScopeSelection names mobile devices, mobile device groups, buildings and departments.
+type MobileScopeSelection struct {
+	MobileDeviceIDs []string `json:"mobile_device_ids"`
+	GroupIDs        []string `json:"group_ids"`
+	Buildings       []string `json:"buildings"`
+	Departments     []string `json:"departments"`
+}
+
+// IsEmpty reports whether the selection names nothing.
+func (s MobileScopeSelection) IsEmpty() bool {
+	return len(s.MobileDeviceIDs)+len(s.GroupIDs)+len(s.Buildings)+len(s.Departments) == 0
+}
+
+func (s *MobileScopeSelection) normalize() {
+	s.MobileDeviceIDs = nonNil(s.MobileDeviceIDs)
+	s.GroupIDs = nonNil(s.GroupIDs)
+	s.Buildings = nonNil(s.Buildings)
+	s.Departments = nonNil(s.Departments)
+}
+
+// Normalize replaces nil slices so the JSON shape is stable.
+func (s *MobileScope) Normalize() {
+	s.Targets.normalize()
+	s.Exclusions.normalize()
+}
+
+// MobilePayloadValues is one payload of a mobile profile built with the payload editors.
+type MobilePayloadValues struct {
+	Type   string         `json:"type"`
+	Values map[string]any `json:"values"`
+}
+
+// MobileConfigProfile is a Mobile Device Configuration Profile.
+type MobileConfigProfile struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Category    string `json:"category"`
+	Identifier  string `json:"identifier"`
+	UUID        string `json:"uuid"`
+	// Payload is the .mobileconfig XML (empty in lists).
+	Payload string `json:"payload,omitempty"`
+	// Payloads holds the editor values; nil when the profile was uploaded as XML.
+	Payloads  []MobilePayloadValues `json:"payloads"`
+	Scope     MobileScope           `json:"scope"`
+	CreatedAt time.Time             `json:"created_at"`
+	UpdatedAt time.Time             `json:"updated_at"`
+}
+
+// MobileProfileDeployment is a mobile profile's state on one device.
+type MobileProfileDeployment struct {
+	ProfileID        string    `json:"profile_id"`
+	ProfileName      string    `json:"profile_name"`
+	MobileDeviceID   string    `json:"mobile_device_id"`
+	MobileDeviceName string    `json:"mobile_device_name"`
+	Status           string    `json:"status"`
+	CommandUUID      string    `json:"command_uuid"`
+	Error            string    `json:"error"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }

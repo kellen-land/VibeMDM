@@ -46,15 +46,24 @@
 ## iOS and iPadOS (plan: docs/plans/ios-ipados.md)
 Test hardware: iPhone 13 mini, iPad (8th generation), supervised with Apple Configurator. No ABM/ASM account: items marked **Blocked: ABM/ASM** are built against Apple's docs and the simulator, then stay untested and off by default.
 
-- [ ] Mobile Devices as a separate, Jamf-style area: `mobile_devices` table routed by platform at enrollment (migrate iOS rows out of `computers`), its own groups, searches, profiles, apps and API, a Mobile Devices sidebar group, and an Inventory / Management / History device record
-- [ ] Simulator iOS mode (`vibemdm-sim -platform iphone|ipad`): iOS DeviceInformation, supervision, passcode, Lost Mode, app lists, UnlockToken
-- [ ] Mobile enrollment page: Apple Configurator (supervised) step by step, and profile enrollment in Safari with a QR code
+- [x] Mobile Devices as a separate, Jamf-style area: `mobile_devices` table routed by platform at enrollment (migrate iOS rows out of `computers`), its own groups, searches, profiles, apps and API, a Mobile Devices sidebar group, and an Inventory / Management / History device record
+    - Added `mobile_devices` and its own groups, searches, command history and API, routed by product at MDM Authenticate (iPhones and iPads already filed under computers are moved), scheduled MDM inventory, and a Mobile Devices sidebar section with an Inventory / Management / History record (profiles and apps are their own items below).
+- [x] Simulator iOS mode (`vibemdm-sim -platform iphone|ipad`): iOS DeviceInformation, supervision, passcode, Lost Mode, app lists, UnlockToken
+    - `vibemdm-sim -platform iphone|ipad` enrolls simulated iPhones and iPads that answer the iOS DeviceInformation, SecurityInfo and app-list queries, with supervision and passcode varying per device.
+- [x] Mobile enrollment page: Apple Configurator (supervised) step by step, and profile enrollment in Safari with a QR code
+    - Added a Mobile Device Enrollment page with Apple Configurator (supervised) steps and the Configurator URL, Safari enrollment with a QR code (one-time invitation link when open enrollment is off), and iPhone/iPad steps on the public /enroll page.
 - [ ] Automated Device Enrollment with NanoDEP: token upload, device sync, enrollment profiles, Await Configuration and DeviceConfigured
     - Blocked: ABM/ASM (Apple declined a test account).
-- [ ] Mobile inventory: scheduled DeviceInformation, SecurityInfo, installed and managed app lists, profiles, certificates; cellular, battery, storage, supervision, Activation Lock, Lost Mode and passcode fields; server-side extension attributes
-- [ ] Mobile commands: Lock, Clear Passcode (UnlockToken), Erase (Return to Service), Restart/Shut Down, Lost Mode with location and sound, Settings (name, wallpaper, Bluetooth, roaming, hotspot, time zone), refresh cellular plans, OS updates via DDM plans
-- [ ] Activation Lock bypass code: collect from supervised devices, store sealed, audited reveal with a reason
-- [ ] Mobile Device Configuration Profiles with GUI editors: Restrictions, Passcode, Wi-Fi, VPN, Web Clips, Home Screen Layout, Notifications, Single App Mode, Content Filter, Certificates, AirPrint, Lock Screen message; DDM declarations for iOS 17+
+- [x] Mobile inventory: scheduled DeviceInformation, SecurityInfo, installed and managed app lists, profiles, certificates; cellular, battery, storage, supervision, Activation Lock, Lost Mode and passcode fields; server-side extension attributes
+    - Mobile devices report DeviceInformation (iOS queries), SecurityInfo, installed and managed app lists, profiles and certificates on a schedule, with cellular, battery, storage, supervision, Activation Lock, Lost Mode and passcode fields; mobile extension attributes are admin-entered text or pop-up fields usable in groups and searches.
+- [x] Mobile commands: Lock, Clear Passcode (UnlockToken), Erase, Restart/Shut Down, Lost Mode with location and sound, Settings (name, Bluetooth, roaming, hotspot, time zone), refresh cellular plans
+    - Added an Actions panel on the mobile device record (rarer commands under *More actions*) backed by `POST /api/v1/mobile-devices/{id}/actions`, with supervision checks, typed-name erase confirmation, Lost Mode location and audit entries; untested on real hardware.
+- [ ] More mobile commands: Settings wallpaper, Erase with Return to Service (iOS 17+), `ClearRestrictionsPassword`, OS updates via DDM plans
+- [x] Activation Lock bypass code: collect from supervised devices, store sealed, audited reveal with a reason
+    - Supervised devices are asked for the code after inventory; it is sealed, scrubbed from NanoMDM's raw result and revealed from the Security section only with a reason recorded in the audit log.
+- [x] Mobile Device Configuration Profiles with GUI editors: Restrictions, Passcode, Wi-Fi, VPN, Web Clips, Home Screen Layout, Notifications, Single App Mode, Content Filter, Certificates, AirPrint, Lock Screen message
+    - Added a separate Mobile Device Configuration Profiles area with 13 schema-driven payload editors checked against Apple's device-management repository, .mobileconfig upload, mobile scoping, per-device deployments and failures on the device record; untested on real hardware.
+- [ ] Mobile DDM declarations for iOS 17+ (passcode, software update enforcement), enterprise Wi-Fi (802.1X) and certificate references in VPN/Wi-Fi payloads
 - [ ] Mobile apps: App Store apps by Store ID (user signs in), install/update/remove with status from ManagedApplicationList, Managed App Configuration via the JSON-schema form engine
 - [ ] Apps and Books: content token, licence sync, device-based licences, token-expiry and licence-shortage Health checks
     - Blocked: ABM/ASM.

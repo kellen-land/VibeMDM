@@ -62,6 +62,11 @@ type device struct {
 	ctx          context.Context
 	agentEvery   time.Duration
 	agentStarted bool
+
+	mobile     bool // an iPhone or iPad (no agent; MDM only)
+	supervised bool // mobile: as if prepared with Apple Configurator
+	passcode   bool // mobile: a passcode is set
+	lostMode   bool // mobile: MDM Lost Mode is on
 }
 
 func main() {
@@ -74,7 +79,18 @@ func main() {
 	checkin := flag.Duration("checkin", 30*time.Second, "agent check-in interval")
 	prefix := flag.String("prefix", "SIM", "computer name prefix")
 	noMDM := flag.Bool("no-mdm", false, "skip MDM enrollment (agent only)")
+	platform := flag.String("platform", "mac", "device kind to simulate: mac, iphone or ipad (iPhone and iPad are MDM only)")
 	flag.Parse()
+	switch *platform {
+	case "mac", "iphone", "ipad":
+	default:
+		fmt.Fprintln(os.Stderr, "-platform must be mac, iphone or ipad")
+		os.Exit(2)
+	}
+	if *platform != "mac" && (*noMDM || *token != "") {
+		fmt.Fprintln(os.Stderr, "iPhone and iPad have no agent: drop -no-mdm and -token")
+		os.Exit(2)
+	}
 	loadSimTokens()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -87,7 +103,7 @@ func main() {
 	}
 	var wg sync.WaitGroup
 	for i := 1; i <= *n; i++ {
-		d := newDevice(i, *prefix, *server, *topic, logger)
+		d := newDevice(i, *prefix, *server, *topic, *platform, logger)
 		wg.Add(1)
 		d.ctx, d.agentEvery = ctx, *checkin
 		go func() {
@@ -123,14 +139,33 @@ var models = []struct{ id, name string }{
 }
 var osVersions = []struct{ v, b string }{{"15.6.1", "24G90"}, {"15.5", "24F74"}, {"14.7.6", "23H626"}, {"26.0", "25A354"}}
 
-func newDevice(i int, prefix, server, topic string, logger *slog.Logger) *device {
+var iPhoneModels = []struct{ id, name string }{{"iPhone14,4", "iPhone 13 mini"}, {"iPhone15,2", "iPhone 14 Pro"}, {"iPhone17,3", "iPhone 16"}}
+var iPadModels = []struct{ id, name string }{{"iPad11,6", "iPad (8th generation)"}, {"iPad13,18", "iPad (10th generation)"}, {"iPad14,8", "iPad Air 11-inch (M2)"}}
+var iOSVersions = []struct{ v, b string }{{"18.6.2", "22G100"}, {"26.0", "23A341"}, {"17.7.10", "21H450"}}
+
+func newDevice(i int, prefix, server, topic, platform string, logger *slog.Logger) *device {
 	m := models[i%len(models)]
 	o := osVersions[i%len(osVersions)]
+	kind := "Mac"
+	switch platform {
+	case "iphone":
+		m, o, kind = iPhoneModels[i%len(iPhoneModels)], iOSVersions[i%len(iOSVersions)], "iPhone"
+	case "ipad":
+		m, o, kind = iPadModels[i%len(iPadModels)], iOSVersions[i%len(iOSVersions)], "iPad"
+	}
 	serial := fmt.Sprintf("SIM%07d", 1000000+i*7919%9000000)
 	udid := fmt.Sprintf("%08X-SIM0-4000-8000-%012d", 0x5A000000+i, i)
-	d := &device{idx: i, prkReady: i%4 != 0, udid: udid, serial: serial, name: fmt.Sprintf("%s-Mac-%02d", prefix, i), model: m.id, osVer: o.v, build: o.b,
+	if platform != "mac" {
+		// Different identifiers per kind so Macs, iPhones and iPads can run against one server.
+		base := map[string]int{"iphone": 0x5B000000, "ipad": 0x5C000000}[platform]
+		serial = fmt.Sprintf("SIM%s%05d", map[string]string{"iphone": "PH", "ipad": "PD"}[platform], 10000+i*7919%90000)
+		udid = fmt.Sprintf("%08X-SIM0-4000-8000-%012d", base+i, i)
+	}
+	name := fmt.Sprintf("%s-%s-%02d", prefix, kind, i)
+	d := &device{idx: i, prkReady: i%4 != 0, udid: udid, serial: serial, name: name, model: m.id, osVer: o.v, build: o.b,
 		profiles: map[string]map[string]any{}, violated: map[string]bool{}, server: strings.TrimRight(server, "/"), topic: topic,
-		client: &http.Client{Timeout: 60 * time.Second}, log: logger.With("device", fmt.Sprintf("%s-Mac-%02d", prefix, i))}
+		client: &http.Client{Timeout: 60 * time.Second}, log: logger.With("device", name),
+		mobile: platform != "mac", supervised: i%2 == 1, passcode: i%3 != 0}
 	return d
 }
 
@@ -218,6 +253,9 @@ func (d *device) enrollMDM(ctx context.Context, challenge string) error {
 		"MessageType": "Authenticate", "Topic": d.topic, "UDID": d.udid, "SerialNumber": d.serial, "DeviceName": d.name,
 		"Model": d.model, "ModelName": modelName(d.model), "OSVersion": d.osVer, "BuildVersion": d.build, "ProductName": d.model,
 	}
+	if d.mobile {
+		auth["IMEI"] = d.imei()
+	}
 	if err := d.checkin(ctx, auth); err != nil {
 		return fmt.Errorf("Authenticate: %w", err)
 	}
@@ -228,6 +266,9 @@ func (d *device) enrollMDM(ctx context.Context, challenge string) error {
 		"MessageType": "TokenUpdate", "Topic": d.topic, "UDID": d.udid, "Token": tok, "PushMagic": fmt.Sprintf("SIM-%d-%x", d.idx, tok[:4]),
 		"AwaitingConfiguration": false,
 	}
+	if d.mobile {
+		tu["UnlockToken"] = []byte(fmt.Sprintf("sim-unlock-token-%d", d.idx)) // iOS sends one so MDM can clear the passcode
+	}
 	if err := d.checkin(ctx, tu); err != nil {
 		return fmt.Errorf("TokenUpdate: %w", err)
 	}
@@ -235,7 +276,7 @@ func (d *device) enrollMDM(ctx context.Context, challenge string) error {
 }
 
 func modelName(id string) string {
-	for _, m := range models {
+	for _, m := range append(append(models[:len(models):len(models)], iPhoneModels...), iPadModels...) {
 		if m.id == id {
 			return m.name
 		}
@@ -360,6 +401,11 @@ func sleep(ctx context.Context, dur time.Duration) {
 
 func (d *device) respond(uuid, rt string, cmd map[string]any) map[string]any {
 	r := map[string]any{"Status": "Acknowledged", "UDID": d.udid, "CommandUUID": uuid}
+	if d.mobile {
+		if handled := d.respondMobile(r, rt, cmd); handled {
+			return r
+		}
+	}
 	switch rt {
 	case "DeviceInformation":
 		r["QueryResponses"] = map[string]any{

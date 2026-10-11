@@ -1,0 +1,253 @@
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Eye, Save, Trash2 } from 'lucide-react'
+import { qk, useMobileCriteriaFields, useMobileGroup, useMobileGroupMembers, useInvalidate } from '../api/queries'
+import { api, errorMessage } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
+import type { ComputerGroup, Criterion, MobileDevice, MobileGroupPreview } from '../api/types'
+import { PageHeader } from '../components/ui/PageHeader'
+import { Card, CardBody, CardHeader } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
+import { Field, FormGrid } from '../components/ui/Field'
+import { Input } from '../components/ui/Input'
+import { Toggle } from '../components/ui/Checkbox'
+import { Tabs } from '../components/ui/Tabs'
+import { Table } from '../components/ui/Table'
+import { Alert } from '../components/ui/Alert'
+import { Badge } from '../components/ui/Badge'
+import { LoadingBlock } from '../components/ui/Spinner'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import { RelativeTime } from '../components/ui/RelativeTime'
+import { useToast } from '../components/ui/Toast'
+import { CriteriaBuilder, describeCriteria } from '../components/pickers/CriteriaBuilder'
+import { MobileDevicePicker } from '../components/pickers/MobileDevicePicker'
+
+type Tab = 'settings' | 'members'
+
+export function MobileGroupEditorPage() {
+  const { id } = useParams()
+  const isNew = !id || id === 'new'
+  const navigate = useNavigate()
+  const [sp, setSp] = useSearchParams()
+  const { isAdmin } = useAuth()
+  const toast = useToast()
+  const invalidate = useInvalidate()
+  const group = useMobileGroup(isNew ? undefined : id)
+  const members = useMobileGroupMembers(isNew ? undefined : id)
+  const fields = useMobileCriteriaFields()
+
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [isSmart, setIsSmart] = useState(true)
+  const [criteria, setCriteria] = useState<Criterion[]>([])
+  const [memberIds, setMemberIds] = useState<string[]>([])
+  const [dirtyMembers, setDirtyMembers] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [preview, setPreview] = useState<MobileGroupPreview | null>(null)
+  const [previewing, setPreviewing] = useState(false)
+  const [del, setDel] = useState(false)
+  const tab = (sp.get('tab') as Tab) || 'settings'
+  const setTab = (t: Tab) => setSp(t === 'settings' ? {} : { tab: t }, { replace: true })
+
+  useEffect(() => {
+    if (group.data) {
+      setName(group.data.name)
+      setDescription(group.data.description)
+      setIsSmart(group.data.is_smart)
+      setCriteria(group.data.criteria ?? [])
+    }
+  }, [group.data])
+  useEffect(() => {
+    if (members.data && !dirtyMembers) setMemberIds(members.data.items.map((c) => c.id))
+  }, [members.data, dirtyMembers])
+
+  const save = async () => {
+    if (!name.trim()) {
+      toast.error('Name is required')
+      return
+    }
+    setSaving(true)
+    try {
+      const body: Partial<ComputerGroup> = { name: name.trim(), description, is_smart: isSmart, criteria: isSmart ? criteria : [] }
+      let out: ComputerGroup
+      if (isNew) out = await api.post<ComputerGroup>('/api/v1/mobile-device-groups', body)
+      else out = await api.put<ComputerGroup>(`/api/v1/mobile-device-groups/${id}`, body)
+      if (!isSmart && (isNew || dirtyMembers)) {
+        await api.put(`/api/v1/mobile-device-groups/${out.id}/members`, { mobile_device_ids: memberIds })
+      }
+      await invalidate(qk.mobileGroups, qk.mobileGroup(out.id), qk.mobileGroupMembers(out.id), qk.dashboard, ['mobile-devices'])
+      setDirtyMembers(false)
+      toast.success(isNew ? 'Group created' : 'Group saved')
+      if (isNew) navigate(`/mobile-groups/${out.id}`, { replace: true })
+    } catch (e) {
+      toast.error('Save failed', errorMessage(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const runPreview = async () => {
+    setPreviewing(true)
+    try {
+      const r = await api.post<MobileGroupPreview>('/api/v1/mobile-device-groups/preview', { criteria })
+      setPreview(r)
+    } catch (e) {
+      toast.error('Preview failed', errorMessage(e))
+    } finally {
+      setPreviewing(false)
+    }
+  }
+
+  const doDelete = async () => {
+    try {
+      await api.del(`/api/v1/mobile-device-groups/${id}`)
+      toast.success('Group deleted')
+      await invalidate(qk.mobileGroups, qk.dashboard)
+      navigate('/mobile-groups')
+    } catch (e) {
+      toast.error('Delete failed', errorMessage(e))
+    }
+  }
+
+  if (!isNew && group.isPending) return <LoadingBlock />
+  if (!isNew && group.error) return <Alert tone="critical">{errorMessage(group.error)}</Alert>
+  const ro = !isAdmin
+
+  return (
+    <>
+      <PageHeader
+        crumbs={[{ label: 'Mobile Device Groups', to: '/mobile-groups' }, { label: isNew ? 'New group' : group.data?.name ?? '' }]}
+        title={isNew ? 'New mobile device group' : group.data?.name}
+        meta={
+          !isNew && group.data ? (
+            <>
+              <Badge tone={group.data.is_smart ? 'accent' : 'neutral'}>{group.data.is_smart ? 'Smart group' : 'Static group'}</Badge>
+              <span className="text-xs text-ink-muted">{group.data.member_count} members</span>
+              <span className="text-xs text-ink-muted">
+                Updated <RelativeTime value={group.data.updated_at} />
+              </span>
+            </>
+          ) : undefined
+        }
+        actions={
+          isAdmin && (
+            <>
+              {!isNew && (
+                <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDel(true)}>
+                  Delete
+                </Button>
+              )}
+              <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
+                {isNew ? 'Create group' : 'Save changes'}
+              </Button>
+            </>
+          )
+        }
+      />
+      {!isNew && <Tabs className="mb-5" value={tab} onChange={setTab} items={[{ key: 'settings', label: 'Settings' }, { key: 'members', label: 'Members', count: members.data?.total }]} />}
+
+      {tab === 'settings' && (
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardHeader title="General" />
+            <CardBody>
+              <FormGrid cols={2}>
+                <Field label="Name" required>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} placeholder="e.g. Student iPads" />
+                </Field>
+                <Field label="Description">
+                  <Input value={description} onChange={(e) => setDescription(e.target.value)} disabled={ro} />
+                </Field>
+              </FormGrid>
+              <div className="mt-5">
+                <Toggle
+                  checked={isSmart}
+                  onChange={setIsSmart}
+                  disabled={ro || !isNew}
+                  label="Smart group"
+                  description={isNew ? 'Membership is computed from criteria. Turn off to pick members manually.' : 'The group type cannot be changed after creation.'}
+                />
+              </div>
+            </CardBody>
+          </Card>
+
+          {isSmart ? (
+            <Card>
+              <CardHeader
+                title="Criteria"
+                description="Mobile devices matching these rules are members. Rules are evaluated top to bottom; use parentheses to group and/or conditions."
+                actions={
+                  <Button icon={<Eye />} loading={previewing} onClick={runPreview} disabled={criteria.length === 0}>
+                    Preview
+                  </Button>
+                }
+              />
+              <CardBody className="flex flex-col gap-4">
+                <CriteriaBuilder kind="mobile" value={criteria} onChange={setCriteria} disabled={ro} />
+                {criteria.length > 0 && <p className="text-xs text-ink-muted font-mono rounded-lg bg-surface-sunken px-3 py-2">{describeCriteria(criteria, fields.data)}</p>}
+                {preview && (
+                  <div className="rounded-xl border border-line">
+                    <div className="flex items-center justify-between px-4 py-2.5 border-b border-line">
+                      <p className="text-sm font-medium text-ink">
+                        Preview: {preview.count.toLocaleString()} matching {preview.count === 1 ? 'device' : 'devices'}
+                      </p>
+                      <Button size="xs" variant="ghost" onClick={() => setPreview(null)}>
+                        Dismiss
+                      </Button>
+                    </div>
+                    <MobileMemberTable rows={preview.mobile_devices} emptyTitle="No mobile devices match these criteria" />
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader title="Members" description="Search for mobile devices and add them to this static group." />
+              <CardBody>
+                <MobileDevicePicker
+                  value={memberIds}
+                  onChange={(ids) => {
+                    setMemberIds(ids)
+                    setDirtyMembers(true)
+                  }}
+                  disabled={ro}
+                />
+                {dirtyMembers && <p className="mt-2 text-xs text-ink-muted">Membership changes are saved when you click Save.</p>}
+              </CardBody>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {tab === 'members' && !isNew && (
+        <Card>
+          <CardHeader title={`Members (${members.data?.total ?? 0})`} description={group.data?.is_smart ? 'Computed from the current criteria.' : 'Edit membership on the Settings tab.'} />
+          <MobileMemberTable rows={members.data?.items} loading={members.isPending} emptyTitle="This group has no members" />
+        </Card>
+      )}
+
+      <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={doDelete} destructive title={`Delete "${name}"?`} description="Profiles and apps scoped to this group will no longer target its members." confirmLabel="Delete group" />
+    </>
+  )
+}
+
+export function MobileMemberTable({ rows, loading, emptyTitle }: { rows: MobileDevice[] | undefined; loading?: boolean; emptyTitle: string }) {
+  const navigate = useNavigate()
+  return (
+    <Table<MobileDevice>
+      rows={rows}
+      loading={loading}
+      rowKey={(d) => d.id}
+      dense
+      onRowClick={(d) => navigate(`/mobile-devices/${d.id}`)}
+      emptyTitle={emptyTitle}
+      columns={[
+        { key: 'name', header: 'Device', render: (d) => <span className="font-medium text-ink">{d.name || d.serial_number}</span> },
+        { key: 'serial', header: 'Serial', render: (d) => <span className="font-mono text-xs">{d.serial_number}</span> },
+        { key: 'model', header: 'Model', render: (d) => <span className="text-ink-muted">{d.model_name || d.model || '—'}</span> },
+        { key: 'os', header: 'OS', render: (d) => <span className="tabular-nums">{d.os_version || '—'}</span> },
+        { key: 'checkin', header: 'Last check-in', render: (d) => <RelativeTime value={d.mdm_last_checkin} className="text-ink-muted" /> },
+      ]}
+    />
+  )
+}

@@ -27,6 +27,7 @@ import {
   QrCode,
   Search,
   Settings,
+  Smartphone,
   ShieldCheck,
   ShieldHalf,
   Sun,
@@ -62,11 +63,21 @@ const navGroups: { heading: string; items: NavItem[] }[] = [
     ],
   },
   {
-    heading: 'Inventory',
+    heading: 'Computers',
     items: [
       { to: '/computers', label: 'Computers', icon: Laptop },
       { to: '/groups', label: 'Computer Groups', icon: Users },
       { to: '/searches', label: 'Searches', icon: Search },
+    ],
+  },
+  {
+    heading: 'Mobile Devices',
+    items: [
+      { to: '/mobile-devices', label: 'Mobile Devices', icon: Smartphone },
+      { to: '/mobile-groups', label: 'Mobile Device Groups', icon: Users },
+      { to: '/mobile-searches', label: 'Searches', icon: Search },
+      { to: '/mobile-profiles', label: 'Configuration Profiles', icon: ShieldCheck },
+      { to: '/mobile-enrollment', label: 'Enrollment', icon: QrCode },
     ],
   },
   {

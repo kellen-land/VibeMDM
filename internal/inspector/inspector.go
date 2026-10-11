@@ -68,7 +68,7 @@ var sensitiveKeys = []string{
 	"PIN", "Password", "NewPassword", "CurrentPassword", "Payload", "FDE_PersonalRecoveryKeyCMS", "PersonalRecoveryKey",
 	"RecoveryKey", "BootstrapToken", "UnlockToken", "Token", "PushMagic", "ChallengePassword", "Challenge", "Passcode",
 	"ActivationLockBypassCode", "EscrowKey", "RotateRecoveryKey", "SecurityToken", "Identity", "Data", "Certificate",
-	"VPNPassword", "ProxyPassword", "SharedSecret", "AuthPassword", "PrivateKey", "Secret",
+	"VPNPassword", "ProxyPassword", "SharedSecret", "AuthPassword", "PrivateKey", "Secret", "PayloadContent",
 }
 
 var sensitiveRe = func() *regexp.Regexp {

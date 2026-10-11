@@ -106,7 +106,7 @@ func (s *Store) ListComputers(ctx context.Context, f ComputerFilter) ([]model.Co
 		where = append(where, fmt.Sprintf(`(c.name ILIKE $%d OR c.serial_number ILIKE $%d OR c.udid ILIKE $%d OR c.last_user ILIKE $%d OR c.model_name ILIKE $%d OR c.assigned_user ILIKE $%d OR c.hostname ILIKE $%d OR c.asset_tag ILIKE $%d OR c.ip_address ILIKE $%d)`, n, n, n, n, n, n, n, n, n))
 	}
 	if f.GroupID != "" {
-		sub, subArgs, err := s.groupMembershipSQL(ctx, f.GroupID, len(args), 0)
+		sub, subArgs, err := s.groupMembershipSQL(ctx, computerDomain, f.GroupID, len(args), 0)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -239,6 +239,7 @@ func (s *Store) MarkMDMUnenrolled(ctx context.Context, udid string) error {
 // TouchMDMCheckin updates the MDM last check-in time.
 func (s *Store) TouchMDMCheckin(ctx context.Context, udid string) {
 	s.DB.ExecContext(ctx, `UPDATE computers SET mdm_last_checkin = now() WHERE udid = $1`, udid)
+	s.DB.ExecContext(ctx, `UPDATE mobile_devices SET mdm_last_checkin = now() WHERE udid = $1`, udid)
 }
 
 // ErrAgentActive is returned when an enrollment would replace a computer's active agent.

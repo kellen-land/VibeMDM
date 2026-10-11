@@ -1,0 +1,137 @@
+{
+  "title": "Notifications",
+  "description": "Sets how each app's notifications appear and stops users changing them. Supervised only.",
+  "__payloadtype": "com.apple.notificationsettings",
+  "__category": "Apps and Home Screen",
+  "__multiple": false,
+  "__order": 30,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "NotificationSettings"
+  ],
+  "properties": {
+    "NotificationSettings": {
+      "title": "Apps",
+      "description": "Notification settings for each app.",
+      "type": "array",
+      "property_order": 10,
+      "items": {
+        "title": "App",
+        "type": "object",
+        "required": [
+          "BundleIdentifier"
+        ],
+        "properties": {
+          "BundleIdentifier": {
+            "title": "App bundle ID",
+            "description": "The app these settings apply to.",
+            "type": "string",
+            "property_order": 1,
+            "options": {
+              "inputAttributes": {
+                "placeholder": "com.example.app"
+              }
+            }
+          },
+          "NotificationsEnabled": {
+            "title": "Allow notifications",
+            "description": "Off turns all notifications off for this app.",
+            "type": "boolean",
+            "property_order": 2
+          },
+          "ShowInLockScreen": {
+            "title": "Show on Lock Screen",
+            "type": "boolean",
+            "property_order": 3
+          },
+          "ShowInNotificationCenter": {
+            "title": "Show in Notification Center",
+            "type": "boolean",
+            "property_order": 4
+          },
+          "AlertType": {
+            "title": "Banner style",
+            "description": "How alerts appear while the device is in use.",
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2
+            ],
+            "options": {
+              "enum_titles": [
+                "None",
+                "Temporary banner",
+                "Persistent banner"
+              ]
+            },
+            "property_order": 5
+          },
+          "BadgesEnabled": {
+            "title": "Badges",
+            "description": "Show the badge count on the app icon.",
+            "type": "boolean",
+            "property_order": 6
+          },
+          "SoundsEnabled": {
+            "title": "Sounds",
+            "description": "Play sounds for notifications.",
+            "type": "boolean",
+            "property_order": 7
+          },
+          "CriticalAlertEnabled": {
+            "title": "Critical alerts",
+            "description": "Let the app's critical alerts ignore Do Not Disturb and the ringer switch. iOS 12+.",
+            "type": "boolean",
+            "property_order": 8
+          },
+          "ShowInCarPlay": {
+            "title": "Show in CarPlay",
+            "description": "iOS 12+.",
+            "type": "boolean",
+            "property_order": 9
+          },
+          "PreviewType": {
+            "title": "Show previews",
+            "description": "Overrides Settings > Notifications > Show Previews for this app. iOS 14+.",
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2
+            ],
+            "options": {
+              "enum_titles": [
+                "Always",
+                "When unlocked",
+                "Never"
+              ]
+            },
+            "property_order": 10
+          },
+          "GroupingType": {
+            "title": "Grouping",
+            "description": "How notifications from this app are grouped. iOS 12+.",
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2
+            ],
+            "options": {
+              "enum_titles": [
+                "Automatic",
+                "By app",
+                "Off"
+              ]
+            },
+            "property_order": 11
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Users, X } from 'lucide-react'
-import { useGroups } from '../../api/queries'
+import { useGroups, useMobileGroups } from '../../api/queries'
 import { SearchInput } from '../ui/SearchInput'
 import { Badge } from '../ui/Badge'
 import { cn } from '../../lib/cn'
@@ -13,10 +13,14 @@ export interface GroupPickerProps {
   exclude?: string[]
   /** Only show smart or static groups. */
   smart?: boolean
+  /** Computer groups (default) or mobile device groups. */
+  kind?: 'computer' | 'mobile'
 }
 
-export function GroupPicker({ value, onChange, disabled, className, exclude, smart }: GroupPickerProps) {
-  const groups = useGroups()
+export function GroupPicker({ value, onChange, disabled, className, exclude, smart, kind = 'computer' }: GroupPickerProps) {
+  const computerGroups = useGroups({ enabled: kind === 'computer' })
+  const mobileGroups = useMobileGroups({ enabled: kind === 'mobile' })
+  const groups = kind === 'mobile' ? mobileGroups : computerGroups
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
   const all = groups.data?.items ?? []

@@ -1,0 +1,523 @@
+{
+  "title": "VPN",
+  "description": "Adds a VPN connection, either the built-in IKEv2 client or a VPN app. Legacy L2TP and Cisco IPSec, Always On VPN and certificate linking are not in this editor yet.",
+  "__payloadtype": "com.apple.vpn.managed",
+  "__category": "Network",
+  "__multiple": true,
+  "__order": 20,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "UserDefinedName",
+    "VPNType"
+  ],
+  "properties": {
+    "UserDefinedName": {
+      "title": "Connection name",
+      "description": "Name shown in Settings > VPN.",
+      "type": "string",
+      "property_order": 10
+    },
+    "VPNType": {
+      "title": "Type",
+      "description": "IKEv2 uses the built-in client. App-based uses an installed VPN app such as Cisco, Palo Alto or WireGuard.",
+      "type": "string",
+      "enum": [
+        "IKEv2",
+        "VPN"
+      ],
+      "options": {
+        "enum_titles": [
+          "IKEv2 (built in)",
+          "App-based VPN"
+        ]
+      },
+      "property_order": 11,
+      "default": "IKEv2"
+    },
+    "VPNSubType": {
+      "title": "VPN app bundle ID",
+      "description": "Required for app-based VPNs: the bundle ID of the VPN app or plug-in. Leave empty for IKEv2.",
+      "type": "string",
+      "property_order": 12,
+      "options": {
+        "inputAttributes": {
+          "placeholder": "com.cisco.anyconnect"
+        }
+      }
+    },
+    "IKEv2": {
+      "title": "IKEv2 settings",
+      "description": "Used when Type is IKEv2.",
+      "type": "object",
+      "property_order": 20,
+      "required": [
+        "RemoteAddress",
+        "RemoteIdentifier",
+        "LocalIdentifier",
+        "AuthenticationMethod"
+      ],
+      "properties": {
+        "RemoteAddress": {
+          "title": "Server",
+          "description": "Host name or IP address of the VPN server.",
+          "type": "string",
+          "property_order": 1
+        },
+        "RemoteIdentifier": {
+          "title": "Remote ID",
+          "description": "The server's IKEv2 identifier.",
+          "type": "string",
+          "property_order": 2
+        },
+        "LocalIdentifier": {
+          "title": "Local ID",
+          "description": "This device's IKEv2 identifier.",
+          "type": "string",
+          "property_order": 3
+        },
+        "AuthenticationMethod": {
+          "title": "Authentication",
+          "description": "Certificate needs an identity certificate linked to this VPN, which this editor cannot do yet.",
+          "type": "string",
+          "enum": [
+            "SharedSecret",
+            "Certificate",
+            "None"
+          ],
+          "options": {
+            "enum_titles": [
+              "Shared secret",
+              "Certificate",
+              "None (EAP only)"
+            ]
+          },
+          "property_order": 4
+        },
+        "SharedSecret": {
+          "title": "Shared secret",
+          "description": "Used with shared-secret authentication. Stored in the profile.",
+          "type": "string",
+          "property_order": 5
+        },
+        "ExtendedAuthEnabled": {
+          "title": "Use EAP (user name and password)",
+          "description": "Yes adds EAP authentication with the user name and password below.",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "options": {
+            "enum_titles": [
+              "No",
+              "Yes"
+            ]
+          },
+          "property_order": 6
+        },
+        "AuthName": {
+          "title": "User name",
+          "description": "EAP user name.",
+          "type": "string",
+          "property_order": 7
+        },
+        "AuthPassword": {
+          "title": "Password",
+          "description": "EAP password. Stored in the profile.",
+          "type": "string",
+          "property_order": 8
+        },
+        "DeadPeerDetectionRate": {
+          "title": "Dead peer detection",
+          "description": "How often to check the server is still there.",
+          "type": "string",
+          "enum": [
+            "None",
+            "Low",
+            "Medium",
+            "High"
+          ],
+          "options": {
+            "enum_titles": [
+              "Off",
+              "Low",
+              "Medium",
+              "High"
+            ]
+          },
+          "property_order": 9
+        },
+        "EnablePFS": {
+          "title": "Perfect forward secrecy",
+          "description": "Yes enables PFS for the IKEv2 connection.",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "options": {
+            "enum_titles": [
+              "No",
+              "Yes"
+            ]
+          },
+          "property_order": 10
+        },
+        "IncludeAllNetworks": {
+          "title": "Send all traffic through the VPN",
+          "description": "Yes routes all traffic through the tunnel. iOS 14+.",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "options": {
+            "enum_titles": [
+              "No",
+              "Yes"
+            ]
+          },
+          "property_order": 11
+        },
+        "OnDemandEnabled": {
+          "title": "Connect on demand",
+          "description": "Yes connects automatically using the rules below.",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "options": {
+            "enum_titles": [
+              "No",
+              "Yes"
+            ]
+          },
+          "property_order": 12
+        },
+        "OnDemandUserOverrideDisabled": {
+          "title": "Stop users turning off on-demand",
+          "description": "Yes greys out the Connect On Demand switch. iOS 14+.",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "options": {
+            "enum_titles": [
+              "No",
+              "Yes"
+            ]
+          },
+          "property_order": 13
+        },
+        "OnDemandRules": {
+          "title": "On-demand rules",
+          "description": "Evaluated in order; the first matching rule decides what happens.",
+          "type": "array",
+          "property_order": 14,
+          "items": {
+            "title": "Rule",
+            "type": "object",
+            "required": [
+              "Action"
+            ],
+            "properties": {
+              "Action": {
+                "title": "Action",
+                "description": "What to do when this rule matches.",
+                "type": "string",
+                "enum": [
+                  "Connect",
+                  "Disconnect",
+                  "Ignore"
+                ],
+                "options": {
+                  "enum_titles": [
+                    "Connect",
+                    "Disconnect",
+                    "Don't reconnect (keep existing connection)"
+                  ]
+                },
+                "property_order": 1
+              },
+              "InterfaceTypeMatch": {
+                "title": "Interface",
+                "description": "Match only on this kind of network.",
+                "type": "string",
+                "enum": [
+                  "WiFi",
+                  "Cellular",
+                  "Ethernet"
+                ],
+                "options": {
+                  "enum_titles": [
+                    "Wi-Fi",
+                    "Cellular",
+                    "Ethernet"
+                  ]
+                },
+                "property_order": 2
+              },
+              "SSIDMatch": {
+                "title": "Wi-Fi names",
+                "description": "Match only on these Wi-Fi networks.",
+                "type": "array",
+                "items": {
+                  "title": "SSID",
+                  "type": "string"
+                },
+                "property_order": 3
+              },
+              "DNSDomainMatch": {
+                "title": "DNS search domains",
+                "description": "Match when the network's search domain is one of these (wildcards allowed).",
+                "type": "array",
+                "items": {
+                  "title": "Domain",
+                  "type": "string",
+                  "options": {
+                    "inputAttributes": {
+                      "placeholder": "*.example.com"
+                    }
+                  }
+                },
+                "property_order": 4
+              },
+              "DNSServerAddressMatch": {
+                "title": "DNS servers",
+                "description": "Match when the network uses one of these DNS servers.",
+                "type": "array",
+                "items": {
+                  "title": "IP address",
+                  "type": "string"
+                },
+                "property_order": 5
+              },
+              "URLStringProbe": {
+                "title": "Probe URL",
+                "description": "Match when this URL loads successfully (HTTP 200).",
+                "type": "string",
+                "property_order": 6,
+                "pattern": "^https?://"
+              }
+            }
+          }
+        }
+      }
+    },
+    "VPN": {
+      "title": "App-based VPN settings",
+      "description": "Used when Type is App-based VPN.",
+      "type": "object",
+      "property_order": 21,
+      "required": [
+        "RemoteAddress"
+      ],
+      "properties": {
+        "RemoteAddress": {
+          "title": "Server",
+          "description": "Host name or IP address of the VPN server.",
+          "type": "string",
+          "property_order": 1
+        },
+        "AuthenticationMethod": {
+          "title": "Authentication",
+          "description": "How the app signs in.",
+          "type": "string",
+          "enum": [
+            "Password",
+            "Certificate",
+            "Password+Certificate"
+          ],
+          "options": {
+            "enum_titles": [
+              "Password",
+              "Certificate",
+              "Password and certificate"
+            ]
+          },
+          "property_order": 2
+        },
+        "AuthName": {
+          "title": "User name",
+          "description": "Account name for the VPN.",
+          "type": "string",
+          "property_order": 3
+        },
+        "AuthPassword": {
+          "title": "Password",
+          "description": "Stored in the profile.",
+          "type": "string",
+          "property_order": 4
+        },
+        "ProviderBundleIdentifier": {
+          "title": "Provider bundle ID",
+          "description": "Only needed when the app contains more than one VPN provider.",
+          "type": "string",
+          "property_order": 5
+        },
+        "ProviderType": {
+          "title": "Provider type",
+          "description": "Packet tunnel for most VPNs; app proxy for per-app proxies.",
+          "type": "string",
+          "enum": [
+            "packet-tunnel",
+            "app-proxy"
+          ],
+          "options": {
+            "enum_titles": [
+              "Packet tunnel",
+              "App proxy"
+            ]
+          },
+          "property_order": 6
+        },
+        "IncludeAllNetworks": {
+          "title": "Send all traffic through the VPN",
+          "description": "Yes routes all traffic through the tunnel. iOS 14+.",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "options": {
+            "enum_titles": [
+              "No",
+              "Yes"
+            ]
+          },
+          "property_order": 7
+        },
+        "OnDemandEnabled": {
+          "title": "Connect on demand",
+          "description": "Yes connects automatically using the rules below.",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "options": {
+            "enum_titles": [
+              "No",
+              "Yes"
+            ]
+          },
+          "property_order": 8
+        },
+        "OnDemandUserOverrideDisabled": {
+          "title": "Stop users turning off on-demand",
+          "description": "Yes greys out the Connect On Demand switch. iOS 14+.",
+          "type": "integer",
+          "enum": [
+            0,
+            1
+          ],
+          "options": {
+            "enum_titles": [
+              "No",
+              "Yes"
+            ]
+          },
+          "property_order": 9
+        },
+        "OnDemandRules": {
+          "title": "On-demand rules",
+          "description": "Evaluated in order; the first matching rule decides what happens.",
+          "type": "array",
+          "property_order": 10,
+          "items": {
+            "title": "Rule",
+            "type": "object",
+            "required": [
+              "Action"
+            ],
+            "properties": {
+              "Action": {
+                "title": "Action",
+                "description": "What to do when this rule matches.",
+                "type": "string",
+                "enum": [
+                  "Connect",
+                  "Disconnect",
+                  "Ignore"
+                ],
+                "options": {
+                  "enum_titles": [
+                    "Connect",
+                    "Disconnect",
+                    "Don't reconnect (keep existing connection)"
+                  ]
+                },
+                "property_order": 1
+              },
+              "InterfaceTypeMatch": {
+                "title": "Interface",
+                "description": "Match only on this kind of network.",
+                "type": "string",
+                "enum": [
+                  "WiFi",
+                  "Cellular",
+                  "Ethernet"
+                ],
+                "options": {
+                  "enum_titles": [
+                    "Wi-Fi",
+                    "Cellular",
+                    "Ethernet"
+                  ]
+                },
+                "property_order": 2
+              },
+              "SSIDMatch": {
+                "title": "Wi-Fi names",
+                "description": "Match only on these Wi-Fi networks.",
+                "type": "array",
+                "items": {
+                  "title": "SSID",
+                  "type": "string"
+                },
+                "property_order": 3
+              },
+              "DNSDomainMatch": {
+                "title": "DNS search domains",
+                "description": "Match when the network's search domain is one of these (wildcards allowed).",
+                "type": "array",
+                "items": {
+                  "title": "Domain",
+                  "type": "string",
+                  "options": {
+                    "inputAttributes": {
+                      "placeholder": "*.example.com"
+                    }
+                  }
+                },
+                "property_order": 4
+              },
+              "DNSServerAddressMatch": {
+                "title": "DNS servers",
+                "description": "Match when the network uses one of these DNS servers.",
+                "type": "array",
+                "items": {
+                  "title": "IP address",
+                  "type": "string"
+                },
+                "property_order": 5
+              },
+              "URLStringProbe": {
+                "title": "Probe URL",
+                "description": "Match when this URL loads successfully (HTTP 200).",
+                "type": "string",
+                "property_order": 6,
+                "pattern": "^https?://"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

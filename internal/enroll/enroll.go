@@ -111,7 +111,7 @@ func Build(p Params) ([]byte, error) {
 		p.OrgName = "VibeMDM"
 	}
 	if p.Description == "" {
-		p.Description = "Enrolls this Mac in " + p.OrgName + " device management."
+		p.Description = "Enrolls this device in " + p.OrgName + " device management."
 	}
 	prof := profile{
 		PayloadContent: []any{

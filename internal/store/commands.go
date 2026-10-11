@@ -11,10 +11,11 @@ import (
 )
 
 // InsertCommandMeta records metadata for an enqueued MDM command.
-func (s *Store) InsertCommandMeta(ctx context.Context, commandUUID, computerID, enrollmentID, requestType, kind, refID, createdBy string) error {
-	_, err := s.DB.ExecContext(ctx, `INSERT INTO mdm_commands_meta (command_uuid, computer_id, enrollment_id, request_type, kind, ref_id, created_by)
-		VALUES ($1, NULLIF($2,'')::uuid, $3, $4, $5, NULLIF($6,'')::uuid, $7) ON CONFLICT (command_uuid) DO NOTHING`,
-		commandUUID, computerID, enrollmentID, requestType, kind, refID, createdBy)
+// Exactly one of computerID and mobileDeviceID is set.
+func (s *Store) InsertCommandMeta(ctx context.Context, commandUUID, computerID, mobileDeviceID, enrollmentID, requestType, kind, refID, createdBy string) error {
+	_, err := s.DB.ExecContext(ctx, `INSERT INTO mdm_commands_meta (command_uuid, computer_id, mobile_device_id, enrollment_id, request_type, kind, ref_id, created_by)
+		VALUES ($1, NULLIF($2,'')::uuid, NULLIF($3,'')::uuid, $4, $5, $6, NULLIF($7,'')::uuid, $8) ON CONFLICT (command_uuid) DO NOTHING`,
+		commandUUID, computerID, mobileDeviceID, enrollmentID, requestType, kind, refID, createdBy)
 	return err
 }
 
@@ -43,25 +44,28 @@ func (s *Store) GetCommandMeta(ctx context.Context, commandUUID string) (*Comman
 
 // CommandFilter filters the command log.
 type CommandFilter struct {
-	EnrollmentID string
-	ComputerID   string
-	Status       string // Pending | Acknowledged | Error | NotNow
-	Limit        int
-	Offset       int
+	EnrollmentID   string
+	ComputerID     string
+	MobileDeviceID string
+	Status         string // Pending | Acknowledged | Error | NotNow
+	Limit          int
+	Offset         int
 }
 
-const commandSelect = `SELECT q.command_uuid, q.id, COALESCE(m.computer_id::text, comp.id::text, ''), COALESCE(comp.name, ''), c.request_type, COALESCE(m.kind,''),
+const commandSelect = `SELECT q.command_uuid, q.id, COALESCE(m.computer_id::text, comp.id::text, ''), COALESCE(m.mobile_device_id::text, md.id::text, ''),
+	COALESCE(comp.name, md.name, ''), c.request_type, COALESCE(m.kind,''),
 	COALESCE(r.status, 'Pending'), q.active, q.created_at, r.updated_at, COALESCE(m.created_by,'')
 	FROM enrollment_queue q
 	JOIN commands c ON c.command_uuid = q.command_uuid
 	LEFT JOIN command_results r ON r.command_uuid = q.command_uuid AND r.id = q.id
 	LEFT JOIN mdm_commands_meta m ON m.command_uuid = q.command_uuid
-	LEFT JOIN computers comp ON comp.udid = split_part(q.id, ':', 1)`
+	LEFT JOIN computers comp ON comp.udid = split_part(q.id, ':', 1)
+	LEFT JOIN mobile_devices md ON md.udid = split_part(q.id, ':', 1)`
 
 func scanCommand(row interface{ Scan(...any) error }) (*model.MDMCommand, error) {
 	var c model.MDMCommand
 	var upd sql.NullTime
-	if err := row.Scan(&c.CommandUUID, &c.EnrollmentID, &c.ComputerID, &c.ComputerName, &c.RequestType, &c.Kind, &c.Status, &c.Active, &c.CreatedAt, &upd, &c.CreatedBy); err != nil {
+	if err := row.Scan(&c.CommandUUID, &c.EnrollmentID, &c.ComputerID, &c.MobileDeviceID, &c.ComputerName, &c.RequestType, &c.Kind, &c.Status, &c.Active, &c.CreatedAt, &upd, &c.CreatedBy); err != nil {
 		return nil, wrapNotFound(err)
 	}
 	c.ResultUpdatedAt = db.TimePtr(upd)
@@ -84,6 +88,10 @@ func (s *Store) ListCommands(ctx context.Context, f CommandFilter) ([]model.MDMC
 		args = append(args, f.ComputerID)
 		where = append(where, fmt.Sprintf("(m.computer_id::text = $%d OR comp.id::text = $%d)", len(args), len(args)))
 	}
+	if f.MobileDeviceID != "" {
+		args = append(args, f.MobileDeviceID)
+		where = append(where, fmt.Sprintf("(m.mobile_device_id::text = $%d OR md.id::text = $%d)", len(args), len(args)))
+	}
 	if f.Status != "" {
 		args = append(args, f.Status)
 		if f.Status == "Pending" {
@@ -100,7 +108,8 @@ func (s *Store) ListCommands(ctx context.Context, f CommandFilter) ([]model.MDMC
 	countSQL := `SELECT count(*) FROM enrollment_queue q JOIN commands c ON c.command_uuid = q.command_uuid
 		LEFT JOIN command_results r ON r.command_uuid = q.command_uuid AND r.id = q.id
 		LEFT JOIN mdm_commands_meta m ON m.command_uuid = q.command_uuid
-		LEFT JOIN computers comp ON comp.udid = split_part(q.id, ':', 1)` + w
+		LEFT JOIN computers comp ON comp.udid = split_part(q.id, ':', 1)
+		LEFT JOIN mobile_devices md ON md.udid = split_part(q.id, ':', 1)` + w
 	var total int
 	if err := s.DB.QueryRowContext(ctx, countSQL, args...).Scan(&total); err != nil {
 		return nil, 0, err

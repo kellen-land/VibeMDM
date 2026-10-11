@@ -444,6 +444,9 @@ export interface MDMCommand {
   command_uuid: string
   enrollment_id: string
   computer_id: string
+  /** Set instead of computer_id for iPhone and iPad commands. */
+  mobile_device_id?: string
+  /** The device's name (computer or mobile device). */
   computer_name?: string
   request_type: string
   kind: string
@@ -1967,4 +1970,186 @@ export interface AgentInstallAttempt {
   created_by: string
   created_at: string
   updated_at: string
+}
+
+// ---- Mobile devices (internal/model MobileDevice*, internal/api/mobile.go) ----
+
+/** An iPhone, iPad, iPod touch or Apple TV. Kept apart from computers, as in Jamf Pro. */
+export interface MobileDevice {
+  id: string
+  udid: string
+  serial_number: string
+  name: string
+  device_type: 'iPhone' | 'iPad' | 'iPod' | 'AppleTV' | ''
+  model: string
+  model_name: string
+  product_name: string
+  os_version: string
+  os_build: string
+  capacity_gb: number | null
+  available_gb: number | null
+  /** 0..1 */
+  battery_level: number | null
+  wifi_mac: string
+  bluetooth_mac: string
+  imei: string
+  meid: string
+  phone_number: string
+  carrier: string
+  cellular_technology: string
+  is_roaming: boolean | null
+  is_supervised: boolean | null
+  is_shared_ipad: boolean | null
+  activation_lock_enabled: boolean | null
+  find_my_enabled: boolean | null
+  lost_mode_enabled: boolean | null
+  passcode_present: boolean | null
+  passcode_compliant: boolean | null
+  hardware_encryption: number | null
+  last_backup_at: string | null
+  mdm_enrolled: boolean
+  mdm_enrolled_at: string | null
+  mdm_last_checkin: string | null
+  mdm_unenrolled_at: string | null
+  device_info: Record<string, unknown>
+  security_info: Record<string, unknown>
+  last_inventory_at: string | null
+  /** Last DeviceLocation answer (only available in Lost Mode). */
+  location: { latitude: number; longitude: number; accuracy: number | null; at: string } | null
+  /** When the Activation Lock bypass code was collected (null: none stored). */
+  activation_lock_bypass_at: string | null
+  asset_tag: string
+  site: string
+  department: string
+  building: string
+  room: string
+  assigned_user: string
+  assigned_real_name: string
+  assigned_email: string
+  notes: string
+  created_at: string
+  updated_at: string
+}
+
+export interface MobileDeviceApp {
+  name: string
+  version: string
+  bundle_id: string
+  managed: boolean
+  managed_status: string
+}
+
+export interface MobileDeviceDetail extends MobileDevice {
+  apps: MobileDeviceApp[]
+  profiles: ComputerProfile[]
+  groups: ComputerGroup[]
+  extension_attributes: EAValue[]
+}
+
+/** Admin-entered custom field for mobile devices (no agent on iOS). */
+export interface MobileExtensionAttribute {
+  id: string
+  name: string
+  description: string
+  data_type: 'string' | 'integer' | 'date'
+  input_type: 'text' | 'popup'
+  popup_choices: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface MobileGroupPreview {
+  count: number
+  mobile_devices: MobileDevice[]
+}
+
+export type MobileDeviceListParams = ComputerListParams
+
+export interface MobileSearchRunResult {
+  search: AdvancedSearch
+  count: number
+  mobile_devices: MobileDevice[]
+}
+
+/** Which iPhones and iPads a mobile object applies to: targets minus exclusions. */
+export interface MobileScopeSelection {
+  mobile_device_ids: string[]
+  group_ids: string[]
+  buildings: string[]
+  departments: string[]
+}
+
+export interface MobileScope {
+  all_mobile_devices: boolean
+  targets: MobileScopeSelection
+  exclusions: MobileScopeSelection
+}
+
+export const emptyMobileSelection = (): MobileScopeSelection => ({ mobile_device_ids: [], group_ids: [], buildings: [], departments: [] })
+export const emptyMobileScope = (): MobileScope => ({ all_mobile_devices: false, targets: emptyMobileSelection(), exclusions: emptyMobileSelection() })
+
+export function normalizeMobileScope(s: Partial<MobileScope> | null | undefined): MobileScope {
+  const sel = (v: Partial<MobileScopeSelection> | undefined): MobileScopeSelection => ({ ...emptyMobileSelection(), ...(v ?? {}) })
+  return { all_mobile_devices: !!s?.all_mobile_devices, targets: sel(s?.targets), exclusions: sel(s?.exclusions) }
+}
+
+/** One payload of a mobile profile built with the payload editors. */
+export interface MobilePayloadValues {
+  type: string
+  values: SchemaValues
+}
+
+/** A built-in payload editor (GET /api/v1/mobile-device-payloads). */
+export interface MobilePayloadDef {
+  type: string
+  title: string
+  description: string
+  category: string
+  multiple: boolean
+  order: number
+  schema: SchemaNode
+}
+
+export interface MobileConfigProfile {
+  id: string
+  name: string
+  description: string
+  category: string
+  identifier: string
+  uuid: string
+  /** The .mobileconfig XML (absent in lists). */
+  payload?: string
+  /** Editor values; null when the profile was uploaded as XML. */
+  payloads: MobilePayloadValues[] | null
+  scope: MobileScope
+  status: Record<string, number>
+  created_at: string
+  updated_at: string
+}
+
+export interface MobileProfileDeployment {
+  profile_id: string
+  profile_name: string
+  mobile_device_id: string
+  mobile_device_name: string
+  status: string
+  command_uuid: string
+  error: string
+  updated_at: string
+}
+
+export interface MobilePayloadErrors {
+  index: number
+  errors: SchemaFieldError[]
+}
+
+export interface MobileProfilePreview {
+  payload: string
+  error?: string
+  payload_errors: MobilePayloadErrors[]
+}
+
+export interface MobileScopePreview {
+  count: number
+  mobile_devices: MobileDevice[]
 }

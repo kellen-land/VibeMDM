@@ -11,7 +11,7 @@ import (
 
 func (h *Handler) listCommands(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	items, total, err := h.st.ListCommands(r.Context(), store.CommandFilter{ComputerID: q.Get("computer_id"), Status: q.Get("status"), Limit: qInt(r, "limit", 50), Offset: qInt(r, "offset", 0)})
+	items, total, err := h.st.ListCommands(r.Context(), store.CommandFilter{ComputerID: q.Get("computer_id"), MobileDeviceID: q.Get("mobile_device_id"), Status: q.Get("status"), Limit: qInt(r, "limit", 50), Offset: qInt(r, "offset", 0)})
 	if err != nil {
 		h.fail(w, err, "commands")
 		return

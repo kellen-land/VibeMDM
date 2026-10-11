@@ -88,19 +88,34 @@ var existsCols = map[string]string{
 	"profile_identifier": "x.identifier", "profile_name": "x.display_name", "local_username": "x.username",
 }
 
+var computerFieldOrder = []string{"computer_name", "hostname", "serial_number", "udid", "model_name", "model_identifier", "os_version", "os_build", "architecture",
+	"cpu", "cpu_cores", "memory_mb", "disk_total_mb", "disk_free_mb", "ip_address", "mac_address", "last_user", "assigned_user", "assigned_email",
+	"department", "building", "site", "asset_tag", "agent_version", "filevault_enabled", "sip_enabled", "firewall_enabled", "gatekeeper_enabled",
+	"is_supervised", "activation_lock_enabled", "mdm_enrolled", "agent_enrolled", "secure_boot_level", "last_checkin", "last_inventory",
+	"mdm_enrolled_at", "agent_enrolled_at", "created_at", "application_title", "application_version", "application_bundle_id", "profile_identifier",
+	"profile_name", "local_username", "group_membership"}
+
+// groupDomain is one side of the Jamf-style split: computer groups over computers, or
+// mobile device groups over mobile devices. The criteria engine is shared; tables differ.
+// Every query uses the alias c for the device table.
+type groupDomain struct {
+	devices    string // device table
+	groups     string // group table
+	members    string // static membership table
+	memberCol  string // device column in the membership table
+	eaValues   string // extension attribute values table ("" = none)
+	eaTable    string // extension attribute definitions table
+	fields     map[string]fieldDef
+	existsCols map[string]string
+	order      []string
+}
+
+var computerDomain = &groupDomain{devices: "computers", groups: "computer_groups", members: "computer_group_members", memberCol: "computer_id",
+	eaValues: "computer_ea_values", eaTable: "extension_attributes", fields: fieldDefs, existsCols: existsCols, order: computerFieldOrder}
+
 // CriterionFields lists fields for the UI, including extension attributes.
 func (s *Store) CriterionFields(ctx context.Context) ([]CriterionField, error) {
-	order := []string{"computer_name", "hostname", "serial_number", "udid", "model_name", "model_identifier", "os_version", "os_build", "architecture",
-		"cpu", "cpu_cores", "memory_mb", "disk_total_mb", "disk_free_mb", "ip_address", "mac_address", "last_user", "assigned_user", "assigned_email",
-		"department", "building", "site", "asset_tag", "agent_version", "filevault_enabled", "sip_enabled", "firewall_enabled", "gatekeeper_enabled",
-		"is_supervised", "activation_lock_enabled", "mdm_enrolled", "agent_enrolled", "secure_boot_level", "last_checkin", "last_inventory",
-		"mdm_enrolled_at", "agent_enrolled_at", "created_at", "application_title", "application_version", "application_bundle_id", "profile_identifier",
-		"profile_name", "local_username", "group_membership"}
-	out := make([]CriterionField, 0, len(order)+8)
-	for _, k := range order {
-		d := fieldDefs[k]
-		out = append(out, CriterionField{Key: k, Label: d.label, Type: d.typ, Operators: opsFor(d.typ)})
-	}
+	out := domainFields(computerDomain)
 	eas, err := s.ListExtensionAttributes(ctx)
 	if err != nil {
 		return nil, err
@@ -116,6 +131,15 @@ func (s *Store) CriterionFields(ctx context.Context) ([]CriterionField, error) {
 		out = append(out, CriterionField{Key: "ea:" + ea.ID, Label: "EA: " + ea.Name, Type: typ, Operators: opsFor(typ)})
 	}
 	return out, nil
+}
+
+func domainFields(d *groupDomain) []CriterionField {
+	out := make([]CriterionField, 0, len(d.order)+8)
+	for _, k := range d.order {
+		f := d.fields[k]
+		out = append(out, CriterionField{Key: k, Label: f.label, Type: f.typ, Operators: opsFor(f.typ)})
+	}
+	return out
 }
 
 func opsFor(typ string) []string {
@@ -135,7 +159,7 @@ func opsFor(typ string) []string {
 }
 
 // criteriaSQL converts criteria to a WHERE fragment on alias c. argOffset is the number of existing args.
-func (s *Store) criteriaSQL(ctx context.Context, criteria []model.Criterion, argOffset int, depth int) (string, []any, error) {
+func (s *Store) criteriaSQL(ctx context.Context, d *groupDomain, criteria []model.Criterion, argOffset int, depth int) (string, []any, error) {
 	if depth > 6 {
 		return "", nil, errors.New("smart group nesting too deep")
 	}
@@ -158,7 +182,7 @@ func (s *Store) criteriaSQL(ctx context.Context, criteria []model.Criterion, arg
 			sb.WriteString("(")
 			parens++
 		}
-		expr, err := s.criterionExpr(ctx, cr, next, argOffset, &args, depth)
+		expr, err := s.criterionExpr(ctx, d, cr, next, argOffset, &args, depth)
 		if err != nil {
 			return "", nil, err
 		}
@@ -178,17 +202,17 @@ func (s *Store) criteriaSQL(ctx context.Context, criteria []model.Criterion, arg
 	return "(" + sb.String() + ")", args, nil
 }
 
-func (s *Store) criterionExpr(ctx context.Context, cr model.Criterion, next func(any) string, argOffset int, args *[]any, depth int) (string, error) {
+func (s *Store) criterionExpr(ctx context.Context, d *groupDomain, cr model.Criterion, next func(any) string, argOffset int, args *[]any, depth int) (string, error) {
 	field := cr.Field
 	var typ, expr, existsTpl string
-	if strings.HasPrefix(field, "ea:") {
+	if strings.HasPrefix(field, "ea:") && d.eaValues != "" {
 		eaID := strings.TrimPrefix(field, "ea:")
-		ea, err := s.GetExtensionAttribute(ctx, eaID)
-		if err != nil {
+		var dataType string
+		if err := s.DB.QueryRowContext(ctx, `SELECT data_type FROM `+d.eaTable+` WHERE id::text = $1`, eaID).Scan(&dataType); err != nil {
 			return "FALSE", nil
 		}
 		typ = "string"
-		switch ea.DataType {
+		switch dataType {
 		case "integer":
 			typ = "number"
 		case "date":
@@ -204,15 +228,15 @@ func (s *Store) criterionExpr(ctx context.Context, cr model.Criterion, next func
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf(`EXISTS (SELECT 1 FROM computer_ea_values x WHERE x.computer_id = c.id AND x.ea_id = %s AND %s)`, next(eaID), cmp), nil
+		return fmt.Sprintf(`EXISTS (SELECT 1 FROM %s x WHERE x.%s = c.id AND x.ea_id = %s AND %s)`, d.eaValues, d.memberCol, next(eaID), cmp), nil
 	}
-	d, ok := fieldDefs[field]
+	fd, ok := d.fields[field]
 	if !ok {
 		return "", fmt.Errorf("unknown criterion field %q", field)
 	}
-	typ, expr, existsTpl = d.typ, d.expr, d.exists
+	typ, expr, existsTpl = fd.typ, fd.expr, fd.exists
 	if typ == "group" {
-		sub, subArgs, err := s.groupMembershipSQL(ctx, cr.Value, argOffset+len(*args), depth+1)
+		sub, subArgs, err := s.groupMembershipSQL(ctx, d, cr.Value, argOffset+len(*args), depth+1)
 		if err != nil {
 			return "", err
 		}
@@ -223,7 +247,7 @@ func (s *Store) criterionExpr(ctx context.Context, cr model.Criterion, next func
 		return sub, nil
 	}
 	if existsTpl != "" {
-		cmp, err := compare(typ, existsCols[field], cr.Operator, cr.Value, next)
+		cmp, err := compare(typ, d.existsCols[field], cr.Operator, cr.Value, next)
 		if err != nil {
 			return "", err
 		}
@@ -307,13 +331,13 @@ func compare(typ, expr, op, value string, next func(any) string) (string, error)
 }
 
 // getGroupRaw fetches a group without computing its member count (used internally to avoid recursion).
-func (s *Store) getGroupRaw(ctx context.Context, id string) (*model.ComputerGroup, error) {
-	return scanGroup(s.DB.QueryRowContext(ctx, `SELECT `+groupCols+` FROM computer_groups g WHERE g.id::text = $1`, id))
+func (s *Store) getGroupRaw(ctx context.Context, d *groupDomain, id string) (*model.ComputerGroup, error) {
+	return scanGroup(s.DB.QueryRowContext(ctx, `SELECT `+groupCols+` FROM `+d.groups+` g WHERE g.id::text = $1`, id))
 }
 
 // groupMembershipSQL returns an EXISTS/criteria fragment testing whether c is in the group.
-func (s *Store) groupMembershipSQL(ctx context.Context, groupID string, argOffset int, depth int) (string, []any, error) {
-	g, err := s.getGroupRaw(ctx, groupID)
+func (s *Store) groupMembershipSQL(ctx context.Context, d *groupDomain, groupID string, argOffset int, depth int) (string, []any, error) {
+	g, err := s.getGroupRaw(ctx, d, groupID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return "FALSE", nil, nil
@@ -321,9 +345,9 @@ func (s *Store) groupMembershipSQL(ctx context.Context, groupID string, argOffse
 		return "", nil, err
 	}
 	if !g.IsSmart {
-		return fmt.Sprintf(`EXISTS (SELECT 1 FROM computer_group_members m WHERE m.group_id = $%d AND m.computer_id = c.id)`, argOffset+1), []any{groupID}, nil
+		return fmt.Sprintf(`EXISTS (SELECT 1 FROM %s m WHERE m.group_id = $%d AND m.%s = c.id)`, d.members, argOffset+1, d.memberCol), []any{groupID}, nil
 	}
-	return s.criteriaSQL(ctx, g.Criteria, argOffset, depth)
+	return s.criteriaSQL(ctx, d, g.Criteria, argOffset, depth)
 }
 
 // ---- groups CRUD ----
@@ -343,9 +367,70 @@ func scanGroup(row interface{ Scan(...any) error }) (*model.ComputerGroup, error
 	return &g, nil
 }
 
-// ListGroups returns all groups with member counts.
+// ListGroups returns all computer groups with member counts.
 func (s *Store) ListGroups(ctx context.Context) ([]model.ComputerGroup, error) {
-	rows, err := s.DB.QueryContext(ctx, `SELECT `+groupCols+` FROM computer_groups g ORDER BY lower(g.name)`)
+	return s.listGroups(ctx, computerDomain)
+}
+
+// GetGroup returns a computer group.
+func (s *Store) GetGroup(ctx context.Context, id string) (*model.ComputerGroup, error) {
+	return s.getGroup(ctx, computerDomain, id)
+}
+
+// CreateGroup inserts a computer group.
+func (s *Store) CreateGroup(ctx context.Context, g model.ComputerGroup) (*model.ComputerGroup, error) {
+	return s.createGroup(ctx, computerDomain, g)
+}
+
+// UpdateGroup updates a computer group.
+func (s *Store) UpdateGroup(ctx context.Context, g model.ComputerGroup) (*model.ComputerGroup, error) {
+	return s.updateGroup(ctx, computerDomain, g)
+}
+
+// DeleteGroup removes a computer group.
+func (s *Store) DeleteGroup(ctx context.Context, id string) error {
+	return s.deleteGroup(ctx, computerDomain, id)
+}
+
+// SetStaticMembers replaces a static computer group's membership list.
+func (s *Store) SetStaticMembers(ctx context.Context, groupID string, computerIDs []string) error {
+	return s.setStaticMembers(ctx, computerDomain, groupID, computerIDs)
+}
+
+// AddStaticMembers adds computers to a static group.
+func (s *Store) AddStaticMembers(ctx context.Context, groupID string, computerIDs []string) error {
+	return s.addStaticMembers(ctx, computerDomain, groupID, computerIDs)
+}
+
+// RemoveStaticMember removes a computer from a static group.
+func (s *Store) RemoveStaticMember(ctx context.Context, groupID, computerID string) error {
+	return s.removeStaticMember(ctx, computerDomain, groupID, computerID)
+}
+
+// GroupMemberIDs resolves the member computer IDs of a group.
+func (s *Store) GroupMemberIDs(ctx context.Context, groupID string) ([]string, error) {
+	return s.groupMemberIDs(ctx, computerDomain, groupID)
+}
+
+// CountGroupMembers counts a computer group's members.
+func (s *Store) CountGroupMembers(ctx context.Context, groupID string) (int, error) {
+	return s.countGroupMembers(ctx, computerDomain, groupID)
+}
+
+// IsGroupMember tests computer group membership.
+func (s *Store) IsGroupMember(ctx context.Context, groupID, computerID string) (bool, error) {
+	return s.isGroupMember(ctx, computerDomain, groupID, computerID)
+}
+
+// PreviewCriteria evaluates criteria and returns matching computer IDs.
+func (s *Store) PreviewCriteria(ctx context.Context, criteria []model.Criterion) ([]string, error) {
+	return s.previewCriteria(ctx, computerDomain, criteria)
+}
+
+// ---- shared implementation (computer and mobile device groups) ----
+
+func (s *Store) listGroups(ctx context.Context, d *groupDomain) ([]model.ComputerGroup, error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT `+groupCols+` FROM `+d.groups+` g ORDER BY lower(g.name)`)
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +447,7 @@ func (s *Store) ListGroups(ctx context.Context) ([]model.ComputerGroup, error) {
 		return nil, err
 	}
 	for i := range out {
-		n, err := s.CountGroupMembers(ctx, out[i].ID)
+		n, err := s.countGroupMembers(ctx, d, out[i].ID)
 		if err != nil {
 			return nil, err
 		}
@@ -371,131 +456,115 @@ func (s *Store) ListGroups(ctx context.Context) ([]model.ComputerGroup, error) {
 	return out, nil
 }
 
-// GetGroup returns a group.
-func (s *Store) GetGroup(ctx context.Context, id string) (*model.ComputerGroup, error) {
-	g, err := scanGroup(s.DB.QueryRowContext(ctx, `SELECT `+groupCols+` FROM computer_groups g WHERE g.id = $1`, id))
+func (s *Store) getGroup(ctx context.Context, d *groupDomain, id string) (*model.ComputerGroup, error) {
+	g, err := scanGroup(s.DB.QueryRowContext(ctx, `SELECT `+groupCols+` FROM `+d.groups+` g WHERE g.id = $1`, id))
 	if err != nil {
 		return nil, err
 	}
-	g.MemberCount, _ = s.CountGroupMembers(ctx, g.ID)
+	g.MemberCount, _ = s.countGroupMembers(ctx, d, g.ID)
 	return g, nil
 }
 
-// CreateGroup inserts a group.
-func (s *Store) CreateGroup(ctx context.Context, g model.ComputerGroup) (*model.ComputerGroup, error) {
+func (s *Store) createGroup(ctx context.Context, d *groupDomain, g model.ComputerGroup) (*model.ComputerGroup, error) {
 	if g.Criteria == nil {
 		g.Criteria = []model.Criterion{}
 	}
-	return scanGroup(s.DB.QueryRowContext(ctx, `INSERT INTO computer_groups (name, description, is_smart, criteria) VALUES ($1,$2,$3,$4::jsonb) RETURNING `+strings.ReplaceAll(groupCols, "g.", ""),
+	return scanGroup(s.DB.QueryRowContext(ctx, `INSERT INTO `+d.groups+` (name, description, is_smart, criteria) VALUES ($1,$2,$3,$4::jsonb) RETURNING `+strings.ReplaceAll(groupCols, "g.", ""),
 		g.Name, g.Description, g.IsSmart, jsonArg(g.Criteria)))
 }
 
-// UpdateGroup updates a group.
-func (s *Store) UpdateGroup(ctx context.Context, g model.ComputerGroup) (*model.ComputerGroup, error) {
+func (s *Store) updateGroup(ctx context.Context, d *groupDomain, g model.ComputerGroup) (*model.ComputerGroup, error) {
 	if g.Criteria == nil {
 		g.Criteria = []model.Criterion{}
 	}
-	return scanGroup(s.DB.QueryRowContext(ctx, `UPDATE computer_groups SET name=$2, description=$3, is_smart=$4, criteria=$5::jsonb, updated_at=now() WHERE id=$1 RETURNING `+strings.ReplaceAll(groupCols, "g.", ""),
+	return scanGroup(s.DB.QueryRowContext(ctx, `UPDATE `+d.groups+` SET name=$2, description=$3, is_smart=$4, criteria=$5::jsonb, updated_at=now() WHERE id=$1 RETURNING `+strings.ReplaceAll(groupCols, "g.", ""),
 		g.ID, g.Name, g.Description, g.IsSmart, jsonArg(g.Criteria)))
 }
 
-// DeleteGroup removes a group.
-func (s *Store) DeleteGroup(ctx context.Context, id string) error {
-	_, err := s.DB.ExecContext(ctx, `DELETE FROM computer_groups WHERE id=$1`, id)
+func (s *Store) deleteGroup(ctx context.Context, d *groupDomain, id string) error {
+	_, err := s.DB.ExecContext(ctx, `DELETE FROM `+d.groups+` WHERE id=$1`, id)
 	return err
 }
 
-// SetStaticMembers replaces the static membership list.
-func (s *Store) SetStaticMembers(ctx context.Context, groupID string, computerIDs []string) error {
+func (s *Store) setStaticMembers(ctx context.Context, d *groupDomain, groupID string, ids []string) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	if _, err := tx.ExecContext(ctx, `DELETE FROM computer_group_members WHERE group_id=$1`, groupID); err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM `+d.members+` WHERE group_id=$1`, groupID); err != nil {
 		return err
 	}
-	for _, id := range computerIDs {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO computer_group_members (group_id, computer_id) SELECT $1, id FROM computers WHERE id::text = $2 ON CONFLICT DO NOTHING`, groupID, id); err != nil {
+	for _, id := range ids {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO `+d.members+` (group_id, `+d.memberCol+`) SELECT $1, id FROM `+d.devices+` WHERE id::text = $2 ON CONFLICT DO NOTHING`, groupID, id); err != nil {
 			return err
 		}
 	}
 	return tx.Commit()
 }
 
-// AddStaticMembers adds computers to a static group.
-func (s *Store) AddStaticMembers(ctx context.Context, groupID string, computerIDs []string) error {
-	for _, id := range computerIDs {
-		if _, err := s.DB.ExecContext(ctx, `INSERT INTO computer_group_members (group_id, computer_id) SELECT $1, id FROM computers WHERE id::text = $2 ON CONFLICT DO NOTHING`, groupID, id); err != nil {
+func (s *Store) addStaticMembers(ctx context.Context, d *groupDomain, groupID string, ids []string) error {
+	for _, id := range ids {
+		if _, err := s.DB.ExecContext(ctx, `INSERT INTO `+d.members+` (group_id, `+d.memberCol+`) SELECT $1, id FROM `+d.devices+` WHERE id::text = $2 ON CONFLICT DO NOTHING`, groupID, id); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// RemoveStaticMember removes a computer from a static group.
-func (s *Store) RemoveStaticMember(ctx context.Context, groupID, computerID string) error {
-	_, err := s.DB.ExecContext(ctx, `DELETE FROM computer_group_members WHERE group_id=$1 AND computer_id=$2`, groupID, computerID)
+func (s *Store) removeStaticMember(ctx context.Context, d *groupDomain, groupID, deviceID string) error {
+	_, err := s.DB.ExecContext(ctx, `DELETE FROM `+d.members+` WHERE group_id=$1 AND `+d.memberCol+`=$2`, groupID, deviceID)
 	return err
 }
 
-// GroupMemberIDs resolves the member computer IDs of a group.
-func (s *Store) GroupMemberIDs(ctx context.Context, groupID string) ([]string, error) {
-	sub, args, err := s.groupMembershipSQL(ctx, groupID, 0, 0)
+func (s *Store) groupMemberIDs(ctx context.Context, d *groupDomain, groupID string) ([]string, error) {
+	sub, args, err := s.groupMembershipSQL(ctx, d, groupID, 0, 0)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.DB.QueryContext(ctx, `SELECT c.id FROM computers c WHERE `+sub, args...)
+	return s.deviceIDs(ctx, `SELECT c.id FROM `+d.devices+` c WHERE `+sub, args...)
+}
+
+func (s *Store) countGroupMembers(ctx context.Context, d *groupDomain, groupID string) (int, error) {
+	sub, args, err := s.groupMembershipSQL(ctx, d, groupID, 0, 0)
+	if err != nil {
+		return 0, err
+	}
+	var n int
+	err = s.DB.QueryRowContext(ctx, `SELECT count(*) FROM `+d.devices+` c WHERE `+sub, args...).Scan(&n)
+	return n, err
+}
+
+func (s *Store) isGroupMember(ctx context.Context, d *groupDomain, groupID, deviceID string) (bool, error) {
+	sub, args, err := s.groupMembershipSQL(ctx, d, groupID, 1, 0)
+	if err != nil {
+		return false, err
+	}
+	args = append([]any{deviceID}, args...)
+	var n int
+	err = s.DB.QueryRowContext(ctx, `SELECT count(*) FROM `+d.devices+` c WHERE c.id = $1 AND `+sub, args...).Scan(&n)
+	return n > 0, err
+}
+
+func (s *Store) previewCriteria(ctx context.Context, d *groupDomain, criteria []model.Criterion) ([]string, error) {
+	sub, args, err := s.criteriaSQL(ctx, d, criteria, 0, 0)
+	if err != nil {
+		return nil, err
+	}
+	ids, err := s.deviceIDs(ctx, `SELECT c.id FROM `+d.devices+` c WHERE `+sub, args...)
+	if ids == nil && err == nil {
+		ids = []string{}
+	}
+	return ids, err
+}
+
+func (s *Store) deviceIDs(ctx context.Context, q string, args ...any) ([]string, error) {
+	rows, err := s.DB.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var out []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		out = append(out, id)
-	}
-	return out, rows.Err()
-}
-
-// CountGroupMembers counts members.
-func (s *Store) CountGroupMembers(ctx context.Context, groupID string) (int, error) {
-	sub, args, err := s.groupMembershipSQL(ctx, groupID, 0, 0)
-	if err != nil {
-		return 0, err
-	}
-	var n int
-	err = s.DB.QueryRowContext(ctx, `SELECT count(*) FROM computers c WHERE `+sub, args...).Scan(&n)
-	return n, err
-}
-
-// IsGroupMember tests membership.
-func (s *Store) IsGroupMember(ctx context.Context, groupID, computerID string) (bool, error) {
-	sub, args, err := s.groupMembershipSQL(ctx, groupID, 1, 0)
-	if err != nil {
-		return false, err
-	}
-	args = append([]any{computerID}, args...)
-	var n int
-	err = s.DB.QueryRowContext(ctx, `SELECT count(*) FROM computers c WHERE c.id = $1 AND `+sub, args...).Scan(&n)
-	return n > 0, err
-}
-
-// PreviewCriteria evaluates criteria and returns matching computer IDs.
-func (s *Store) PreviewCriteria(ctx context.Context, criteria []model.Criterion) ([]string, error) {
-	sub, args, err := s.criteriaSQL(ctx, criteria, 0, 0)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := s.DB.QueryContext(ctx, `SELECT c.id FROM computers c WHERE `+sub, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []string{}
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {

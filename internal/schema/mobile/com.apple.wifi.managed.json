@@ -1,0 +1,140 @@
+{
+  "title": "Wi-Fi",
+  "description": "Adds a Wi-Fi network so the device joins it without typing the password. Enterprise (802.1X/EAP) networks are not supported in this editor yet.",
+  "__payloadtype": "com.apple.wifi.managed",
+  "__category": "Network",
+  "__multiple": true,
+  "__order": 10,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "SSID_STR"
+  ],
+  "properties": {
+    "PayloadDisplayName": {
+      "title": "Name shown in Settings",
+      "description": "Optional label for this payload.",
+      "type": "string",
+      "property_order": 1
+    },
+    "SSID_STR": {
+      "title": "Network name (SSID)",
+      "description": "Exact name of the Wi-Fi network.",
+      "type": "string",
+      "property_order": 10
+    },
+    "HIDDEN_NETWORK": {
+      "title": "Hidden network",
+      "description": "On if the network does not broadcast its name.",
+      "type": "boolean",
+      "property_order": 11
+    },
+    "AutoJoin": {
+      "title": "Join automatically",
+      "description": "Off makes the user tap the network to join it.",
+      "type": "boolean",
+      "property_order": 12
+    },
+    "EncryptionType": {
+      "title": "Security type",
+      "description": "WPA allows WPA and WPA2; WPA2 allows WPA2 and WPA3; Any also allows WEP.",
+      "type": "string",
+      "enum": [
+        "WPA2",
+        "WPA3",
+        "WPA",
+        "Any",
+        "WEP",
+        "None"
+      ],
+      "options": {
+        "enum_titles": [
+          "WPA2 / WPA3 Personal",
+          "WPA3 Personal only",
+          "WPA / WPA2 Personal",
+          "Any (personal)",
+          "WEP",
+          "None (open)"
+        ]
+      },
+      "property_order": 13
+    },
+    "Password": {
+      "title": "Password",
+      "description": "Wi-Fi password. Stored in the profile.",
+      "type": "string",
+      "property_order": 14
+    },
+    "DisableAssociationMACRandomization": {
+      "title": "Turn off private Wi-Fi address",
+      "description": "On uses the real MAC address on this network; Settings shows a privacy warning. iOS 14+.",
+      "type": "boolean",
+      "property_order": 15
+    },
+    "CaptiveBypass": {
+      "title": "Skip captive portal detection",
+      "description": "On stops the login sheet for captive networks. iOS 10+.",
+      "type": "boolean",
+      "property_order": 16
+    },
+    "ProxyType": {
+      "title": "Proxy",
+      "description": "Proxy for this network.",
+      "type": "string",
+      "enum": [
+        "None",
+        "Manual",
+        "Auto"
+      ],
+      "options": {
+        "enum_titles": [
+          "None",
+          "Manual",
+          "Automatic (PAC)"
+        ]
+      },
+      "property_order": 20
+    },
+    "ProxyServer": {
+      "title": "Proxy server",
+      "description": "Host name or IP address. Manual proxy only.",
+      "type": "string",
+      "property_order": 21
+    },
+    "ProxyServerPort": {
+      "title": "Proxy port",
+      "description": "Manual proxy only.",
+      "type": "integer",
+      "property_order": 22,
+      "minimum": 0,
+      "maximum": 65535
+    },
+    "ProxyUsername": {
+      "title": "Proxy user name",
+      "description": "Manual proxy only.",
+      "type": "string",
+      "property_order": 23
+    },
+    "ProxyPassword": {
+      "title": "Proxy password",
+      "description": "Manual proxy only. Stored in the profile.",
+      "type": "string",
+      "property_order": 24
+    },
+    "ProxyPACURL": {
+      "title": "PAC file URL",
+      "description": "Automatic proxy only.",
+      "type": "string",
+      "property_order": 25,
+      "pattern": "^https?://"
+    },
+    "ProxyPACFallbackAllowed": {
+      "title": "Connect directly if the PAC file is unreachable",
+      "description": "Automatic proxy only.",
+      "type": "boolean",
+      "property_order": 26
+    }
+  }
+}

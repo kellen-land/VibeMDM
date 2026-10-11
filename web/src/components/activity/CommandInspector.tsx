@@ -227,11 +227,11 @@ export function CommandInspector({ uuid, showOpenPage }: { uuid: string; showOpe
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
-          {c.computer_id && (
+          {(c.computer_id || c.mobile_device_id) && (
             <span>
-              Computer{' '}
-              <Link to={`/computers/${c.computer_id}`} className="text-ink hover:underline">
-                {c.computer_name || c.computer_id}
+              {c.mobile_device_id ? 'Mobile device' : 'Computer'}{' '}
+              <Link to={c.mobile_device_id ? `/mobile-devices/${c.mobile_device_id}` : `/computers/${c.computer_id}`} className="text-ink hover:underline">
+                {c.computer_name || c.mobile_device_id || c.computer_id}
               </Link>
             </span>
           )}
