@@ -113,7 +113,7 @@ func (s *Store) CompleteOnboardingRun(ctx context.Context, runID, computerID str
 	}
 	res, err := s.DB.ExecContext(ctx, `UPDATE onboarding_runs SET status=$3, steps=$4::jsonb, log=$5, completed_at=now(), started_at=COALESCE(started_at, now()),
 		user_entry = CASE WHEN $6::jsonb = '{}'::jsonb THEN user_entry ELSE $6::jsonb END
-		WHERE id=$1 AND computer_id=$2 AND status IN ('queued','running')`, runID, computerID, status, jsonArg(sub.Steps), truncate(sub.Log, 200000), jsonArg(sub.UserEntry))
+		WHERE id=$1 AND computer_id=$2 AND status IN ('queued','running')`, runID, computerID, status, jsonArg(sub.Steps), cleanText(truncate(sub.Log, 200000)), jsonArg(sub.UserEntry))
 	if err != nil {
 		return err
 	}

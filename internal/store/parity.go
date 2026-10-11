@@ -318,7 +318,7 @@ func (s *Store) CompleteAppInstallLog(ctx context.Context, logID, computerID, st
 	if status != "completed" {
 		status = "failed"
 	}
-	res, err := s.DB.ExecContext(ctx, `UPDATE app_install_logs SET status=$3, log=$4, completed_at=now() WHERE id=$1 AND computer_id=$2`, logID, computerID, status, logText)
+	res, err := s.DB.ExecContext(ctx, `UPDATE app_install_logs SET status=$3, log=$4, completed_at=now() WHERE id=$1 AND computer_id=$2`, logID, computerID, status, cleanText(logText))
 	if err != nil {
 		return err
 	}

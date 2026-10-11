@@ -78,8 +78,12 @@ pkgutil --check-signature Installer.pkg    # for packages
 send, for example:
 
 ```
-googlechrome NOTIFY='silent' BLOCKING_PROCESS_ACTION='prompt_user'
+googlechrome DEBUG='0' NOTIFY='silent' BLOCKING_PROCESS_ACTION='prompt_user'
 ```
+
+`DEBUG='0'` is always sent. The bundled Installomator script keeps upstream's default of `DEBUG=1`, in which it
+downloads and verifies the app but installs nothing and still exits 0; the agent also adds `DEBUG=0` when an older
+server leaves it out.
 
 ## 9.5 Custom labels
 
@@ -105,7 +109,7 @@ Example generated arguments:
 ```
 valuesfromarguments name='Acme Agent' type='pkg' downloadURL='https://downloads.acme.example/agent.pkg'
 expectedTeamID='ABCDE12345' packageID='com.acme.agent' blockingProcesses=( 'Acme Agent' )
-NOTIFY='silent' BLOCKING_PROCESS_ACTION='prompt_user'
+DEBUG='0' NOTIFY='silent' BLOCKING_PROCESS_ACTION='prompt_user'
 ```
 
 ## 9.6 Why arguments are single-quoted

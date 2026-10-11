@@ -128,7 +128,9 @@ func sq(v string) string { return "'" + strings.ReplaceAll(v, "'", `'\''`) + "'"
 func assign(key, value string) string { return key + "=" + sq(value) }
 
 func (o Options) args() []string {
-	var a []string
+	// The bundled script ships with upstream's DEBUG=1, which downloads but never installs
+	// (and still exits 0), so every run must turn it off.
+	a := []string{assign("DEBUG", "0")}
 	notify := o.Notify
 	if notify == "" {
 		notify = "silent"

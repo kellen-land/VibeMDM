@@ -49,7 +49,15 @@ func jsonArg(v any) string {
 	if err != nil {
 		return "null"
 	}
-	return string(b)
+	// jsonb rejects the NUL escape that tool output can contain (json.Marshal already
+	// replaces invalid UTF-8).
+	return strings.ReplaceAll(string(b), `\u0000`, `\ufffd`)
+}
+
+// cleanText makes command output storable in a text column: PostgreSQL rejects NUL bytes
+// and invalid UTF-8 ("invalid byte sequence for encoding UTF8"), which tool output can contain.
+func cleanText(s string) string {
+	return strings.ToValidUTF8(strings.ReplaceAll(s, "\x00", ""), "\uFFFD")
 }
 
 // ---- settings ----
