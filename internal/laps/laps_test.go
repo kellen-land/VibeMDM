@@ -70,11 +70,11 @@ func TestSetPasswordPrefersSysadminctlThenFallsBack(t *testing.T) {
 		t.Fatalf("calls=%v err=%v", calls, err)
 	}
 	calls = nil
-	if err := SetPassword(context.Background(), run("sysadminctl"), "vibeadmin", "oldpw", "newpw"); err != nil || len(calls) != 2 || !strings.HasSuffix(calls[1].name, "dscl") {
+	if err := SetPassword(context.Background(), run("sysadminctl"), "vibeadmin", "oldpw", "newpw"); err != nil || !strings.HasSuffix(calls[len(calls)-1].name, "dscl") {
 		t.Fatalf("fallback calls=%v err=%v", calls, err)
 	}
 	calls = nil
-	if err := SetPassword(context.Background(), run("none"), "vibeadmin", "", "newpw"); err != nil || !strings.HasSuffix(calls[0].name, "dscl") {
+	if err := SetPassword(context.Background(), run("none"), "vibeadmin", "", "newpw"); err != nil || !strings.HasSuffix(calls[len(calls)-1].name, "dscl") {
 		t.Fatalf("no-old calls=%v err=%v", calls, err)
 	}
 	err := SetPassword(context.Background(), run("dscl"), "vibeadmin", "", "newpw")
@@ -103,5 +103,88 @@ func TestGenerateJamfFormat(t *testing.T) {
 	}
 	if ValidateManual("short") == nil || ValidateManual(" padded-password ") == nil || ValidateManual("fine-password-1") != nil {
 		t.Fatal("ValidateManual")
+	}
+}
+
+const listUsersAppleSilicon = `Cryptographic users for disk3s5 (3 found)
+|
++-- 0E2A8F3C-1111-2222-3333-444455556666
+|   Type: Local Open Directory User
+|   Volume Owner: Yes
+|
++-- 9F1B7D2E-AAAA-BBBB-CCCC-DDDDEEEEFFFF
+|   Type: Local Open Directory User
+|   Volume Owner: No
+|
++-- EBC6C064-0000-11AA-AA11-00306543ECAC
+    Type: MDM Bootstrap Token External Key
+    Volume Owner: Yes
+`
+
+func TestParseVolumeOwner(t *testing.T) {
+	if v := parseVolumeOwner(listUsersAppleSilicon, "0e2a8f3c-1111-2222-3333-444455556666"); v == nil || !*v {
+		t.Fatalf("owner: %v", v)
+	}
+	if v := parseVolumeOwner(listUsersAppleSilicon, "9F1B7D2E-AAAA-BBBB-CCCC-DDDDEEEEFFFF"); v == nil || *v {
+		t.Fatalf("not owner: %v", v)
+	}
+	intel := "Cryptographic users for disk1s1 (1 found)\n|\n+-- 0E2A8F3C-1111-2222-3333-444455556666\n    Type: Local Open Directory User\n"
+	if v := parseVolumeOwner(intel, "0E2A8F3C-1111-2222-3333-444455556666"); v != nil {
+		t.Fatalf("Intel has no volume owners: %v", *v)
+	}
+	if v := parseVolumeOwner(listUsersAppleSilicon, "MISSING"); v != nil {
+		t.Fatal("unknown GUID")
+	}
+}
+
+// A Secure Token account must never fall back to dscl: that desynchronises FileVault.
+func TestSetPasswordRefusesDsclOnSecureTokenAccount(t *testing.T) {
+	var calls []string
+	run := func(_ context.Context, name string, args ...string) (string, error) {
+		calls = append(calls, args[0])
+		switch {
+		case strings.HasSuffix(name, "sysadminctl") && args[0] == "-secureTokenStatus":
+			return "sysadminctl[1:2] Secure token is ENABLED for user vibeadmin", nil
+		case strings.HasSuffix(name, "sysadminctl"):
+			return "error", errors.New("exit 1")
+		}
+		return "", nil
+	}
+	if err := SetPassword(context.Background(), run, "vibeadmin", "", "newpw"); err == nil || !strings.Contains(err.Error(), "Secure Token") {
+		t.Fatalf("expected refusal, got %v", err)
+	}
+	if err := SetPassword(context.Background(), run, "vibeadmin", "oldpw", "newpw"); err == nil {
+		t.Fatal("expected failure when sysadminctl fails on a Secure Token account")
+	}
+	for _, c := range calls {
+		if c == "." {
+			t.Fatal("dscl must not run on a Secure Token account")
+		}
+	}
+}
+
+func TestGrantSecureTokenChecksStatus(t *testing.T) {
+	granted := false
+	run := func(_ context.Context, name string, args ...string) (string, error) {
+		switch args[0] {
+		case "-secureTokenOn":
+			if args[7] == "right-pw" {
+				granted = true
+			}
+			return "done (admin pw " + args[7] + ")", nil // sysadminctl exits 0 even on failure
+		case "-secureTokenStatus":
+			if granted {
+				return "Secure token is ENABLED for user vibeadmin", nil
+			}
+			return "Secure token is DISABLED for user vibeadmin", nil
+		}
+		return "", nil
+	}
+	err := GrantSecureToken(context.Background(), run, "vibeadmin", "laps-pw", "alice", "wrong-pw")
+	if err == nil || strings.Contains(err.Error(), "wrong-pw") {
+		t.Fatalf("must fail without leaking the admin password: %v", err)
+	}
+	if err := GrantSecureToken(context.Background(), run, "vibeadmin", "laps-pw", "alice", "right-pw"); err != nil {
+		t.Fatal(err)
 	}
 }

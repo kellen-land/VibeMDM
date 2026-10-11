@@ -218,6 +218,53 @@ func (h *Handler) setLAPSPassword(w http.ResponseWriter, r *http.Request) {
 	h.computerLAPS(w, r)
 }
 
+// grantLAPSSecureToken asks the agent to give the LAPS account a Secure Token (and, on Apple
+// silicon, volume ownership) using an existing Secure Token administrator's credentials. They are
+// sealed, handed to the agent once and deleted; they expire after 30 minutes if the Mac is offline.
+func (h *Handler) grantLAPSSecureToken(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		AdminUser     string `json:"admin_user"`
+		AdminPassword string `json:"admin_password"`
+	}
+	if err := decode(r, &req); err != nil {
+		writeErr(w, 400, "invalid JSON")
+		return
+	}
+	req.AdminUser = strings.TrimSpace(req.AdminUser)
+	if req.AdminUser == "" || req.AdminPassword == "" || len(req.AdminUser) > 64 || len(req.AdminPassword) > 256 {
+		writeErr(w, 400, "the administrator's account name and password are required")
+		return
+	}
+	comp, err := h.st.GetComputer(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "computer")
+		return
+	}
+	st, err := h.st.LAPSStatusFor(r.Context(), comp)
+	if err != nil {
+		h.fail(w, err, "laps")
+		return
+	}
+	if !st.InScope || !st.HasPassword {
+		writeErr(w, 400, "LAPS does not manage an account with a known password on this computer yet")
+		return
+	}
+	if req.AdminUser == st.Account {
+		writeErr(w, 400, "use a different administrator that already has a Secure Token")
+		return
+	}
+	if err := h.st.LAPSCreateTokenGrant(r.Context(), comp.ID, req.AdminUser, req.AdminPassword, actor(r), 30*time.Minute); err != nil {
+		h.fail(w, err, "laps")
+		return
+	}
+	if _, err := h.queueTask(r, comp, "laps_rotate", "", nil, "", "", "", ""); err != nil {
+		h.fail(w, err, "task")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "laps.secure_token_requested", "computer", comp.ID, map[string]any{"admin_user": req.AdminUser, "ip": auth.ClientIP(r)})
+	h.computerLAPS(w, r)
+}
+
 // ---- Jamf Pro-compatible API: /api/v2/local-admin-password/... ----
 //
 // Mirrors the Jamf Pro API's LAPS endpoints so scripts written for Jamf work with a VibeMDM

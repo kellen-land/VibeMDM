@@ -21,6 +21,8 @@ type fakeLAPSAPI struct {
 	forget     bool // commit returns 409 as if the server lost the stage
 	lastErrMsg string
 	lastCommit model.AgentLAPSCommit
+	states     []model.AgentLAPSState
+	grant      *model.AgentLAPSTokenGrant
 }
 
 func (f *fakeLAPSAPI) LAPSConfig(context.Context) (*model.AgentLAPSConfig, error) {
@@ -53,6 +55,18 @@ func (f *fakeLAPSAPI) LAPSCommit(_ context.Context, c model.AgentLAPSCommit) err
 	return nil
 }
 func (f *fakeLAPSAPI) LAPSError(_ context.Context, msg string) error { f.lastErrMsg = msg; return nil }
+func (f *fakeLAPSAPI) LAPSState(_ context.Context, st model.AgentLAPSState) error {
+	f.states = append(f.states, st)
+	return nil
+}
+func (f *fakeLAPSAPI) LAPSTokenGrant(context.Context) (*model.AgentLAPSTokenGrant, error) {
+	if f.grant == nil {
+		return nil, &apiError{Status: 404, Msg: "no grant"}
+	}
+	g := f.grant
+	f.grant = nil // one time
+	return g, nil
+}
 
 // fakeMac models the local account database behind dscl/sysadminctl.
 type fakeMac struct {
@@ -61,11 +75,33 @@ type fakeMac struct {
 	setThenFail bool // change takes effect but the tool exits non-zero
 	calls       []string
 	hidden      []string
+	tokens      map[string]bool   // accounts holding a Secure Token
+	admins      map[string]string // Secure Token admins and their passwords
 }
 
 func (m *fakeMac) run(_ context.Context, name string, args ...string) (string, error) {
 	m.calls = append(m.calls, filepath.Base(name))
 	switch {
+	case strings.HasSuffix(name, "sysadminctl") && args[0] == "-secureTokenStatus":
+		if m.tokens[args[1]] {
+			return "Secure token is ENABLED for user " + args[1], nil
+		}
+		return "Secure token is DISABLED for user " + args[1], nil
+	case strings.HasSuffix(name, "sysadminctl") && args[0] == "-secureTokenOn":
+		if pw, ok := m.admins[args[5]]; ok && pw == args[7] && m.users[args[1]] == args[3] {
+			if m.tokens == nil {
+				m.tokens = map[string]bool{}
+			}
+			m.tokens[args[1]] = true
+		}
+		return "", nil // sysadminctl exits 0 even when it fails
+	case strings.HasSuffix(name, "diskutil"):
+		out := "Cryptographic users for disk3s5\n"
+		for u := range m.tokens {
+			_ = u
+			out += "+-- 11111111-2222-3333-4444-555555555555\n|   Volume Owner: Yes\n"
+		}
+		return out, nil
 	case strings.HasSuffix(name, "dscl") && args[1] == "-read" && len(args) > 3 && args[3] == "GeneratedUID":
 		if _, ok := m.users[strings.TrimPrefix(args[2], "/Users/")]; ok {
 			return "GeneratedUID: 11111111-2222-3333-4444-555555555555\n", nil
@@ -88,7 +124,7 @@ func (m *fakeMac) run(_ context.Context, name string, args ...string) (string, e
 		m.users[args[1]] = args[args2(args, "-password")]
 		return "", nil
 	case strings.HasSuffix(name, "sysadminctl") && args[0] == "-resetPasswordFor":
-		if m.failSet {
+		if m.failSet || m.users[args[1]] != args[args2(args, "-oldPassword")] {
 			return "failed", errors.New("exit 1")
 		}
 		m.users[args[1]] = args[args2(args, "-newPassword")]
@@ -256,5 +292,42 @@ func TestLAPSJamfFormatSetPasswordHideAndGUID(t *testing.T) {
 	}
 	if mac.users["vibeadmin"] != "Chosen-by-admin-42" {
 		t.Fatal("set-password not applied")
+	}
+}
+
+func TestLAPSGrantsSecureTokenOnce(t *testing.T) {
+	cfg := dueCfg()
+	cfg.Rotate, cfg.GrantSecureToken = false, true
+	api := &fakeLAPSAPI{cfg: cfg, grant: &model.AgentLAPSTokenGrant{AdminUser: "alice", AdminPassword: "wrong"}}
+	mac := &fakeMac{users: map[string]string{"vibeadmin": "old-Password-1"}, admins: map[string]string{"alice": "alice-pw"}}
+	if err := newLAPS(t, api, mac).Cycle(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	last := api.states[len(api.states)-1]
+	if last.Granted || last.GrantError == "" || strings.Contains(last.GrantError, "wrong") {
+		t.Fatalf("a wrong admin password must fail without leaking it: %+v", last)
+	}
+	api.grant = &model.AgentLAPSTokenGrant{AdminUser: "alice", AdminPassword: "alice-pw"}
+	if err := newLAPS(t, api, mac).Cycle(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	last = api.states[len(api.states)-1]
+	if !last.Granted || last.SecureToken == nil || !*last.SecureToken || last.VolumeOwner == nil || !*last.VolumeOwner {
+		t.Fatalf("grant not reported: %+v", last)
+	}
+}
+
+// Rotating the password of a Secure Token account must never fall back to dscl.
+func TestLAPSRotationKeepsSecureToken(t *testing.T) {
+	cfg := dueCfg()
+	cfg.CurrentPassword = "stale-password" // the server's copy is out of date: sysadminctl fails
+	api := &fakeLAPSAPI{cfg: cfg}
+	mac := &fakeMac{users: map[string]string{"vibeadmin": "actual-password"}, tokens: map[string]bool{"vibeadmin": true}}
+	_ = newLAPS(t, api, mac).Cycle(context.Background())
+	if mac.users["vibeadmin"] != "actual-password" {
+		t.Fatal("dscl changed a Secure Token account's password")
+	}
+	if len(api.commits) != 1 || api.commits[0] {
+		t.Fatalf("rotation must be reported as failed: %v", api.commits)
 	}
 }

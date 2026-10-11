@@ -1866,6 +1866,11 @@ export interface LAPSStatus {
   guid: string
   /** Set while an administrator-chosen password waits to be applied. */
   password_set_by?: string
+  /** As last reported by the agent; null = unknown. volume_owner is also null on Intel Macs. */
+  secure_token: boolean | null
+  volume_owner: boolean | null
+  token_checked_at: string | null
+  token_grant_pending: boolean
 }
 
 export interface LAPSView {
@@ -1884,7 +1889,7 @@ export interface LAPSHistoryEntry {
   views: LAPSView[]
 }
 
-export type LAPSEventType = 'CREATED' | 'ROTATED' | 'VIEWED' | 'PENDING' | 'SET' | 'ERROR'
+export type LAPSEventType = 'CREATED' | 'ROTATED' | 'VIEWED' | 'PENDING' | 'SET' | 'ERROR' | 'TOKEN_GRANTED'
 
 export interface LAPSEvent {
   id: number

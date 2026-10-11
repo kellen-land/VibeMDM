@@ -238,6 +238,23 @@ type AgentLAPSConfig struct {
 	CurrentPassword string `json:"current_password,omitempty"`
 	// NewPassword is an administrator-chosen password to apply instead of a generated one.
 	NewPassword string `json:"new_password,omitempty"`
+	// GrantSecureToken asks the agent to fetch one-time admin credentials (POST /agent/v1/laps/token-grant)
+	// and give the account a Secure Token. CurrentPassword is included for it.
+	GrantSecureToken bool `json:"grant_secure_token,omitempty"`
+}
+
+// AgentLAPSState reports the LAPS account's Secure Token and volume ownership.
+type AgentLAPSState struct {
+	SecureToken *bool  `json:"secure_token"`
+	VolumeOwner *bool  `json:"volume_owner"` // nil: unknown or not applicable (Intel)
+	GrantError  string `json:"grant_error,omitempty"`
+	Granted     bool   `json:"granted,omitempty"`
+}
+
+// AgentLAPSTokenGrant carries an existing Secure Token administrator's credentials, once.
+type AgentLAPSTokenGrant struct {
+	AdminUser     string `json:"admin_user"`
+	AdminPassword string `json:"admin_password"`
 }
 
 // AgentLAPSStage uploads a newly generated password before the agent applies it.

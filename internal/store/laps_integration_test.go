@@ -191,3 +191,54 @@ func TestAgentBootstrapTokens(t *testing.T) {
 		t.Fatalf("attempt: %+v", a)
 	}
 }
+
+func TestLAPSSecureTokenGrant(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	stamp := time.Now().Format("150405.000")
+	comp, err := s.EnrollAgent(ctx, model.AgentEnrollRequest{SerialNumber: "TOK" + stamp, UDID: "t" + stamp, Hostname: "t.local",
+		ComputerName: "token-test", OSVersion: "26.0", Architecture: "arm64"}, HashToken("tok-"+stamp))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { s.DeleteComputer(ctx, comp.ID) })
+	cfg, _ := s.SaveLAPSConfig(ctx, model.LAPSConfig{Enabled: true, Scope: model.Scope{AllComputers: true}})
+	fp, _ := s.LAPSStage(ctx, comp.ID, cfg.AccountName, "Laps-Password-12345")
+	s.LAPSCommit(ctx, comp.ID, model.AgentLAPSCommit{Fingerprint: fp, Applied: true})
+
+	if err := s.LAPSCreateTokenGrant(ctx, comp.ID, "alice", "Alice-Secret-pw", "admin", time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	if st, _ := s.LAPSStatusFor(ctx, comp); !st.TokenGrantPending {
+		t.Fatal("grant should be pending")
+	}
+	ac, _ := s.LAPSConfigForAgent(ctx, comp)
+	if !ac.GrantSecureToken || ac.CurrentPassword != "Laps-Password-12345" {
+		t.Fatalf("agent not told to grant: %+v", ac)
+	}
+	var stored string
+	s.DB.QueryRowContext(ctx, `SELECT admin_password_encrypted FROM laps_token_grants WHERE computer_id = $1`, comp.ID).Scan(&stored)
+	if s.Box.Enabled() && stored == "Alice-Secret-pw" {
+		t.Fatal("admin password stored in plain text")
+	}
+	g, err := s.LAPSTakeTokenGrant(ctx, comp.ID)
+	if err != nil || g.AdminUser != "alice" || g.AdminPassword != "Alice-Secret-pw" {
+		t.Fatalf("take: %+v %v", g, err)
+	}
+	if _, err := s.LAPSTakeTokenGrant(ctx, comp.ID); err == nil {
+		t.Fatal("credentials handed out twice")
+	}
+	yes := true
+	if err := s.LAPSSetTokenState(ctx, comp.ID, model.AgentLAPSState{SecureToken: &yes, VolumeOwner: &yes, Granted: true}); err != nil {
+		t.Fatal(err)
+	}
+	st, _ := s.LAPSStatusFor(ctx, comp)
+	if st.SecureToken == nil || !*st.SecureToken || st.VolumeOwner == nil || !*st.VolumeOwner || st.TokenGrantPending {
+		t.Fatalf("state: %+v", st)
+	}
+	// An expired grant is never handed out.
+	s.LAPSCreateTokenGrant(ctx, comp.ID, "alice", "pw", "admin", -time.Minute)
+	if _, err := s.LAPSTakeTokenGrant(ctx, comp.ID); err == nil {
+		t.Fatal("expired grant handed out")
+	}
+}

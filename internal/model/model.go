@@ -1096,6 +1096,12 @@ type LAPSStatus struct {
 	Guid           string     `json:"guid"`
 	// PasswordSetBy is set while an administrator-chosen password waits to be applied.
 	PasswordSetBy string `json:"password_set_by,omitempty"`
+	// SecureToken and VolumeOwner as last reported by the agent (nil = unknown; VolumeOwner is
+	// also nil on Intel Macs, which have no volume owners).
+	SecureToken       *bool      `json:"secure_token"`
+	VolumeOwner       *bool      `json:"volume_owner"`
+	TokenCheckedAt    *time.Time `json:"token_checked_at"`
+	TokenGrantPending bool       `json:"token_grant_pending"`
 }
 
 // LAPSView records one administrator viewing a password.

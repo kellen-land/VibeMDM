@@ -100,3 +100,40 @@ func (h *Handler) lapsError(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// lapsState records the LAPS account's Secure Token and volume ownership.
+func (h *Handler) lapsState(w http.ResponseWriter, r *http.Request) {
+	comp := computerFrom(r.Context())
+	var req model.AgentLAPSState
+	if err := decode(r, &req); err != nil {
+		writeErr(w, 400, "invalid JSON")
+		return
+	}
+	if len(req.GrantError) > 500 {
+		req.GrantError = req.GrantError[:500]
+	}
+	if err := h.st.LAPSSetTokenState(r.Context(), comp.ID, req); err != nil {
+		writeErr(w, 500, "could not record the state")
+		return
+	}
+	if req.Granted {
+		h.st.Audit(r.Context(), "agent:"+comp.Name, "laps.secure_token_granted", "computer", comp.ID, map[string]any{"volume_owner": req.VolumeOwner})
+	} else if req.GrantError != "" {
+		h.st.Audit(r.Context(), "agent:"+comp.Name, "laps.secure_token_failed", "computer", comp.ID, map[string]any{"error": req.GrantError})
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// lapsTokenGrant hands the one-time Secure Token administrator credentials to the agent and
+// deletes them. 404 when nothing is pending.
+func (h *Handler) lapsTokenGrant(w http.ResponseWriter, r *http.Request) {
+	comp := computerFrom(r.Context())
+	g, err := h.st.LAPSTakeTokenGrant(r.Context(), comp.ID)
+	if err != nil {
+		writeErr(w, 404, "no Secure Token grant is pending")
+		return
+	}
+	h.st.Audit(r.Context(), "agent:"+comp.Name, "laps.secure_token_credentials_fetched", "computer", comp.ID, map[string]any{"admin_user": g.AdminUser})
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 200, g)
+}

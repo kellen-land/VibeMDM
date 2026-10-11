@@ -151,9 +151,11 @@ func Create(ctx context.Context, run Runner, account, password string) error {
 	return nil
 }
 
-// SetPassword changes the account password. With the old password it uses
-// sysadminctl, which keeps Secure Token and keychain wrapping in step; without it
-// (first adoption of an existing account) it falls back to dscl as root.
+// SetPassword changes the account password. With the old password it uses sysadminctl,
+// which keeps the Secure Token, FileVault unlock and keychain wrapping in step. Only an account
+// without a Secure Token may fall back to dscl as root (first adoption of an existing account
+// whose password is unknown): on a Secure Token account that would leave FileVault and the
+// login password out of sync, so it is refused.
 func SetPassword(ctx context.Context, run Runner, account, oldPassword, newPassword string) error {
 	var out string
 	var err error
@@ -163,11 +165,77 @@ func SetPassword(ctx context.Context, run Runner, account, oldPassword, newPassw
 			return nil
 		}
 	}
+	if HasSecureToken(ctx, run, account) {
+		if oldPassword == "" {
+			return errors.New("the account holds a Secure Token and its current password is unknown, so it cannot be changed safely; set the password with Set password in VibeMDM or reset it with a Secure Token administrator")
+		}
+		return fmt.Errorf("sysadminctl could not change the password of this Secure Token account: %s", Scrub(out, oldPassword, newPassword))
+	}
 	out2, err2 := run(ctx, "/usr/bin/dscl", ".", "-passwd", "/Users/"+account, newPassword)
 	if err2 != nil {
 		return fmt.Errorf("setting password: %w: %s %s", err2, Scrub(out, oldPassword, newPassword), Scrub(out2, oldPassword, newPassword))
 	}
 	return nil
+}
+
+// HasSecureToken reports whether the account holds a Secure Token
+// (sysadminctl prints "Secure token is ENABLED for user …").
+func HasSecureToken(ctx context.Context, run Runner, account string) bool {
+	out, err := run(ctx, "/usr/sbin/sysadminctl", "-secureTokenStatus", account)
+	return err == nil && strings.Contains(out, "ENABLED")
+}
+
+// VolumeOwner reports whether the account (by GeneratedUID) is a volume owner of the system
+// volume, from `diskutil apfs listUsers /`. nil means unknown or not applicable (Intel Macs
+// have no volume owners).
+func VolumeOwner(ctx context.Context, run Runner, guid string) *bool {
+	if guid == "" {
+		return nil
+	}
+	out, err := run(ctx, "/usr/sbin/diskutil", "apfs", "listUsers", "/")
+	if err != nil {
+		return nil
+	}
+	return parseVolumeOwner(out, guid)
+}
+
+func parseVolumeOwner(out, guid string) *bool {
+	inUser := false
+	for _, line := range strings.Split(out, "\n") {
+		t := strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(line), "|+- "))
+		if strings.EqualFold(t, guid) {
+			inUser = true
+			continue
+		}
+		if !inUser {
+			continue
+		}
+		if strings.HasPrefix(strings.TrimSpace(line), "+--") {
+			return nil // next user: this one had no Volume Owner line
+		}
+		if v, ok := strings.CutPrefix(t, "Volume Owner:"); ok {
+			yes := strings.EqualFold(strings.TrimSpace(v), "Yes")
+			return &yes
+		}
+	}
+	return nil
+}
+
+// GrantSecureToken gives the account a Secure Token using an existing Secure Token
+// administrator's credentials. On Apple silicon, when that administrator is a volume owner,
+// the account also becomes a volume owner. Apple offers no way to do this without such
+// credentials (other than the bootstrap token at the account's first login-window sign-in).
+func GrantSecureToken(ctx context.Context, run Runner, account, password, adminUser, adminPassword string) error {
+	out, err := run(ctx, "/usr/sbin/sysadminctl", "-secureTokenOn", account, "-password", password, "-adminUser", adminUser, "-adminPassword", adminPassword)
+	// sysadminctl often exits 0 even on failure; the status check is what counts.
+	if HasSecureToken(ctx, run, account) {
+		return nil
+	}
+	msg := Scrub(out, password, adminPassword)
+	if err != nil {
+		return fmt.Errorf("granting the Secure Token failed: %w: %s", err, msg)
+	}
+	return fmt.Errorf("granting the Secure Token failed: %s", msg)
 }
 
 // Scrub removes secrets from command output before it is logged or reported.

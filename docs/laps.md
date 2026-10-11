@@ -64,6 +64,32 @@ keeps the old password until the Mac confirms the new one (below).
 | A staged password is never confirmed | A Health finding opens after one hour; *Show password* displays the current and the unconfirmed password so you can try both. |
 | The account does not exist and creation is off | The agent reports the problem; nothing is created. |
 
+## Secure Token and volume ownership
+
+A Secure Token lets an account unlock FileVault and give tokens to others; on Apple silicon a **volume owner** can
+also authorize software updates and change startup security. The agent checks the LAPS account at each check-in
+(`sysadminctl -secureTokenStatus`, and `diskutil apfs listUsers /` for volume ownership, which Intel Macs do not have)
+and the computer's *Local admin password* panel shows both.
+
+macOS does not let MDM or an agent give an account a Secure Token on its own. There are exactly two ways, and
+VibeMDM supports both:
+
+1. **Grant Secure Token…** (computer → Security → Local admin password → *More*). Enter the account name and
+   password of an administrator who already has a Secure Token (on Apple silicon, one who is a volume owner, such
+   as the person who set up the Mac). VibeMDM seals the credentials, hands them to the agent **once** (then deletes
+   them; they expire after 30 minutes if the Mac is offline), and the agent runs
+   `sysadminctl -secureTokenOn <LAPS account> -password … -adminUser … -adminPassword …`. On Apple silicon the
+   account becomes a volume owner too. The result is checked with `-secureTokenStatus` (sysadminctl exits 0 even
+   when it fails) and recorded as a *Secure Token granted* or *Problem* event. Audit: `laps.secure_token_requested`,
+   `laps.secure_token_credentials_fetched`, `laps.secure_token_granted` / `_failed`.
+2. **Bootstrap token.** If the Mac has escrowed its bootstrap token to VibeMDM, macOS gives a Secure Token (and
+   volume ownership) to an account the first time it signs in at the login window. Showing the LAPS password and
+   signing in once as that account therefore also works; the agent reports the new state at its next check-in.
+
+Rotation keeps the token: the agent changes the password only with `sysadminctl -resetPasswordFor … -oldPassword`,
+and **never falls back to `dscl`** on an account that holds a Secure Token (that would leave FileVault unlock and
+the login password out of sync). If the old password is unknown, rotation fails with an explanation instead.
+
 ## Showing a password
 
 *Show password* (admin only) asks for a reason, then returns the password with `Cache-Control: no-store`. It is
@@ -126,6 +152,8 @@ handler also redacts attributes named like `password`, `token` or `secret`.
   desynchronise it from FileVault, which is why the agent prefers `sysadminctl` with the old password. As Jamf
   advises, use a dedicated LAPS account that is not a FileVault user and rely on the escrowed recovery key instead.
 - Account creation with `sysadminctl -addUser`, hiding with `IsHidden`, and reading `GeneratedUID`.
+- `sysadminctl -secureTokenOn` and the parsing of `sysadminctl -secureTokenStatus` and `diskutil apfs listUsers /`
+  output on current macOS, and volume ownership after a grant on Apple silicon.
 - The password is passed as a command-line argument for a moment. Other local users can see it with `ps` during
   that window. The agent runs these commands as root, briefly.
 

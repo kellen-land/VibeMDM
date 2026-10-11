@@ -116,6 +116,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.Handle("POST /agent/v1/laps/stage", a(h.lapsStage))
 	mux.Handle("POST /agent/v1/laps/commit", a(h.lapsCommit))
 	mux.Handle("POST /agent/v1/laps/error", a(h.lapsError))
+	mux.Handle("POST /agent/v1/laps/state", a(h.lapsState))
+	mux.Handle("POST /agent/v1/laps/token-grant", a(h.lapsTokenGrant))
 	h.registerParity(mux)
 }
 
