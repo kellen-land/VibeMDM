@@ -674,7 +674,7 @@ func (c *checks) lapsNotCurrent(ctx context.Context) ([]Finding, error) {
 				if recent, err := c.d.St.HasRecentTask(ctx, id, "laps_rotate", time.Hour); err != nil || recent {
 					return err
 				}
-				if err := c.d.St.LAPSRequestRotation(ctx, id); err != nil {
+				if err := c.d.St.LAPSRequestRotation(ctx, id, actor); err != nil {
 					return err
 				}
 				if _, err := c.d.St.CreateTask(ctx, id, "laps_rotate", map[string]any{"reason": "health: local admin password not current"}, actor); err != nil {

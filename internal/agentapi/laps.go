@@ -41,8 +41,9 @@ func (h *Handler) lapsStage(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "account does not match the LAPS policy")
 		return
 	}
-	if len(req.Password) < laps.MinLength || len(req.Password) > laps.MaxLength {
-		writeErr(w, 400, "password length is outside the allowed range")
+	// Generated passwords are 14-64 characters; administrator-chosen ones may be 8-128.
+	if err := laps.ValidateManual(req.Password); err != nil {
+		writeErr(w, 400, err.Error())
 		return
 	}
 	fp, err := h.st.LAPSStage(r.Context(), comp.ID, req.Account, req.Password)
@@ -63,7 +64,7 @@ func (h *Handler) lapsCommit(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "invalid request")
 		return
 	}
-	if err := h.st.LAPSCommit(r.Context(), comp.ID, req.Fingerprint, req.Applied, req.Error); err != nil {
+	if err := h.st.LAPSCommit(r.Context(), comp.ID, req); err != nil {
 		if errors.Is(err, store.ErrLAPSNoPending) {
 			writeErr(w, 409, "no matching staged password")
 			return

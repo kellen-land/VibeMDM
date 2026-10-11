@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,6 +33,13 @@ func (a *simAccounts) run(_ context.Context, name string, args ...string) (strin
 		return ""
 	}
 	switch {
+	case tool == "dscl" && len(args) > 3 && args[1] == "-read" && args[3] == "GeneratedUID":
+		if _, ok := a.users[strings.TrimPrefix(args[2], "/Users/")]; ok {
+			return "GeneratedUID: " + strings.ToUpper(fmt.Sprintf("%x", sha256.Sum256([]byte(args[2]+fmt.Sprintf("%p", a))))[:8]) + "-SIM\n", nil
+		}
+		return "", errors.New("no such user")
+	case tool == "dscl" && len(args) > 4 && args[1] == "-create" && args[3] == "IsHidden":
+		return "", nil
 	case tool == "dscl" && len(args) > 2 && args[1] == "-read":
 		if _, ok := a.users[strings.TrimPrefix(args[2], "/Users/")]; ok {
 			return "", nil

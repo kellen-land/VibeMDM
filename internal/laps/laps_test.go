@@ -45,7 +45,7 @@ func TestNormalize(t *testing.T) {
 			t.Errorf("account %q accepted", bad)
 		}
 	}
-	if Normalize(&model.LAPSConfig{PasswordLength: 5}) == nil || Normalize(&model.LAPSConfig{RotationDays: 999}) == nil {
+	if Normalize(&model.LAPSConfig{PasswordLength: 5}) == nil || Normalize(&model.LAPSConfig{RotationDays: 9999}) == nil {
 		t.Error("out-of-range values accepted")
 	}
 }
@@ -80,5 +80,28 @@ func TestSetPasswordPrefersSysadminctlThenFallsBack(t *testing.T) {
 	err := SetPassword(context.Background(), run("dscl"), "vibeadmin", "", "newpw")
 	if err == nil || strings.Contains(err.Error(), "newpw") {
 		t.Fatalf("error must fail and not leak the password: %v", err)
+	}
+}
+
+func TestGenerateJamfFormat(t *testing.T) {
+	for _, n := range []int{14, 29, 30, 31, 64} {
+		p, err := GenerateFormat(FormatJamf, n)
+		if err != nil || len(p) != n {
+			t.Fatalf("%d: %q %v", n, p, err)
+		}
+		if strings.HasPrefix(p, "-") || strings.HasSuffix(p, "-") || strings.Contains(p, "--") {
+			t.Fatalf("bad dashes: %q", p)
+		}
+		for _, c := range p {
+			if c != '-' && !strings.ContainsRune(jamfAlphabet, c) {
+				t.Fatalf("unexpected %q in %q", c, p)
+			}
+		}
+	}
+	if p, _ := GenerateFormat(FormatJamf, 30); p[5] != '-' || p[11] != '-' {
+		t.Fatalf("groups of five expected: %q", p)
+	}
+	if ValidateManual("short") == nil || ValidateManual(" padded-password ") == nil || ValidateManual("fine-password-1") != nil {
+		t.Fatal("ValidateManual")
 	}
 }

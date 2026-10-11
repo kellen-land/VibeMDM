@@ -10,6 +10,7 @@ import { CopyButton } from './ui/CopyButton'
 import { Field } from './ui/Field'
 import { Input } from './ui/Input'
 import { Modal } from './ui/Modal'
+import { RelativeTime } from './ui/RelativeTime'
 import { useToast } from './ui/Toast'
 
 /**
@@ -57,7 +58,7 @@ export function LapsRevealButton({ computerId, computerName, onDone }: { compute
         loading={reveal.isPending}
         confirmDisabled={!reason.trim()}
         title="Show the local admin password?"
-        description="This is recorded under your name with the reason below. The password is changed again shortly after, if your policy rotates after use."
+        description="This is recorded under your name with the reason below. The password changes automatically a while after it is viewed."
         confirmLabel="Show password"
       >
         <Field label="Reason" required hint="For example a ticket number.">
@@ -86,7 +87,11 @@ export function LapsRevealButton({ computerId, computerName, onDone }: { compute
                 <p className="mt-1 break-all font-mono text-ink select-all">{shown.unconfirmed_password}</p>
               </Alert>
             )}
-            {shown.status.rotate_after && <p className="text-xs text-ink-muted">A new password will be set automatically after this view.</p>}
+            {shown.status.rotate_after && (
+              <p className="text-xs text-ink-muted">
+                It changes automatically <RelativeTime value={shown.status.rotate_after} /> because it was viewed.
+              </p>
+            )}
           </div>
         )}
       </Modal>

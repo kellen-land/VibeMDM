@@ -1826,9 +1826,15 @@ export interface LAPSConfig {
   scope: Scope
   account_name: string
   create_account: boolean
+  /** Hide the account from the login window and Users & Groups. */
+  hide_account: boolean
+  /** "jamf": A-Z and 2-9 in dash-separated groups of five (like Jamf Pro); "complex": every character class. */
+  password_format: 'jamf' | 'complex'
   password_length: number
+  /** Rotate passwords that were never viewed after rotation_days (Jamf: autoRotateEnabled). */
+  auto_rotate: boolean
   rotation_days: number
-  rotate_after_use: boolean
+  /** Minutes after a view before the password rotates (Jamf: passwordRotationTime). Always on. */
   rotate_after_use_minutes: number
 }
 
@@ -1857,6 +1863,51 @@ export interface LAPSStatus {
   serial_number?: string
   agent_last_seen?: string | null
   rotation_status?: LAPSRotationStatus
+  guid: string
+  /** Set while an administrator-chosen password waits to be applied. */
+  password_set_by?: string
+}
+
+export interface LAPSView {
+  viewed_by: string
+  reason: string
+  viewed_at: string
+}
+
+/** One password a Mac has had (never includes the password in the console API). */
+export interface LAPSHistoryEntry {
+  account: string
+  guid: string
+  fingerprint: string
+  created_at: string
+  retired_at: string | null
+  views: LAPSView[]
+}
+
+export type LAPSEventType = 'CREATED' | 'ROTATED' | 'VIEWED' | 'PENDING' | 'SET' | 'ERROR'
+
+export interface LAPSEvent {
+  id: number
+  account: string
+  event_type: LAPSEventType
+  actor: string
+  detail: string
+  at: string
+}
+
+export interface LAPSHistory {
+  events: LAPSEvent[]
+  passwords: LAPSHistoryEntry[]
+}
+
+export interface LAPSPendingRotation {
+  computer_id: string
+  computer_name: string
+  account: string
+  guid: string
+  reason: 'viewed' | 'requested' | 'set' | 'expired' | 'staged' | 'missing'
+  since: string
+  due_at: string | null
 }
 
 export interface LAPSSummary {

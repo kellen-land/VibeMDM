@@ -338,8 +338,8 @@ func (c *Client) LAPSStage(ctx context.Context, account, password string) error 
 }
 
 // LAPSCommit reports whether a staged password was applied.
-func (c *Client) LAPSCommit(ctx context.Context, fingerprint string, applied bool, errMsg string) error {
-	return c.do(ctx, http.MethodPost, "/agent/v1/laps/commit", model.AgentLAPSCommit{Fingerprint: fingerprint, Applied: applied, Error: errMsg}, nil, 0)
+func (c *Client) LAPSCommit(ctx context.Context, commit model.AgentLAPSCommit) error {
+	return c.do(ctx, http.MethodPost, "/agent/v1/laps/commit", commit, nil, 0)
 }
 
 // LAPSError reports a failure that happened before a password was staged.

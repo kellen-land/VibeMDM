@@ -1053,13 +1053,19 @@ type LAPSConfig struct {
 	// AccountName is the local account whose password is managed.
 	AccountName string `json:"account_name"`
 	// CreateAccount creates the account (as an administrator) when it is missing.
-	CreateAccount  bool `json:"create_account"`
-	PasswordLength int  `json:"password_length"`
-	// RotationDays is the maximum age of a password before the agent rotates it.
-	RotationDays int `json:"rotation_days"`
-	// RotateAfterUse rotates the password after an administrator revealed it.
-	RotateAfterUse        bool `json:"rotate_after_use"`
-	RotateAfterUseMinutes int  `json:"rotate_after_use_minutes"`
+	CreateAccount bool `json:"create_account"`
+	// HideAccount hides the account from the login window and Users & Groups.
+	HideAccount bool `json:"hide_account"`
+	// PasswordFormat is "jamf" (A-Z and 2-9 in dash-separated groups of five, like Jamf Pro)
+	// or "complex" (all character classes).
+	PasswordFormat string `json:"password_format"`
+	PasswordLength int    `json:"password_length"`
+	// AutoRotate expires a password that was never viewed after RotationDays (Jamf: autoRotateEnabled).
+	AutoRotate   bool `json:"auto_rotate"`
+	RotationDays int  `json:"rotation_days"`
+	// RotateAfterUseMinutes is how long after a view the password is rotated (Jamf: passwordRotationTime).
+	// Rotation after viewing is always on, as in Jamf Pro.
+	RotateAfterUseMinutes int `json:"rotate_after_use_minutes"`
 }
 
 // LAPSStatus is one computer's LAPS state. It never contains a password.
@@ -1087,6 +1093,49 @@ type LAPSStatus struct {
 	SerialNumber   string     `json:"serial_number,omitempty"`
 	AgentLastSeen  *time.Time `json:"agent_last_seen,omitempty"`
 	RotationStatus string     `json:"rotation_status,omitempty"` // ok | due | pending | missing | failing | out_of_scope
+	Guid           string     `json:"guid"`
+	// PasswordSetBy is set while an administrator-chosen password waits to be applied.
+	PasswordSetBy string `json:"password_set_by,omitempty"`
+}
+
+// LAPSView records one administrator viewing a password.
+type LAPSView struct {
+	ViewedBy string    `json:"viewed_by"`
+	Reason   string    `json:"reason"`
+	ViewedAt time.Time `json:"viewed_at"`
+}
+
+// LAPSHistoryEntry is one password a Mac has had. Password is filled only for the admin audit view.
+type LAPSHistoryEntry struct {
+	Account     string     `json:"account"`
+	Guid        string     `json:"guid"`
+	Fingerprint string     `json:"fingerprint"`
+	Password    string     `json:"password,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	RetiredAt   *time.Time `json:"retired_at"` // nil while current
+	Views       []LAPSView `json:"views"`
+}
+
+// LAPSEvent is one entry in a Mac's LAPS event history.
+type LAPSEvent struct {
+	ID        int64     `json:"id"`
+	Account   string    `json:"account"`
+	EventType string    `json:"event_type"` // CREATED | ROTATED | VIEWED | PENDING | SET | ERROR
+	Actor     string    `json:"actor"`
+	Detail    string    `json:"detail"`
+	At        time.Time `json:"at"`
+}
+
+// LAPSPendingRotation is a Mac with a rotation queued but not yet confirmed.
+type LAPSPendingRotation struct {
+	ComputerID   string    `json:"computer_id"`
+	ComputerName string    `json:"computer_name"`
+	Account      string    `json:"account"`
+	Guid         string    `json:"guid"`
+	Reason       string    `json:"reason"` // viewed | requested | set | expired | staged | missing
+	Since        time.Time `json:"since"`
+	// DueAt is when a post-view rotation falls due (nil = as soon as the agent checks in).
+	DueAt *time.Time `json:"due_at"`
 }
 
 // LAPSSummary counts fleet LAPS states (Macs in scope with the agent).

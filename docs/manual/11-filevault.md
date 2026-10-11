@@ -161,7 +161,7 @@ Viewers can never reveal keys, and MCP tools never return them.
 ## 11.6 Local administrator passwords (LAPS)
 
 The same escrow pattern also manages a local administrator account's password: a random password per Mac, rotated
-on a schedule and after each view, sealed on the server, and revealed to admins with an audited reason. It lives
+after each view and optionally on a schedule, sealed on the server with its history, and revealed to admins with an audited reason. It follows Jamf Pro's jamf-binary LAPS model and offers a Jamf-compatible API. It lives
 under **Security → Local Admin Passwords** and is documented in [docs/laps.md](../laps.md), including the
 stage → apply → verify → commit protocol that keeps the Mac and the server in agreement when something fails.
 

@@ -230,10 +230,14 @@ type AgentLAPSConfig struct {
 	Enabled         bool   `json:"enabled"`
 	Account         string `json:"account"`
 	CreateAccount   bool   `json:"create_account"`
+	HideAccount     bool   `json:"hide_account"`
+	PasswordFormat  string `json:"password_format"`
 	PasswordLength  int    `json:"password_length"`
 	Rotate          bool   `json:"rotate"`
-	Reason          string `json:"reason,omitempty"` // missing | expired | used | requested
+	Reason          string `json:"reason,omitempty"` // missing | expired | used | requested | set | account_changed
 	CurrentPassword string `json:"current_password,omitempty"`
+	// NewPassword is an administrator-chosen password to apply instead of a generated one.
+	NewPassword string `json:"new_password,omitempty"`
 }
 
 // AgentLAPSStage uploads a newly generated password before the agent applies it.
@@ -247,4 +251,6 @@ type AgentLAPSCommit struct {
 	Fingerprint string `json:"fingerprint"` // of the staged password being resolved
 	Applied     bool   `json:"applied"`
 	Error       string `json:"error,omitempty"`
+	Guid        string `json:"guid,omitempty"`    // the account's GeneratedUID
+	Created     bool   `json:"created,omitempty"` // the agent created the account in this rotation
 }

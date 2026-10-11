@@ -20,11 +20,14 @@ import (
 // Defaults and limits for model.LAPSConfig.
 const (
 	DefaultAccount     = "vibeadmin"
-	DefaultLength      = 20
+	FormatJamf         = "jamf"    // A-Z and 2-9 in groups of five separated by dashes, like Jamf Pro
+	FormatComplex      = "complex" // every character class
+	DefaultLength      = 30        // Jamf Pro's LAPS passwords are 30 characters
+	DefaultComplexLen  = 20
 	MinLength          = 14
 	MaxLength          = 64
-	DefaultRotateDays  = 30
-	DefaultAfterUseMin = 60
+	DefaultRotateDays  = 90 // Jamf Pro's autoRotateExpirationTime default (7776000 s)
+	DefaultAfterUseMin = 60 // Jamf Pro's passwordRotationTime default (3600 s)
 )
 
 var accountRe = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,30}$`)
@@ -41,8 +44,18 @@ func Normalize(c *model.LAPSConfig) error {
 	if !accountRe.MatchString(c.AccountName) || reserved[c.AccountName] {
 		return fmt.Errorf("account name %q is not allowed (lowercase letters, digits, - and _, up to 31 characters; not a system account)", c.AccountName)
 	}
+	switch c.PasswordFormat {
+	case "":
+		c.PasswordFormat = FormatJamf
+	case FormatJamf, FormatComplex:
+	default:
+		return fmt.Errorf("password format must be %q or %q", FormatJamf, FormatComplex)
+	}
 	if c.PasswordLength == 0 {
 		c.PasswordLength = DefaultLength
+		if c.PasswordFormat == FormatComplex {
+			c.PasswordLength = DefaultComplexLen
+		}
 	}
 	if c.PasswordLength < MinLength || c.PasswordLength > MaxLength {
 		return fmt.Errorf("password length must be between %d and %d", MinLength, MaxLength)
@@ -50,14 +63,14 @@ func Normalize(c *model.LAPSConfig) error {
 	if c.RotationDays == 0 {
 		c.RotationDays = DefaultRotateDays
 	}
-	if c.RotationDays < 1 || c.RotationDays > 365 {
-		return errors.New("rotation interval must be between 1 and 365 days")
+	if c.RotationDays < 1 || c.RotationDays > 3650 {
+		return errors.New("rotation interval must be between 1 and 3650 days")
 	}
 	if c.RotateAfterUseMinutes == 0 {
 		c.RotateAfterUseMinutes = DefaultAfterUseMin
 	}
-	if c.RotateAfterUseMinutes < 5 || c.RotateAfterUseMinutes > 24*60 {
-		return errors.New("rotate-after-use delay must be between 5 minutes and 24 hours")
+	if c.RotateAfterUseMinutes < 1 || c.RotateAfterUseMinutes > 7*24*60 {
+		return errors.New("rotation after viewing must be between 1 minute and 7 days")
 	}
 	c.Scope.Normalize()
 	return nil
@@ -172,4 +185,63 @@ func Scrub(s string, secrets ...string) string {
 func Fingerprint(password string) string {
 	sum := sha256.Sum256([]byte(password))
 	return hex.EncodeToString(sum[:4])
+}
+
+// jamfAlphabet is upper case letters and digits without look-alikes (0 O 1 I).
+const jamfAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+// GenerateFormat returns a password in the given format. The Jamf format is
+// upper case letters and digits in groups of five separated by dashes
+// (e.g. "K7QMX-2PZ9R-…"), which Jamf Pro uses because it is easy to read out and
+// type at a login window; length counts the dashes.
+func GenerateFormat(format string, length int) (string, error) {
+	if format != FormatJamf {
+		return Generate(length)
+	}
+	if length < MinLength || length > MaxLength {
+		return "", fmt.Errorf("password length must be between %d and %d", MinLength, MaxLength)
+	}
+	b := make([]byte, length)
+	for i := range b {
+		if (i+1)%6 == 0 && i != length-1 {
+			b[i] = '-'
+			continue
+		}
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(jamfAlphabet))))
+		if err != nil {
+			return "", err
+		}
+		b[i] = jamfAlphabet[n.Int64()]
+	}
+	return string(b), nil
+}
+
+// ValidateManual checks an administrator-chosen password.
+func ValidateManual(pw string) error {
+	if len(pw) < 8 || len(pw) > 128 {
+		return errors.New("the password must be 8 to 128 characters")
+	}
+	if strings.TrimSpace(pw) != pw || strings.ContainsAny(pw, "\x00\r\n\t") {
+		return errors.New("the password must not contain control characters or leading/trailing spaces")
+	}
+	return nil
+}
+
+// Hide hides the account from the login window and Users & Groups.
+func Hide(ctx context.Context, run Runner, account string) error {
+	_, err := run(ctx, "/usr/bin/dscl", ".", "-create", "/Users/"+account, "IsHidden", "1")
+	return err
+}
+
+// GUID returns the account's GeneratedUID ("" if it cannot be read).
+func GUID(ctx context.Context, run Runner, account string) string {
+	out, err := run(ctx, "/usr/bin/dscl", ".", "-read", "/Users/"+account, "GeneratedUID")
+	if err != nil {
+		return ""
+	}
+	f := strings.Fields(out)
+	if len(f) >= 2 && f[0] == "GeneratedUID:" {
+		return f[1]
+	}
+	return ""
 }

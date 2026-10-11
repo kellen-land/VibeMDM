@@ -20,6 +20,7 @@ type fakeLAPSAPI struct {
 	commitErr  error
 	forget     bool // commit returns 409 as if the server lost the stage
 	lastErrMsg string
+	lastCommit model.AgentLAPSCommit
 }
 
 func (f *fakeLAPSAPI) LAPSConfig(context.Context) (*model.AgentLAPSConfig, error) {
@@ -37,7 +38,9 @@ func (f *fakeLAPSAPI) LAPSStage(_ context.Context, _, pw string) error {
 	f.forget = false
 	return nil
 }
-func (f *fakeLAPSAPI) LAPSCommit(_ context.Context, fingerprint string, applied bool, msg string) error {
+func (f *fakeLAPSAPI) LAPSCommit(_ context.Context, c model.AgentLAPSCommit) error {
+	fingerprint, applied, msg := c.Fingerprint, c.Applied, c.Error
+	f.lastCommit = c
 	if f.commitErr != nil {
 		return f.commitErr
 	}
@@ -57,11 +60,20 @@ type fakeMac struct {
 	failSet     bool
 	setThenFail bool // change takes effect but the tool exits non-zero
 	calls       []string
+	hidden      []string
 }
 
 func (m *fakeMac) run(_ context.Context, name string, args ...string) (string, error) {
 	m.calls = append(m.calls, filepath.Base(name))
 	switch {
+	case strings.HasSuffix(name, "dscl") && args[1] == "-read" && len(args) > 3 && args[3] == "GeneratedUID":
+		if _, ok := m.users[strings.TrimPrefix(args[2], "/Users/")]; ok {
+			return "GeneratedUID: 11111111-2222-3333-4444-555555555555\n", nil
+		}
+		return "", errors.New("no such user")
+	case strings.HasSuffix(name, "dscl") && args[1] == "-create" && args[3] == "IsHidden":
+		m.hidden = append(m.hidden, strings.TrimPrefix(args[2], "/Users/"))
+		return "", nil
 	case strings.HasSuffix(name, "dscl") && args[1] == "-read":
 		if _, ok := m.users[strings.TrimPrefix(args[2], "/Users/")]; ok {
 			return "", nil
@@ -220,5 +232,29 @@ func TestLAPSCreatesMissingAccountOnlyWhenAllowed(t *testing.T) {
 	}
 	if len(mac.users["vibeadmin"]) != 20 {
 		t.Fatal("account not created with a generated password")
+	}
+}
+
+func TestLAPSJamfFormatSetPasswordHideAndGUID(t *testing.T) {
+	cfg := dueCfg()
+	cfg.PasswordFormat, cfg.PasswordLength, cfg.HideAccount = "jamf", 30, true
+	api, mac := &fakeLAPSAPI{cfg: cfg}, &fakeMac{users: map[string]string{"vibeadmin": "old-Password-1"}}
+	if err := newLAPS(t, api, mac).Cycle(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	pw := mac.users["vibeadmin"]
+	if len(pw) != 30 || strings.Count(pw, "-") != 4 || strings.ToUpper(pw) != pw {
+		t.Fatalf("not a Jamf-style password: %q", pw)
+	}
+	if api.lastCommit.Guid == "" || len(mac.hidden) != 1 {
+		t.Fatalf("guid %q hidden %v", api.lastCommit.Guid, mac.hidden)
+	}
+	// An administrator-chosen password is applied verbatim.
+	api.cfg.NewPassword, api.cfg.CurrentPassword = "Chosen-by-admin-42", pw
+	if err := newLAPS(t, api, mac).Cycle(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if mac.users["vibeadmin"] != "Chosen-by-admin-42" {
+		t.Fatal("set-password not applied")
 	}
 }

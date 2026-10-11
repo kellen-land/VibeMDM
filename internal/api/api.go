@@ -330,6 +330,24 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("GET /api/v1/computers/{id}/laps", h.computerLAPS)
 	adm("POST /api/v1/computers/{id}/laps/reveal", h.revealLAPS)
 	adm("POST /api/v1/computers/{id}/laps/rotate", h.rotateLAPS)
+	adm("PUT /api/v1/computers/{id}/laps/password", h.setLAPSPassword)
+	r("GET /api/v1/computers/{id}/laps/history", h.computerLAPSHistory)
+	r("GET /api/v1/laps/pending-rotations", h.lapsPending)
+
+	// Jamf Pro-compatible LAPS API (see internal/api/laps.go)
+	const jl = "/api/v2/local-admin-password"
+	r("GET "+jl+"/settings", h.jamfLapsGetSettings)
+	adm("PUT "+jl+"/settings", h.jamfLapsPutSettings)
+	r("GET "+jl+"/pending-rotations", h.jamfLapsPending)
+	r("GET "+jl+"/{cmid}/accounts", h.jamfLapsAccounts)
+	r("GET "+jl+"/{cmid}/history", h.jamfLapsFullHistory)
+	adm("PUT "+jl+"/{cmid}/set-password", h.jamfLapsSetPassword)
+	adm("GET "+jl+"/{cmid}/account/{username}/password", h.jamfLapsPassword)
+	adm("GET "+jl+"/{cmid}/account/{username}/audit", h.jamfLapsAudit)
+	r("GET "+jl+"/{cmid}/account/{username}/history", h.jamfLapsAccountHistory)
+	adm("GET "+jl+"/{cmid}/account/{username}/{guid}/password", h.jamfLapsPassword)
+	adm("GET "+jl+"/{cmid}/account/{username}/{guid}/audit", h.jamfLapsAudit)
+	r("GET "+jl+"/{cmid}/account/{username}/{guid}/history", h.jamfLapsAccountHistory)
 
 	// Jamf-parity: restricted software, advanced searches, app catalog, webhooks
 	r("GET /api/v1/restricted-software", h.listRestricted)

@@ -23,13 +23,14 @@ type lapsPending struct {
 	Account     string `json:"account"`
 	Password    string `json:"password"`
 	Fingerprint string `json:"fingerprint"`
+	Created     bool   `json:"created,omitempty"` // the account did not exist before this rotation
 }
 
 // LAPSAPI is the server surface the LAPS cycle needs (the real Client implements it).
 type LAPSAPI interface {
 	LAPSConfig(ctx context.Context) (*model.AgentLAPSConfig, error)
 	LAPSStage(ctx context.Context, account, password string) error
-	LAPSCommit(ctx context.Context, fingerprint string, applied bool, errMsg string) error
+	LAPSCommit(ctx context.Context, c model.AgentLAPSCommit) error
 	LAPSError(ctx context.Context, msg string) error
 }
 
@@ -128,12 +129,16 @@ func (l *LAPS) settlePending(ctx context.Context) error {
 		msg = "interrupted rotation: the new password was not in effect"
 	}
 	l.Log.Warn("settling an interrupted LAPS rotation", "component", "laps", "account", p.Account, "applied", applied)
-	err = l.API.LAPSCommit(ctx, p.Fingerprint, applied, msg)
+	commit := model.AgentLAPSCommit{Fingerprint: p.Fingerprint, Applied: applied, Error: msg, Created: p.Created}
+	if applied {
+		commit.Guid = laps.GUID(ctx, l.Run, p.Account)
+	}
+	err = l.API.LAPSCommit(ctx, commit)
 	if isConflict(err) {
 		// The server never received the stage (or a newer one replaced it). Re-stage, then resolve.
 		if applied {
 			if err = l.API.LAPSStage(ctx, p.Account, p.Password); err == nil {
-				err = l.API.LAPSCommit(ctx, p.Fingerprint, true, "")
+				err = l.API.LAPSCommit(ctx, commit)
 			}
 		} else {
 			err = nil // nothing to discard
@@ -158,12 +163,16 @@ func (l *LAPS) rotate(ctx context.Context, cfg *model.AgentLAPSConfig) error {
 		l.API.LAPSError(ctx, msg)
 		return errors.New(msg)
 	}
-	pw, err := laps.Generate(cfg.PasswordLength)
-	if err != nil {
-		l.API.LAPSError(ctx, "generating a password failed")
-		return err
+	// An administrator-chosen password (Jamf: set-password) replaces the generated one.
+	pw := cfg.NewPassword
+	if pw == "" {
+		var err error
+		if pw, err = laps.GenerateFormat(cfg.PasswordFormat, cfg.PasswordLength); err != nil {
+			l.API.LAPSError(ctx, "generating a password failed")
+			return err
+		}
 	}
-	p := lapsPending{Account: cfg.Account, Password: pw, Fingerprint: laps.Fingerprint(pw)}
+	p := lapsPending{Account: cfg.Account, Password: pw, Fingerprint: laps.Fingerprint(pw), Created: !exists}
 	// 1. Remember it locally, 2. give it to the server, 3. only then touch the account.
 	if err := l.writePending(p); err != nil {
 		l.API.LAPSError(ctx, "cannot write the pending-password file")
@@ -185,11 +194,20 @@ func (l *LAPS) rotate(ctx context.Context, cfg *model.AgentLAPSConfig) error {
 	} else if applyErr == nil {
 		applyErr = errors.New("the new password did not authenticate after the change")
 	}
+	if applyErr == nil && cfg.HideAccount {
+		if err := laps.Hide(ctx, l.Run, cfg.Account); err != nil {
+			l.Log.Warn("could not hide the local admin account", "component", "laps", "account", cfg.Account, "err", err)
+		}
+	}
 	msg := ""
+	commit := model.AgentLAPSCommit{Fingerprint: p.Fingerprint, Applied: applyErr == nil, Created: p.Created && applyErr == nil}
 	if applyErr != nil {
 		msg = laps.Scrub(applyErr.Error(), pw, cfg.CurrentPassword)
+		commit.Error = msg
+	} else {
+		commit.Guid = laps.GUID(ctx, l.Run, cfg.Account)
 	}
-	if err := l.API.LAPSCommit(ctx, p.Fingerprint, applyErr == nil, msg); err != nil {
+	if err := l.API.LAPSCommit(ctx, commit); err != nil {
 		// Keep the pending file: the next cycle verifies and reports.
 		return fmt.Errorf("reporting the result: %w", err)
 	}
