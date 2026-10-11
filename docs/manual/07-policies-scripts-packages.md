@@ -185,6 +185,8 @@ order:
 | **Delete Account** | `sysadminctl -deleteUser`, keeping the home folder unless *Delete home folder* is on. Never deletes the logged-in user or the only account with a Secure Token. Deleting an account that does not exist succeeds as a no-op. |
 | **Disable Account for FileVault** | `fdesetup remove -user`. Never removes the last FileVault user; does nothing when FileVault is off. |
 
+Passwords must meet the Mac's own password policy (configuration profiles such as mSCP/CIS baselines often require 15
+or more characters); a rejected password fails the step with `New account password error (5402)` and an explanation.
 The LAPS account cannot be targeted (it is managed under Security → LAPS). Passwords are sealed with
 `VIBEMDM_ENCRYPTION_KEY` (set it, or they are stored as given), never returned by the API (`password_set` says one
 is stored; send an entry without `password` to keep it) and never part of the policy the agent receives or of
