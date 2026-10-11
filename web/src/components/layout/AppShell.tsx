@@ -18,6 +18,7 @@ import {
   ListChecks,
   LogOut,
   Menu,
+  Monitor,
   Moon,
   Package,
   Puzzle,
@@ -123,17 +124,22 @@ function HealthNavBadge() {
   )
 }
 
+const prefLabel = { system: 'System', light: 'Light', dark: 'Dark' } as const
+const nextPref = { system: 'light', light: 'dark', dark: 'system' } as const
+
+/** Cycles System → Light → Dark. The icon shows the current choice; System follows the OS live. */
 function ThemeToggle({ className }: { className?: string }) {
-  const { theme, toggle } = useTheme()
+  const { theme, preference, cycle } = useTheme()
+  const label = `Theme: ${prefLabel[preference]}${preference === 'system' ? ` (${theme})` : ''}. Switch to ${prefLabel[nextPref[preference]]}`
   return (
     <button
       type="button"
-      onClick={toggle}
-      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      onClick={cycle}
+      aria-label={label}
+      title={label}
       className={cn('inline-flex size-8 items-center justify-center rounded-md border border-line text-ink-muted hover:text-ink hover:bg-line/40 focus-ring', className)}
     >
-      {theme === 'dark' ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      {preference === 'system' ? <Monitor className="size-4" /> : preference === 'light' ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </button>
   )
 }

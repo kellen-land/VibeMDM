@@ -11,7 +11,9 @@ its only external dependency is PostgreSQL. It combines three things:
    remote shell.
 3. **A web console and REST API.** The console was inspired by Jamf Pro's workflow (policies, smart groups,
    extension attributes, Self Service, scope with exclusions). It adds a health engine, a command inspector, mSCP
-   compliance, FileVault escrow, logging, and an MCP server for AI agents.
+   compliance, FileVault escrow, logging, and an MCP server for AI agents. The console follows the operating
+   system's light or dark appearance (live, including macOS *Auto*); the button at the bottom of the sidebar
+   cycles **System → Light → Dark**, and the choice is remembered per browser.
 
 VibeMDM is an independent implementation. It contains no Jamf code or assets.
 
