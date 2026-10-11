@@ -1966,3 +1966,85 @@ export interface AgentInstallAttempt {
   created_at: string
   updated_at: string
 }
+
+// ---- Mobile devices (internal/model MobileDevice*, internal/api/mobile.go) ----
+
+/** An iPhone, iPad, iPod touch or Apple TV. Kept apart from computers, as in Jamf Pro. */
+export interface MobileDevice {
+  id: string
+  udid: string
+  serial_number: string
+  name: string
+  device_type: 'iPhone' | 'iPad' | 'iPod' | 'AppleTV' | ''
+  model: string
+  model_name: string
+  product_name: string
+  os_version: string
+  os_build: string
+  capacity_gb: number | null
+  available_gb: number | null
+  /** 0..1 */
+  battery_level: number | null
+  wifi_mac: string
+  bluetooth_mac: string
+  imei: string
+  meid: string
+  phone_number: string
+  carrier: string
+  cellular_technology: string
+  is_roaming: boolean | null
+  is_supervised: boolean | null
+  is_shared_ipad: boolean | null
+  activation_lock_enabled: boolean | null
+  find_my_enabled: boolean | null
+  lost_mode_enabled: boolean | null
+  passcode_present: boolean | null
+  passcode_compliant: boolean | null
+  hardware_encryption: number | null
+  last_backup_at: string | null
+  mdm_enrolled: boolean
+  mdm_enrolled_at: string | null
+  mdm_last_checkin: string | null
+  mdm_unenrolled_at: string | null
+  device_info: Record<string, unknown>
+  security_info: Record<string, unknown>
+  last_inventory_at: string | null
+  asset_tag: string
+  site: string
+  department: string
+  building: string
+  room: string
+  assigned_user: string
+  assigned_real_name: string
+  assigned_email: string
+  notes: string
+  created_at: string
+  updated_at: string
+}
+
+export interface MobileDeviceApp {
+  name: string
+  version: string
+  bundle_id: string
+  managed: boolean
+  managed_status: string
+}
+
+export interface MobileDeviceDetail extends MobileDevice {
+  apps: MobileDeviceApp[]
+  profiles: ComputerProfile[]
+  groups: ComputerGroup[]
+}
+
+export interface MobileGroupPreview {
+  count: number
+  mobile_devices: MobileDevice[]
+}
+
+export type MobileDeviceListParams = ComputerListParams
+
+export interface MobileSearchRunResult {
+  search: AdvancedSearch
+  count: number
+  mobile_devices: MobileDevice[]
+}

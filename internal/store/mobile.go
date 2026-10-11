@@ -632,3 +632,59 @@ func (s *Store) MobileDevicesNeedingInventory(ctx context.Context, maxAge time.D
 
 // ErrNotMobile is returned when a UDID belongs to no mobile device.
 var ErrNotMobile = errors.New("not a mobile device")
+
+// ---- mobile device searches ----
+
+// ListMobileSearches returns saved mobile device searches.
+func (s *Store) ListMobileSearches(ctx context.Context) ([]model.AdvancedSearch, error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT `+searchCols+` FROM mobile_device_searches ORDER BY lower(name)`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []model.AdvancedSearch{}
+	for rows.Next() {
+		a, err := scanSearch(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *a)
+	}
+	return out, rows.Err()
+}
+
+// GetMobileSearch returns one saved mobile device search.
+func (s *Store) GetMobileSearch(ctx context.Context, id string) (*model.AdvancedSearch, error) {
+	return scanSearch(s.DB.QueryRowContext(ctx, `SELECT `+searchCols+` FROM mobile_device_searches WHERE id = $1`, id))
+}
+
+// CreateMobileSearch inserts a saved mobile device search.
+func (s *Store) CreateMobileSearch(ctx context.Context, a model.AdvancedSearch) (*model.AdvancedSearch, error) {
+	return scanSearch(s.DB.QueryRowContext(ctx, `INSERT INTO mobile_device_searches (name, criteria, display_fields) VALUES ($1,$2::jsonb,$3::jsonb) RETURNING `+searchCols,
+		a.Name, jsonArg(a.Criteria), jsonArg(a.DisplayFields)))
+}
+
+// UpdateMobileSearch updates a saved mobile device search.
+func (s *Store) UpdateMobileSearch(ctx context.Context, a model.AdvancedSearch) (*model.AdvancedSearch, error) {
+	return scanSearch(s.DB.QueryRowContext(ctx, `UPDATE mobile_device_searches SET name=$2, criteria=$3::jsonb, display_fields=$4::jsonb, updated_at=now() WHERE id=$1 RETURNING `+searchCols,
+		a.ID, a.Name, jsonArg(a.Criteria), jsonArg(a.DisplayFields)))
+}
+
+// DeleteMobileSearch removes a saved mobile device search.
+func (s *Store) DeleteMobileSearch(ctx context.Context, id string) error {
+	_, err := s.DB.ExecContext(ctx, `DELETE FROM mobile_device_searches WHERE id=$1`, id)
+	return err
+}
+
+// RunMobileSearch evaluates criteria and returns matching mobile devices.
+func (s *Store) RunMobileSearch(ctx context.Context, criteria []model.Criterion, limit int) ([]model.MobileDevice, error) {
+	ids, err := s.PreviewMobileCriteria(ctx, criteria)
+	if err != nil || len(ids) == 0 {
+		return []model.MobileDevice{}, err
+	}
+	if limit <= 0 {
+		limit = 500
+	}
+	out, _, err := s.ListMobileDevices(ctx, MobileDeviceFilter{IDs: ids, Limit: limit})
+	return out, err
+}

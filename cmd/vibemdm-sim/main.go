@@ -158,7 +158,7 @@ func newDevice(i int, prefix, server, topic, platform string, logger *slog.Logge
 	if platform != "mac" {
 		// Different identifiers per kind so Macs, iPhones and iPads can run against one server.
 		base := map[string]int{"iphone": 0x5B000000, "ipad": 0x5C000000}[platform]
-		serial = fmt.Sprintf("SIM%s%05d", strings.ToUpper(platform[:2]), 10000+i*7919%90000)
+		serial = fmt.Sprintf("SIM%s%05d", map[string]string{"iphone": "PH", "ipad": "PD"}[platform], 10000+i*7919%90000)
 		udid = fmt.Sprintf("%08X-SIM0-4000-8000-%012d", base+i, i)
 	}
 	name := fmt.Sprintf("%s-%s-%02d", prefix, kind, i)

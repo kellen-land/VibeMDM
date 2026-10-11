@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import type { Criterion, CriterionField } from '../../api/types'
-import { useCriteriaFields, useGroups } from '../../api/queries'
+import { useCriteriaFields, useGroups, useMobileCriteriaFields, useMobileGroups } from '../../api/queries'
 import { Button, IconButton } from '../ui/Button'
 import { Input, Select } from '../ui/Input'
 import { cn } from '../../lib/cn'
@@ -41,7 +41,11 @@ function groupOf(f: CriterionField): string {
   if (f.key.startsWith('profile_')) return 'Profiles'
   if (f.key === 'local_username') return 'Local users'
   if (f.key === 'group_membership') return 'Groups'
-  if (['filevault_enabled', 'sip_enabled', 'firewall_enabled', 'gatekeeper_enabled', 'is_supervised', 'activation_lock_enabled', 'secure_boot_level'].includes(f.key)) return 'Security'
+  if (['filevault_enabled', 'sip_enabled', 'firewall_enabled', 'gatekeeper_enabled', 'is_supervised', 'activation_lock_enabled', 'secure_boot_level',
+    'is_shared_ipad', 'find_my_enabled', 'lost_mode_enabled', 'passcode_present', 'passcode_compliant'].includes(f.key)) return 'Security'
+  if (['imei', 'phone_number', 'carrier', 'wifi_mac'].includes(f.key)) return 'Network'
+  if (['device_type', 'model', 'capacity_gb', 'available_gb', 'battery_percent'].includes(f.key)) return 'Hardware'
+  if (['last_backup'].includes(f.key)) return 'Management'
   if (['mdm_enrolled', 'agent_enrolled', 'agent_version', 'last_checkin', 'last_inventory', 'mdm_enrolled_at', 'agent_enrolled_at', 'created_at'].includes(f.key)) return 'Management'
   if (['last_user', 'assigned_user', 'assigned_email', 'department', 'building', 'site', 'asset_tag'].includes(f.key)) return 'User & location'
   if (['model_name', 'model_identifier', 'cpu', 'cpu_cores', 'memory_mb', 'disk_total_mb', 'disk_free_mb', 'architecture'].includes(f.key)) return 'Hardware'
@@ -49,9 +53,14 @@ function groupOf(f: CriterionField): string {
   return 'General'
 }
 
-export function CriteriaBuilder({ value, onChange, disabled }: { value: Criterion[]; onChange: (c: Criterion[]) => void; disabled?: boolean }) {
-  const fieldsQ = useCriteriaFields()
-  const groups = useGroups()
+/** Smart-group criteria editor. kind "mobile" uses mobile device fields and groups. */
+export function CriteriaBuilder({ value, onChange, disabled, kind = 'computer' }: { value: Criterion[]; onChange: (c: Criterion[]) => void; disabled?: boolean; kind?: 'computer' | 'mobile' }) {
+  const computerFields = useCriteriaFields(kind === 'computer')
+  const mobileFields = useMobileCriteriaFields(kind === 'mobile')
+  const computerGroups = useGroups({ enabled: kind === 'computer' })
+  const mobileGroups = useMobileGroups({ enabled: kind === 'mobile' })
+  const fieldsQ = kind === 'mobile' ? mobileFields : computerFields
+  const groups = kind === 'mobile' ? mobileGroups : computerGroups
   const fields = fieldsQ.data ?? []
   const byKey = useMemo(() => new Map(fields.map((f) => [f.key, f])), [fields])
   const grouped = useMemo(() => {

@@ -1,8 +1,11 @@
 package api
 
 import (
+	"encoding/csv"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/store"
@@ -221,4 +224,177 @@ func (h *Handler) setMobileGroupMembers(w http.ResponseWriter, r *http.Request) 
 	}
 	h.st.Audit(r.Context(), actor(r), "mobile_group.members", "mobile_group", g.ID, map[string]any{"count": len(req.MobileDeviceIDs)})
 	writeJSON(w, 200, map[string]any{"ok": true, "count": len(req.MobileDeviceIDs)})
+}
+
+// ---- mobile device searches ----
+
+// mobileCSVFields are the columns a mobile device search can show and export.
+var mobileCSVFields = []struct {
+	Key   string
+	Label string
+	Get   func(d *model.MobileDevice) string
+}{
+	{"name", "Name", func(d *model.MobileDevice) string { return d.Name }},
+	{"serial_number", "Serial Number", func(d *model.MobileDevice) string { return d.SerialNumber }},
+	{"udid", "UDID", func(d *model.MobileDevice) string { return d.UDID }},
+	{"device_type", "Device Type", func(d *model.MobileDevice) string { return d.DeviceType }},
+	{"model_name", "Model", func(d *model.MobileDevice) string { return d.ModelName }},
+	{"model", "Model Identifier", func(d *model.MobileDevice) string { return d.Model }},
+	{"os_version", "OS Version", func(d *model.MobileDevice) string { return d.OSVersion }},
+	{"capacity_gb", "Capacity (GB)", func(d *model.MobileDevice) string { return fmtFloat(d.CapacityGB) }},
+	{"available_gb", "Available (GB)", func(d *model.MobileDevice) string { return fmtFloat(d.AvailableGB) }},
+	{"phone_number", "Phone Number", func(d *model.MobileDevice) string { return d.PhoneNumber }},
+	{"imei", "IMEI", func(d *model.MobileDevice) string { return d.IMEI }},
+	{"carrier", "Carrier", func(d *model.MobileDevice) string { return d.Carrier }},
+	{"is_supervised", "Supervised", func(d *model.MobileDevice) string { return fmtBool(d.IsSupervised) }},
+	{"passcode_present", "Passcode Set", func(d *model.MobileDevice) string { return fmtBool(d.PasscodePresent) }},
+	{"lost_mode_enabled", "Lost Mode", func(d *model.MobileDevice) string { return fmtBool(d.LostModeEnabled) }},
+	{"assigned_user", "Assigned User", func(d *model.MobileDevice) string { return d.AssignedUser }},
+	{"department", "Department", func(d *model.MobileDevice) string { return d.Department }},
+	{"building", "Building", func(d *model.MobileDevice) string { return d.Building }},
+	{"asset_tag", "Asset Tag", func(d *model.MobileDevice) string { return d.AssetTag }},
+	{"last_checkin", "Last Check-in", func(d *model.MobileDevice) string { return fmtTime(d.MDMLastCheckin) }},
+	{"last_inventory", "Last Inventory", func(d *model.MobileDevice) string { return fmtTime(d.LastInventoryAt) }},
+}
+
+func fmtFloat(f *float64) string {
+	if f == nil {
+		return ""
+	}
+	return strconv.FormatFloat(*f, 'f', -1, 64)
+}
+
+func fmtBool(b *bool) string {
+	if b == nil {
+		return ""
+	}
+	return strconv.FormatBool(*b)
+}
+
+func fmtTime(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.UTC().Format(time.RFC3339)
+}
+
+func (h *Handler) mobileSearchFields(w http.ResponseWriter, r *http.Request) {
+	type opt struct{ Key, Label string }
+	out := make([]opt, len(mobileCSVFields))
+	for i, f := range mobileCSVFields {
+		out[i] = opt{f.Key, f.Label}
+	}
+	writeJSON(w, 200, out)
+}
+
+func (h *Handler) listMobileSearches(w http.ResponseWriter, r *http.Request) {
+	items, err := h.st.ListMobileSearches(r.Context())
+	if err != nil {
+		h.fail(w, err, "searches")
+		return
+	}
+	writeJSON(w, 200, listResp[model.AdvancedSearch]{Items: items, Total: len(items)})
+}
+
+func (h *Handler) getMobileSearch(w http.ResponseWriter, r *http.Request) {
+	it, err := h.st.GetMobileSearch(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "search")
+		return
+	}
+	writeJSON(w, 200, it)
+}
+
+func (h *Handler) saveMobileSearch(w http.ResponseWriter, r *http.Request) {
+	var a model.AdvancedSearch
+	if err := decode(r, &a); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	if strings.TrimSpace(a.Name) == "" {
+		writeErr(w, 400, "name required")
+		return
+	}
+	if _, err := h.st.PreviewMobileCriteria(r.Context(), a.Criteria); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	var out *model.AdvancedSearch
+	var err error
+	if id := r.PathValue("id"); id != "" {
+		a.ID = id
+		out, err = h.st.UpdateMobileSearch(r.Context(), a)
+	} else {
+		out, err = h.st.CreateMobileSearch(r.Context(), a)
+	}
+	if err != nil {
+		h.fail(w, err, "search")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "mobile_search.save", "mobile_search", out.ID, map[string]any{"name": out.Name})
+	writeJSON(w, 200, out)
+}
+
+func (h *Handler) deleteMobileSearch(w http.ResponseWriter, r *http.Request) {
+	if err := h.st.DeleteMobileSearch(r.Context(), r.PathValue("id")); err != nil {
+		h.fail(w, err, "search")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "mobile_search.delete", "mobile_search", r.PathValue("id"), nil)
+	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+func (h *Handler) runMobileSearch(w http.ResponseWriter, r *http.Request) {
+	it, err := h.st.GetMobileSearch(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "search")
+		return
+	}
+	devices, err := h.st.RunMobileSearch(r.Context(), it.Criteria, qInt(r, "limit", 500))
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	writeJSON(w, 200, map[string]any{"search": it, "count": len(devices), "mobile_devices": devices})
+}
+
+func (h *Handler) exportMobileSearchCSV(w http.ResponseWriter, r *http.Request) {
+	it, err := h.st.GetMobileSearch(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "search")
+		return
+	}
+	devices, err := h.st.RunMobileSearch(r.Context(), it.Criteria, 10000)
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	cols := mobileCSVFields[:0:0]
+	for _, key := range it.DisplayFields {
+		for _, f := range mobileCSVFields {
+			if f.Key == key {
+				cols = append(cols, f)
+			}
+		}
+	}
+	if len(cols) == 0 {
+		cols = mobileCSVFields[:7]
+	}
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="mobile-devices.csv"`)
+	cw := csv.NewWriter(w)
+	head := make([]string, len(cols))
+	for i, c := range cols {
+		head[i] = c.Label
+	}
+	cw.Write(head)
+	for i := range devices {
+		row := make([]string, len(cols))
+		for j, c := range cols {
+			row[j] = c.Get(&devices[i])
+		}
+		cw.Write(csvSafe(row))
+	}
+	cw.Flush()
+	h.st.Audit(r.Context(), actor(r), "mobile_search.export", "mobile_search", it.ID, map[string]any{"rows": len(devices)})
 }

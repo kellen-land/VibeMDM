@@ -62,14 +62,15 @@ export function ComputerTasksTab({ id }: { id: string }) {
   )
 }
 
-export function ComputerCommandsTab({ id }: { id: string }) {
+/** MDM command history for a computer, or for a mobile device when mobile is set. */
+export function ComputerCommandsTab({ id, mobile }: { id: string; mobile?: boolean }) {
   const { isAdmin } = useAuth()
   const toast = useToast()
   const invalidate = useInvalidate()
   const [status, setStatus] = useState('')
   const [page, setPage] = useState({ limit: 25, offset: 0 })
   const [search, setSearch] = useState('')
-  const q = useCommands({ computer_id: id, status: status || undefined, ...page })
+  const q = useCommands({ ...(mobile ? { mobile_device_id: id } : { computer_id: id }), status: status || undefined, ...page })
   const searching = search.trim().length > 0
   const cancel = async (c: MDMCommand) => {
     try {
@@ -87,7 +88,7 @@ export function ComputerCommandsTab({ id }: { id: string }) {
         description="Command history from the MDM queue. Click a row to open the inspector."
         actions={
           <>
-            <SearchInput value={search} onChange={setSearch} placeholder="Search plists…" className="w-56" aria-label="Search commands" />
+            {!mobile && <SearchInput value={search} onChange={setSearch} placeholder="Search plists…" className="w-56" aria-label="Search commands" />}
             <Select
               disabled={searching}
               value={status}

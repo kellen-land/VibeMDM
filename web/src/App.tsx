@@ -30,6 +30,12 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { CommandInspectorPage } from './pages/CommandInspectorPage'
 import { FileVaultPage } from './pages/FileVaultPage'
 import { LapsPage } from './pages/LapsPage'
+import { MobileDevicesPage } from './pages/mobile/MobileDevicesPage'
+import { MobileDeviceDetailPage } from './pages/mobile/MobileDeviceDetailPage'
+import { MobileGroupsPage } from './pages/MobileGroupsPage'
+import { MobileGroupEditorPage } from './pages/MobileGroupEditorPage'
+import { MobileSearchesPage } from './pages/MobileSearchesPage'
+import { MobileSearchEditorPage } from './pages/MobileSearchEditorPage'
 import { LogsPage } from './pages/LogsPage'
 import { CustomLabelsPage } from './pages/CustomLabelsPage'
 import { CustomLabelEditorPage } from './pages/CustomLabelEditorPage'
@@ -112,6 +118,13 @@ export function App() {
         <Route path="/commands/:uuid" element={<CommandInspectorPage />} />
         <Route path="/filevault" element={<FileVaultPage />} />
         <Route path="/laps" element={<LapsPage />} />
+        <Route path="/mobile-devices" element={<MobileDevicesPage />} />
+        <Route path="/mobile-devices/:id" element={<MobileDeviceDetailPage />} />
+        <Route path="/mobile-devices/:id/:tab" element={<MobileDeviceDetailPage />} />
+        <Route path="/mobile-groups" element={<MobileGroupsPage />} />
+        <Route path="/mobile-groups/:id" element={<MobileGroupEditorPage />} />
+        <Route path="/mobile-searches" element={<MobileSearchesPage />} />
+        <Route path="/mobile-searches/:id" element={<MobileSearchEditorPage />} />
         <Route path="/updates" element={<SoftwareUpdatesPage />} />
         <Route path="/updates/plans/new" element={<UpdatePlanEditorPage />} />
         <Route path="/updates/plans/:id" element={<UpdatePlanEditorPage />} />

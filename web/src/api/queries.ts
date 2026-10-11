@@ -25,6 +25,10 @@ import type {
   Computer,
   ComputerGroup,
   ComputerListParams,
+  MobileDevice,
+  MobileDeviceDetail,
+  MobileDeviceListParams,
+  MobileSearchRunResult,
   ConfigProfileWithStatus,
   CriterionField,
   DashboardStats,
@@ -86,6 +90,12 @@ import type {
 export const qk = {
   dashboard: ['dashboard'] as const,
   computers: (p?: ComputerListParams) => ['computers', p ?? {}] as const,
+  mobileDevices: (p?: MobileDeviceListParams) => ['mobile-devices', p ?? {}] as const,
+  mobileDevice: (id: string) => ['mobile-device', id] as const,
+  mobileGroups: ['mobile-groups'] as const,
+  mobileGroup: (id: string) => ['mobile-groups', id] as const,
+  mobileGroupMembers: (id: string) => ['mobile-groups', id, 'members'] as const,
+  mobileCriteriaFields: ['mobile-groups', 'criteria-fields'] as const,
   computer: (id: string) => ['computer', id] as const,
   computerCommands: (id: string, p?: object) => ['computer', id, 'commands', p ?? {}] as const,
   computerTasks: (id: string, p?: object) => ['computer', id, 'tasks', p ?? {}] as const,
@@ -126,6 +136,8 @@ export const qk = {
   restrictedItem: (id: string) => ['restricted-software', id] as const,
   restrictedEvents: (p?: object) => ['restricted-events', p ?? {}] as const,
   searches: ['advanced-searches'] as const,
+  mobileSearches: ['mobile-searches'] as const,
+  mobileSearch: (id: string) => ['mobile-search', id] as const,
   search: (id: string) => ['advanced-search', id] as const,
   searchRun: (id: string, p?: object) => ['advanced-search', id, 'run', p ?? {}] as const,
   searchFields: ['advanced-searches', 'fields'] as const,
@@ -210,6 +222,39 @@ export function useComputer(id: string | undefined) {
   return useQuery({ queryKey: qk.computer(id ?? ''), queryFn: () => api.get<ComputerDetail>(`/api/v1/computers/${id}`), enabled: !!id, refetchInterval: 15_000 })
 }
 
+export function useMobileDevices(p: MobileDeviceListParams = {}, opts?: Opts<ListResponse<MobileDevice>>) {
+  return useQuery({
+    queryKey: qk.mobileDevices(p),
+    queryFn: () => api.get<ListResponse<MobileDevice>>('/api/v1/mobile-devices', { query: { ...p, ids: p.ids } }),
+    placeholderData: (prev) => prev,
+    ...opts,
+  })
+}
+
+export function useMobileDevice(id: string | undefined) {
+  return useQuery({ queryKey: qk.mobileDevice(id ?? ''), queryFn: () => api.get<MobileDeviceDetail>(`/api/v1/mobile-devices/${id}`), enabled: !!id, refetchInterval: 15_000 })
+}
+
+export function useMobileGroups(opts?: Opts<ListResponse<ComputerGroup>>) {
+  return useQuery({ queryKey: qk.mobileGroups, queryFn: () => api.get<ListResponse<ComputerGroup>>('/api/v1/mobile-device-groups'), ...opts })
+}
+
+export function useMobileGroup(id: string | undefined) {
+  return useQuery({ queryKey: qk.mobileGroup(id ?? ''), queryFn: () => api.get<ComputerGroup>(`/api/v1/mobile-device-groups/${id}`), enabled: !!id && id !== 'new' })
+}
+
+export function useMobileGroupMembers(id: string | undefined) {
+  return useQuery({
+    queryKey: qk.mobileGroupMembers(id ?? ''),
+    queryFn: () => api.get<ListResponse<MobileDevice>>(`/api/v1/mobile-device-groups/${id}/members`),
+    enabled: !!id && id !== 'new',
+  })
+}
+
+export function useMobileCriteriaFields(enabled = true) {
+  return useQuery({ queryKey: qk.mobileCriteriaFields, queryFn: () => api.get<CriterionField[]>('/api/v1/mobile-device-groups/criteria-fields'), staleTime: 60_000, enabled })
+}
+
 export function useGroups(opts?: Opts<ListResponse<ComputerGroup>>) {
   return useQuery({ queryKey: qk.groups, queryFn: () => api.get<ListResponse<ComputerGroup>>('/api/v1/groups'), ...opts })
 }
@@ -222,8 +267,8 @@ export function useGroupMembers(id: string | undefined) {
   return useQuery({ queryKey: qk.groupMembers(id ?? ''), queryFn: () => api.get<ListResponse<Computer>>(`/api/v1/groups/${id}/members`), enabled: !!id && id !== 'new' })
 }
 
-export function useCriteriaFields() {
-  return useQuery({ queryKey: qk.criteriaFields, queryFn: () => api.get<CriterionField[]>('/api/v1/groups/criteria-fields'), staleTime: 60_000 })
+export function useCriteriaFields(enabled = true) {
+  return useQuery({ queryKey: qk.criteriaFields, queryFn: () => api.get<CriterionField[]>('/api/v1/groups/criteria-fields'), staleTime: 60_000, enabled })
 }
 
 export function useScripts(opts?: Opts<ListResponse<Script>>) {
@@ -274,7 +319,7 @@ export function useProfileDeployments(id: string | undefined) {
   return useQuery({ queryKey: qk.profileDeployments(id ?? ''), queryFn: () => api.get<ListResponse<ProfileDeployment>>(`/api/v1/profiles/${id}/deployments`), enabled: !!id && id !== 'new', refetchInterval: 15_000 })
 }
 
-export function useCommands(p: { computer_id?: string; status?: string; limit?: number; offset?: number }) {
+export function useCommands(p: { computer_id?: string; mobile_device_id?: string; status?: string; limit?: number; offset?: number }) {
   return useQuery({ queryKey: qk.commands(p), queryFn: () => api.get<ListResponse<MDMCommand>>('/api/v1/commands', { query: p }), placeholderData: (prev) => prev, refetchInterval: 15_000 })
 }
 
@@ -402,6 +447,27 @@ export function useAdvancedSearchRun(id: string | undefined, p: { limit?: number
 
 export function useSearchFields() {
   return useQuery({ queryKey: qk.searchFields, queryFn: () => api.get<SearchField[]>('/api/v1/advanced-searches/fields'), staleTime: 300_000 })
+}
+
+export function useMobileSearches(opts?: Opts<ListResponse<AdvancedSearch>>) {
+  return useQuery({ queryKey: qk.mobileSearches, queryFn: () => api.get<ListResponse<AdvancedSearch>>('/api/v1/mobile-device-searches'), ...opts })
+}
+
+export function useMobileSearch(id: string | undefined) {
+  return useQuery({ queryKey: qk.mobileSearch(id ?? ''), queryFn: () => api.get<AdvancedSearch>(`/api/v1/mobile-device-searches/${id}`), enabled: !!id && id !== 'new' })
+}
+
+export function useMobileSearchRun(id: string | undefined, p: { limit?: number } = {}, enabled = true) {
+  return useQuery({
+    queryKey: ['mobile-search', id ?? '', 'run', p],
+    queryFn: () => api.get<MobileSearchRunResult>(`/api/v1/mobile-device-searches/${id}/run`, { query: p }),
+    enabled: enabled && !!id && id !== 'new',
+    placeholderData: (prev) => prev,
+  })
+}
+
+export function useMobileSearchFields() {
+  return useQuery({ queryKey: ['mobile-searches', 'fields'], queryFn: () => api.get<SearchField[]>('/api/v1/mobile-device-searches/fields'), staleTime: 300_000 })
 }
 
 // ---- mac apps ----

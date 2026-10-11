@@ -117,6 +117,7 @@ has data to show.
 - [docs/logging.md](docs/logging.md) – searchable server/agent logs, live tail, archives, diagnostic bundles
 - [docs/installomator.md](docs/installomator.md) – Mac Apps catalog, Installomator policy steps, custom labels
 - [docs/filevault.md](docs/filevault.md) – FileVault recovery key escrow and Escrow Buddy remediation
+- [docs/mobile-devices.md](docs/mobile-devices.md) – iPhone and iPad: a separate Mobile Devices area, inventory, groups and searches
 - [docs/laps.md](docs/laps.md) – local administrator password (LAPS): rotation, escrow, audited reveal
 - [docs/remote-shell.md](docs/remote-shell.md) – the interactive remote root shell and how it is secured
 

@@ -114,3 +114,13 @@ FROM computers c JOIN mobile_devices md ON md.udid = c.udid
 WHERE m.computer_id = c.id;
 
 DELETE FROM computers c USING mobile_devices md WHERE c.udid = md.udid;
+
+-- Saved advanced searches over mobile devices (Jamf: Mobile Devices → Search Inventory).
+CREATE TABLE mobile_device_searches (
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name           TEXT NOT NULL UNIQUE,
+    criteria       JSONB NOT NULL DEFAULT '[]'::jsonb,
+    display_fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);

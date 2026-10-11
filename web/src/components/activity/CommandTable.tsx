@@ -42,9 +42,9 @@ export function CommandTable({
             ? [
                 {
                   key: 'computer',
-                  header: 'Computer',
+                  header: 'Device',
                   render: (c: MDMCommand) => (
-                    <Link to={`/computers/${c.computer_id}`} onClick={(e) => e.stopPropagation()} className="text-ink hover:underline">
+                    <Link to={c.mobile_device_id ? `/mobile-devices/${c.mobile_device_id}` : `/computers/${c.computer_id}`} onClick={(e) => e.stopPropagation()} className="text-ink hover:underline">
                       {c.computer_name || c.enrollment_id.split(':')[0]?.slice(0, 8) || '—'}
                     </Link>
                   ),

@@ -46,8 +46,10 @@
 ## iOS and iPadOS (plan: docs/plans/ios-ipados.md)
 Test hardware: iPhone 13 mini, iPad (8th generation), supervised with Apple Configurator. No ABM/ASM account: items marked **Blocked: ABM/ASM** are built against Apple's docs and the simulator, then stay untested and off by default.
 
-- [ ] Mobile Devices as a separate, Jamf-style area: `mobile_devices` table routed by platform at enrollment (migrate iOS rows out of `computers`), its own groups, searches, profiles, apps and API, a Mobile Devices sidebar group, and an Inventory / Management / History device record
-- [ ] Simulator iOS mode (`vibemdm-sim -platform iphone|ipad`): iOS DeviceInformation, supervision, passcode, Lost Mode, app lists, UnlockToken
+- [x] Mobile Devices as a separate, Jamf-style area: `mobile_devices` table routed by platform at enrollment (migrate iOS rows out of `computers`), its own groups, searches, profiles, apps and API, a Mobile Devices sidebar group, and an Inventory / Management / History device record
+    - Added `mobile_devices` and its own groups, searches, command history and API, routed by product at MDM Authenticate (iPhones and iPads already filed under computers are moved), scheduled MDM inventory, and a Mobile Devices sidebar section with an Inventory / Management / History record (profiles and apps are their own items below).
+- [x] Simulator iOS mode (`vibemdm-sim -platform iphone|ipad`): iOS DeviceInformation, supervision, passcode, Lost Mode, app lists, UnlockToken
+    - `vibemdm-sim -platform iphone|ipad` enrolls simulated iPhones and iPads that answer the iOS DeviceInformation, SecurityInfo and app-list queries, with supervision and passcode varying per device.
 - [ ] Mobile enrollment page: Apple Configurator (supervised) step by step, and profile enrollment in Safari with a QR code
 - [ ] Automated Device Enrollment with NanoDEP: token upload, device sync, enrollment profiles, Await Configuration and DeviceConfigured
     - Blocked: ABM/ASM (Apple declined a test account).
