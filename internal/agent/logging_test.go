@@ -31,7 +31,7 @@ func TestLocalHandlerFormat(t *testing.T) {
 	if strings.Count(buf.String(), "\n") != 1 {
 		t.Fatalf("record spans several lines: %q", buf.String())
 	}
-	for _, want := range []string{" INFO  [policy] policy finished", `policy="Install Zoom"`, "status=completed", "dur=1.234s",
+	for _, want := range []string{" INFO  policy      Policy finished · ", `policy="Install Zoom"`, "status=completed", "dur=1.23s",
 		"err=boom", `output="line one\nline \"two\""`} {
 		if !strings.Contains(line, want) {
 			t.Errorf("line %q lacks %q", line, want)
@@ -46,7 +46,7 @@ func TestLocalHandlerFormat(t *testing.T) {
 func TestLocalHandlerDefaultComponentAndGroups(t *testing.T) {
 	log, buf := newTestLogger(t, LogOptions{})
 	log.WithGroup("req").Warn("hello", "id", 7, slog.Group("sub", "k", "v"))
-	if got := buf.String(); !strings.Contains(got, "WARN  [agent] hello req.id=7 req.sub.k=v") {
+	if got := buf.String(); !strings.Contains(got, "WARN  agent       Hello · req.sub.k=v · req.id=7") {
 		t.Errorf("got %q", got)
 	}
 }
@@ -79,7 +79,7 @@ func TestLevelVarIsLive(t *testing.T) {
 	log.Debug("hidden")
 	lv.Set(slog.LevelDebug)
 	log.Debug("shown")
-	if got := buf.String(); strings.Contains(got, "hidden") || !strings.Contains(got, "DEBUG [agent] shown") {
+	if got := buf.String(); strings.Contains(got, "hidden") || !strings.Contains(got, "DEBUG agent       Shown") {
 		t.Errorf("got %q", got)
 	}
 }
@@ -158,7 +158,7 @@ func TestTailAndFilter(t *testing.T) {
 		t.Errorf("last2 = %q", last2)
 	}
 	warn, _ := TailLogs(path, 10, LogFilter{MinLevel: slog.LevelWarn}) // the panic line has no level, so it stays
-	if len(warn) != 2 || !strings.Contains(warn[0], "[task]") || !strings.HasPrefix(warn[1], "panic:") {
+	if len(warn) != 2 || !strings.Contains(warn[0], " task ") || !strings.HasPrefix(warn[1], "panic:") {
 		t.Errorf("warn = %q", warn)
 	}
 	pol, _ := TailLogs(path, 10, LogFilter{MinLevel: slog.LevelDebug, Component: "POLICY"})

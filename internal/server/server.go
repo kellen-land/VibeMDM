@@ -530,13 +530,17 @@ func (s *Server) requestLogger(next http.Handler) http.Handler {
 		sw := &statusWriter{ResponseWriter: w, status: 200}
 		next.ServeHTTP(sw, r)
 		dur := time.Since(start)
+		// Successful console, asset and agent requests are routine (the agent logs what they did
+		// itself) and stay at debug; errors, MDM, SCEP and enrollment traffic are logged at info.
 		lvl := slog.LevelDebug
+		routine := strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/assets/") ||
+			(strings.HasPrefix(r.URL.Path, "/agent/v1/") && r.URL.Path != "/agent/v1/enroll")
 		if sw.status >= 500 {
 			lvl = slog.LevelWarn
-		} else if sw.status >= 400 || (!strings.HasPrefix(r.URL.Path, "/api/") && !strings.HasPrefix(r.URL.Path, "/assets/") && !strings.HasPrefix(r.URL.Path, "/agent/v1/tasks")) {
+		} else if sw.status >= 400 || !routine {
 			lvl = slog.LevelInfo
 		}
-		s.log.Log(r.Context(), lvl, "http", "method", r.Method, "path", redactPath(r.URL.Path), "status", sw.status, "dur", dur.Round(time.Millisecond).String(), "remote", auth.ClientIP(r))
+		s.log.Log(r.Context(), lvl, fmt.Sprintf("%s %s → %d", r.Method, redactPath(r.URL.Path), sw.status), "dur", dur, "remote", auth.ClientIP(r), "component", "http")
 	})
 }
 

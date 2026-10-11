@@ -9,10 +9,11 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/vibemdm/vibemdm/internal/logfmt"
 )
 
 // On-device logging.
@@ -100,19 +101,7 @@ func SaveLogLevel(path string, l slog.Level) error {
 	return os.Rename(tmp, path)
 }
 
-// secretKeys are attribute-key fragments whose values are never written
-// anywhere. A safety net: code should not pass secrets to the logger at all.
-var secretKeys = []string{"token", "password", "passwd", "secret", "passphrase", "challenge", "recovery_key", "credential"}
-
-func isSecretKey(k string) bool {
-	k = strings.ToLower(k)
-	for _, s := range secretKeys {
-		if strings.Contains(k, s) {
-			return true
-		}
-	}
-	return false
-}
+func isSecretKey(k string) bool { return logfmt.IsSecretKey(k) }
 
 // Summarize shortens command output for a log line: the last non-empty lines,
 // joined with " | ", at most max bytes.
@@ -155,11 +144,12 @@ type logSinks struct {
 type localHandler struct {
 	s         *logSinks
 	component string
-	attrs     string // pre-formatted " k=v" pairs from WithAttrs
+	attrs     []logfmt.KV // from WithAttrs
 	group     string
 }
 
-// NewLocalHandler returns the on-device slog handler.
+// NewLocalHandler returns the on-device slog handler, which writes readable lines (see
+// internal/logfmt) to the log file and stdout, and the message with details to unified logging.
 func NewLocalHandler(o LogOptions) slog.Handler {
 	if o.Level == nil {
 		o.Level = new(slog.LevelVar)
@@ -175,19 +165,16 @@ func (h *localHandler) Enabled(_ context.Context, l slog.Level) bool { return l 
 
 func (h *localHandler) Handle(_ context.Context, r slog.Record) error {
 	comp := h.component
-	var b strings.Builder
-	b.WriteString(r.Message)
-	b.WriteString(h.attrs)
+	kvs := append([]logfmt.KV(nil), h.attrs...)
 	r.Attrs(func(a slog.Attr) bool {
 		if a.Key == "component" {
 			comp = a.Value.String()
 			return true
 		}
-		writeAttr(&b, h.group, a)
+		kvs = logfmt.Flatten(kvs, h.group, a)
 		return true
 	})
-	body := b.String()
-	line := fmt.Sprintf("%s %-5s [%s] %s\n", r.Time.Format("2006-01-02T15:04:05.000Z07:00"), r.Level.String(), comp, body)
+	line := logfmt.Line(r.Time, r.Level, comp, r.Message, kvs)
 
 	h.s.mu.Lock()
 	defer h.s.mu.Unlock()
@@ -198,23 +185,21 @@ func (h *localHandler) Handle(_ context.Context, r slog.Record) error {
 		io.WriteString(h.s.stdout, line)
 	}
 	if h.s.unified {
-		unifiedLog(comp, r.Level, body)
+		unifiedLog(comp, r.Level, logfmt.Body(logfmt.Explain(r.Level, comp, r.Message, kvs), kvs))
 	}
 	return nil
 }
 
 func (h *localHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	n := *h
-	var b strings.Builder
-	b.WriteString(h.attrs)
+	n.attrs = append([]logfmt.KV(nil), h.attrs...)
 	for _, a := range attrs {
 		if a.Key == "component" {
 			n.component = a.Value.String()
 			continue
 		}
-		writeAttr(&b, h.group, a)
+		n.attrs = logfmt.Flatten(n.attrs, h.group, a)
 	}
-	n.attrs = b.String()
 	return &n
 }
 
@@ -227,72 +212,10 @@ func (h *localHandler) WithGroup(name string) slog.Handler {
 	return &n
 }
 
-// writeAttr appends " key=value", quoting values that contain spaces, quotes or
-// newlines so every record stays on one line.
-func writeAttr(b *strings.Builder, group string, a slog.Attr) {
-	v := a.Value.Resolve()
-	if a.Key == "" && v.Kind() != slog.KindGroup {
-		return
-	}
-	if v.Kind() == slog.KindGroup {
-		prefix := group
-		if a.Key != "" {
-			prefix += a.Key + "."
-		}
-		for _, ga := range v.Group() {
-			writeAttr(b, prefix, ga)
-		}
-		return
-	}
-	key := group + a.Key
-	b.WriteByte(' ')
-	b.WriteString(key)
-	b.WriteByte('=')
-	if isSecretKey(a.Key) {
-		b.WriteString("[redacted]")
-		return
-	}
-	b.WriteString(quoteIfNeeded(attrString(v)))
-}
-
-func attrString(v slog.Value) string {
-	switch v.Kind() {
-	case slog.KindDuration:
-		return v.Duration().Round(time.Millisecond).String()
-	case slog.KindTime:
-		return v.Time().Format(time.RFC3339)
-	case slog.KindAny:
-		if err, ok := v.Any().(error); ok {
-			return err.Error()
-		}
-	}
-	return v.String()
-}
-
-func quoteIfNeeded(s string) string {
-	if s == "" {
-		return `""`
-	}
-	if strings.ContainsAny(s, " \t\r\n\"=") || !strconv.CanBackquote(s) {
-		return strconv.Quote(s)
-	}
-	return s
-}
-
-// ParseLogLine extracts the level and component of a line written by
-// localHandler. ok is false for lines in any other format (panics, old logs).
+// ParseLogLine extracts the level and component of a line written by localHandler (current or
+// older format). ok is false for lines in any other format (panics, other tools).
 func ParseLogLine(line string) (lvl slog.Level, component string, ok bool) {
-	f := strings.Fields(line)
-	if len(f) < 3 || !strings.HasPrefix(f[2], "[") || !strings.HasSuffix(f[2], "]") {
-		return 0, "", false
-	}
-	if _, err := time.Parse("2006-01-02T15:04:05.000Z07:00", f[0]); err != nil {
-		return 0, "", false
-	}
-	if err := lvl.UnmarshalText([]byte(f[1])); err != nil {
-		return 0, "", false
-	}
-	return lvl, strings.Trim(f[2], "[]"), true
+	return logfmt.Parse(line)
 }
 
 // LogFilter selects lines for `vibemdm-agent logs`.

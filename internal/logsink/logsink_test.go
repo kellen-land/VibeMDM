@@ -23,7 +23,7 @@ func TestHandlerTeesAndExtractsComponent(t *testing.T) {
 		t.Fatalf("sink got %d records, want 1", len(sink.ch))
 	}
 	e := <-sink.ch
-	if e.Component != "api" || e.Msg != "hello" || e.Level != "INFO" {
+	if e.Component != "api" || e.Msg != "Hello" || e.Level != "INFO" { // stored readable (internal/logfmt)
 		t.Fatalf("bad entry: %+v", e)
 	}
 	if e.Attrs["user"] != "alice" || e.Attrs["n"] != int64(3) || e.Attrs["err"] != "boom" {
@@ -42,5 +42,14 @@ func TestDropsWhenFull(t *testing.T) {
 	}
 	if sink.Dropped() != 2 {
 		t.Fatalf("dropped = %d, want 2", sink.Dropped())
+	}
+}
+
+func TestSecretsAreRedactedInTheDatabaseCopy(t *testing.T) {
+	sink := New(nil, slog.LevelInfo)
+	slog.New(Wrap(slog.NewTextHandler(&bytes.Buffer{}, nil), sink)).Warn("scep: sign", "challenge", "c-123", "err", errors.New("x"), "component", "scep")
+	e := <-sink.ch
+	if e.Attrs["challenge"] != "[redacted]" || e.Msg != "Sign failed" {
+		t.Fatalf("%+v", e)
 	}
 }

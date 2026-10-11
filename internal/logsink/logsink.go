@@ -13,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/vibemdm/vibemdm/internal/logfmt"
 )
 
 type entry struct {
@@ -122,12 +124,18 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 		if h.group != "" {
 			key = h.group + "." + key
 		}
+		if logfmt.IsSecretKey(a.Key) {
+			e.Attrs[key] = "[redacted]"
+			return
+		}
 		e.Attrs[key] = attrValue(a.Value)
 	}
 	for _, a := range h.attrs {
 		add(a)
 	}
 	r.Attrs(func(a slog.Attr) bool { add(a); return true })
+	_, hasErr := e.Attrs["err"]
+	e.Msg = logfmt.Readable(r.Level, e.Component, e.Msg, hasErr)
 	select {
 	case h.sink.ch <- e:
 	default:
