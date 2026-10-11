@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"html/template"
 	"net/http"
+	"strings"
 
 	"github.com/vibemdm/vibemdm/internal/enroll"
 	"github.com/vibemdm/vibemdm/internal/store"
@@ -25,9 +26,24 @@ code,pre{font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}pre{backgroun
 .err{background:#fde8e8;border:1px solid #f5b5b5;color:#8a1c1c;border-radius:10px;padding:14px 16px}
 footer{color:var(--muted);font-size:13px;text-align:center;margin-top:32px}
 </style></head><body><main>
-<h1>Enroll your Mac in {{.Org}}</h1>
+{{if .Mobile}}<h1>Enroll your iPhone or iPad in {{.Org}}</h1>{{else}}<h1>Enroll your Mac in {{.Org}}</h1>{{end}}
 <p class="sub">Device management powered by VibeMDM</p>
-{{if .Error}}<div class="err">{{.Error}}</div>{{else}}
+{{if .Error}}<div class="err">{{.Error}}</div>{{else if .Mobile}}
+<div class="card"><div class="step"><div class="num">1</div><div>
+<h2>Download the enrollment profile</h2>
+<p>Open this page in <strong>Safari</strong>, tap the button and choose <strong>Allow</strong>.</p>
+<a class="btn" href="{{.ProfileURL}}">Download Enrollment Profile</a>
+</div></div></div>
+<div class="card"><div class="step"><div class="num">2</div><div>
+<h2>Install it in Settings</h2>
+<p>Open <strong>Settings</strong> and tap <strong>Profile Downloaded</strong> near the top (or <strong>General → VPN &amp; Device Management</strong>). Tap <strong>Install</strong>, enter your passcode, then <strong>Install</strong> and <strong>Trust</strong> to allow remote management.</p>
+</div></div></div>
+<div class="card"><div class="step"><div class="num">3</div><div>
+<h2>That's it</h2>
+<p>{{.Org}} can now see this device's inventory and send it settings and apps. To remove management later, delete the profile in the same Settings screen.</p>
+</div></div></div>
+<p class="sub" style="font-size:14px">Administrators: devices prepared with Apple Configurator are <em>supervised</em> and cannot remove the profile; this page gives an unsupervised enrollment.</p>
+{{else}}
 <div class="card"><div class="step"><div class="num">1</div><div>
 <h2>Download the enrollment profile</h2>
 <p>This installs the management certificate and connects your Mac to {{.Org}}.</p>
@@ -43,6 +59,7 @@ footer{color:var(--muted);font-size:13px;text-align:center;margin-top:32px}
 <pre>{{.InstallCommand}}</pre>
 </div></div></div>{{end}}
 {{end}}
+{{if and (not .Error) (not .Mobile)}}<p class="sub" style="text-align:center;font-size:14px"><a href="{{.MobileURL}}" style="color:var(--accent)">Enrolling an iPhone or iPad?</a></p>{{end}}
 <footer>{{.Org}} · VibeMDM</footer>
 </main></body></html>`))
 
@@ -54,7 +71,11 @@ func (s *Server) enrollHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token := r.URL.Query().Get("token")
-	data := map[string]any{"Org": settings.OrgName}
+	// iPhones and iPads get their own steps. iPadOS Safari asks for desktop sites by default and
+	// then looks like a Mac, so the Mac page links to ?device=mobile.
+	ua := r.UserAgent()
+	mobile := r.URL.Query().Get("device") == "mobile" || strings.Contains(ua, "iPhone") || strings.Contains(ua, "iPad") || strings.Contains(ua, "iPod")
+	data := map[string]any{"Org": settings.OrgName, "Mobile": mobile}
 	ok := settings.OpenEnrollment
 	if !ok && token != "" {
 		if _, err := s.st.CheckInvitation(r.Context(), store.HashToken(token)); err == nil {
@@ -71,9 +92,14 @@ func (s *Server) enrollHandler(w http.ResponseWriter, r *http.Request) {
 			q = "?token=" + template.URLQueryEscaper(token)
 		}
 		data["ProfileURL"] = "/enroll/profile" + q
+		if q == "" {
+			data["MobileURL"] = "/enroll?device=mobile"
+		} else {
+			data["MobileURL"] = "/enroll" + q + "&device=mobile"
+		}
 		// The agent install command needs a token; with open enrollment and no
 		// invitation in the link, never reveal the master enrollment secret.
-		if token != "" && settings.ServerURL != "" {
+		if token != "" && settings.ServerURL != "" && !mobile {
 			data["InstallCommand"] = `curl -fsSL "` + settings.ServerURL + `/agent/install.sh?token=` + template.URLQueryEscaper(token) + `" | sudo bash`
 		}
 	}

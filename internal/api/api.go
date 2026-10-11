@@ -401,6 +401,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	adm("DELETE /api/v1/webhooks/{id}", h.deleteWebhook)
 
 	// Mobile devices (iPhone, iPad): a separate tree, as in Jamf Pro
+	r("GET /api/v1/qr", h.qrCode)
 	r("GET /api/v1/mobile-devices", h.listMobileDevices)
 	r("GET /api/v1/mobile-devices/{id}", h.getMobileDevice)
 	r("PATCH /api/v1/mobile-devices/{id}", h.updateMobileDevice)

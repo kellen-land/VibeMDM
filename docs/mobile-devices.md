@@ -6,6 +6,20 @@ Mobile Device Groups, Searches). Plan and remaining work: [plans/ios-ipados.md](
 
 There is no agent on iOS and iPadOS: everything goes through MDM.
 
+## Enrolling an iPhone or iPad
+
+**Mobile Devices → Enrollment** shows both ways that work without Apple Business Manager:
+
+| Method | Supervised | How |
+| --- | --- | --- |
+| Apple Configurator | Yes | On a Mac: Prepare → Manual Configuration → Supervise devices → Enroll in MDM Server → new server with the Configurator URL. **Erases the device.** Unlocks Lost Mode, the Activation Lock bypass code, silent app installs and most restrictions; the user cannot remove management |
+| Safari | No | Scan the QR code or open `/enroll?device=mobile`, download the profile, then Settings → Profile Downloaded → Install. The user can remove it |
+
+The public `/enroll` page shows iPhone and iPad steps to iOS Safari (and to `?device=mobile`, because iPadOS Safari
+identifies as a Mac by default) and links there from the Mac steps. With open enrollment off, *Create a one-time
+link* makes a single-use invitation valid for 7 days and shows it as a QR code (`GET /api/v1/qr?text=` renders an
+SVG). The enrollment profile is the same for Macs and mobile devices.
+
 ## How a device becomes a mobile device
 
 At MDM `Authenticate`, a device whose `ProductName` or `Model` starts with `iPhone`, `iPad`, `iPod` or `AppleTV` is

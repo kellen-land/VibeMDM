@@ -50,7 +50,8 @@ Test hardware: iPhone 13 mini, iPad (8th generation), supervised with Apple Conf
     - Added `mobile_devices` and its own groups, searches, command history and API, routed by product at MDM Authenticate (iPhones and iPads already filed under computers are moved), scheduled MDM inventory, and a Mobile Devices sidebar section with an Inventory / Management / History record (profiles and apps are their own items below).
 - [x] Simulator iOS mode (`vibemdm-sim -platform iphone|ipad`): iOS DeviceInformation, supervision, passcode, Lost Mode, app lists, UnlockToken
     - `vibemdm-sim -platform iphone|ipad` enrolls simulated iPhones and iPads that answer the iOS DeviceInformation, SecurityInfo and app-list queries, with supervision and passcode varying per device.
-- [ ] Mobile enrollment page: Apple Configurator (supervised) step by step, and profile enrollment in Safari with a QR code
+- [x] Mobile enrollment page: Apple Configurator (supervised) step by step, and profile enrollment in Safari with a QR code
+    - Added a Mobile Device Enrollment page with Apple Configurator (supervised) steps and the Configurator URL, Safari enrollment with a QR code (one-time invitation link when open enrollment is off), and iPhone/iPad steps on the public /enroll page.
 - [ ] Automated Device Enrollment with NanoDEP: token upload, device sync, enrollment profiles, Await Configuration and DeviceConfigured
     - Blocked: ABM/ASM (Apple declined a test account).
 - [ ] Mobile inventory: scheduled DeviceInformation, SecurityInfo, installed and managed app lists, profiles, certificates; cellular, battery, storage, supervision, Activation Lock, Lost Mode and passcode fields; server-side extension attributes
