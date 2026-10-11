@@ -105,7 +105,7 @@ func (m *mac) run(_ context.Context, name string, args ...string) (string, error
 		if m.locked {
 			return "Policy does not allow user to authenticate", errors.New("exit 1")
 		}
-		return "Policy allows user to authenticate", nil
+		return "Policy allows user <vibeadmin> to authenticate", nil
 	case tool == "sysadminctl" && args[0] == "-resetPasswordFor":
 		if m.locked || args[5] != m.pw {
 			m.failed++
@@ -168,9 +168,11 @@ func TestSetPasswordOnALockedAccountIsNotReportedAsUnchanged(t *testing.T) {
 
 func TestParseAuthAllowed(t *testing.T) {
 	for out, want := range map[string][2]bool{
-		"Policy allows user to authenticate":         {false, true},
-		"Policy does not allow user to authenticate": {true, true},
-		"Policy denies authentication for this user": {true, true},
+		"Policy allows user to authenticate":                     {false, true},
+		"Policy does not allow user to authenticate":             {true, true},
+		"Policy allows user <vibeadmin> to authenticate":         {false, true}, // real output, macOS 26
+		"Policy does not allow user <vibeadmin> to authenticate": {true, true},
+		"Policy denies authentication for this user":             {true, true},
 		"": {false, false},
 		"pwpolicy: unknown option -authentication-allowed": {false, false},
 	} {
