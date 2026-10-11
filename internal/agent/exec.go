@@ -355,7 +355,7 @@ func Dialog(ctx context.Context, title, message string) {
 func (e *Executor) RunPolicy(ctx context.Context, p model.AgentPolicy) model.AgentPolicyLogSubmit {
 	log := e.log.With("component", "policy", "policy", p.Name, "policy_id", p.PolicyID)
 	log.Info("policy started", "trigger", p.Trigger, "log_id", p.LogID, "scripts", len(p.Scripts), "packages", len(p.Packages),
-		"apps", len(p.Apps), "command", strings.TrimSpace(p.RunCommand) != "", "inventory", p.UpdateInventory)
+		"apps", len(p.Apps), "accounts", len(p.Accounts), "command", strings.TrimSpace(p.RunCommand) != "", "inventory", p.UpdateInventory)
 	sub := model.AgentPolicyLogSubmit{Trigger: p.Trigger, StartedAt: time.Now().UTC(), Steps: []model.PolicyStep{}}
 	var logb strings.Builder
 	failed := false
@@ -415,6 +415,14 @@ func (e *Executor) RunPolicy(ctx context.Context, p model.AgentPolicy) model.Age
 		logf("Installing %q with Installomator", app.Name)
 		r := e.RunAppStep(ctx, app)
 		addStep("app", app.Name, r)
+	}
+	if len(p.Accounts) > 0 {
+		ops := e.accountOps(p.LogID)
+		for i, a := range p.Accounts {
+			name := accountStepName(a)
+			logf("%s", name)
+			addStep("account", name, ops.apply(ctx, i, a))
+		}
 	}
 	if strings.TrimSpace(p.RunCommand) != "" {
 		logf("Running command")

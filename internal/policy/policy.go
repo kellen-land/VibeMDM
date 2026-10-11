@@ -106,6 +106,11 @@ func (e *Engine) Prepare(ctx context.Context, p *model.Policy, trigger string) (
 		}
 		ap.Apps = append(ap.Apps, model.AgentAppStep{Name: name, Label: pa.Label, Args: args})
 	}
+	ap.Accounts = make([]model.PolicyAccount, 0, len(p.Accounts))
+	for _, a := range p.Accounts {
+		a.Password = "" // fetched by the agent during the run, never sent with the policy
+		ap.Accounts = append(ap.Accounts, a)
+	}
 	for _, pkg := range pkgs {
 		ap.Packages = append(ap.Packages, model.AgentPackageStep{
 			PackageID: pkg.ID, Name: pkg.Name, Filename: pkg.Filename, SHA256: pkg.SHA256, SizeBytes: pkg.SizeBytes,
