@@ -257,6 +257,7 @@ func (h *Handler) checkin(w http.ResponseWriter, r *http.Request) {
 	resp := model.AgentCheckinResponse{
 		ComputerID: comp.ID, ComputerName: comp.Name, Policies: []model.AgentPolicy{}, Tasks: []model.AgentTask{},
 		CheckinIntervalSeconds: settings.AgentCheckinIntervalSeconds, ServerTime: time.Now().UTC(),
+		SelfService: selfServiceConfig(settings),
 	}
 	// Enrollment-complete trigger fires once, on the first regular check-in.
 	if req.Trigger == "checkin" && !comp.EnrollmentCompleteFired {

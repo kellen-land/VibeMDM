@@ -435,6 +435,10 @@ type PolicySelfService struct {
 	DisplayName string `json:"display_name"`
 	Description string `json:"description"`
 	ButtonText  string `json:"button_text"`
+	// Category groups the item in Self Service (default: the policy's or app's category).
+	Category string `json:"category"`
+	// Featured shows the item in the Discover banner, like Jamf's "Feature on main page".
+	Featured bool `json:"featured"`
 }
 
 // Policy is the central automation object.
@@ -791,6 +795,11 @@ type Settings struct {
 	LogArchiveEnabled           bool   `json:"log_archive_enabled"`
 	MCPEnabled                  bool   `json:"mcp_enabled"`      // expose the MCP server at /mcp
 	MCPAllowWrites              bool   `json:"mcp_allow_writes"` // allow admin tokens to call write tools
+	// Self Service app (swiftDialog), installed on every Mac with the agent unless disabled.
+	SelfServiceAppDisabled bool   `json:"self_service_app_disabled"`
+	SelfServiceAppName     string `json:"self_service_app_name"`     // default "<org> Self Service"
+	SelfServiceAccentColor string `json:"self_service_accent_color"` // #RRGGBB
+	SelfServiceWelcome     string `json:"self_service_welcome"`      // banner text on Discover
 }
 
 // HealthRemediation describes a fix offered for a health finding.

@@ -101,6 +101,9 @@ func (s *Store) GetSettings(ctx context.Context) (model.Settings, error) {
 	if v.OrgName == "" {
 		v.OrgName = st.OrgName
 	}
+	if v.SelfServiceAccentColor == "" {
+		v.SelfServiceAccentColor = "#0FB5AE"
+	}
 	if v.InventoryIntervalHours == 0 {
 		v.InventoryIntervalHours = st.InventoryIntervalHours
 	}

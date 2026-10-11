@@ -356,6 +356,10 @@ export interface PolicySelfService {
   display_name: string
   description: string
   button_text: string
+  /** Self Service category; empty uses the policy's or app's category. */
+  category?: string
+  /** Shown in the Featured row on Discover. */
+  featured?: boolean
 }
 
 export type PolicyFrequency = 'ongoing' | 'once_per_computer' | 'once_per_day' | 'once_per_week' | 'once_per_month'
@@ -516,6 +520,13 @@ export interface SettingsView {
   mcp_enabled: boolean
   /** Let admin API tokens call the MCP write tools. */
   mcp_allow_writes: boolean
+  /** Self Service app (swiftDialog) on every Mac with the agent, unless disabled. */
+  self_service_app_disabled: boolean
+  /** Custom app name; empty uses self_service_app_default_name. */
+  self_service_app_name: string
+  self_service_app_default_name: string
+  self_service_accent_color: string
+  self_service_welcome: string
   version: string
 }
 
@@ -536,6 +547,10 @@ export interface SettingsUpdate {
   log_archive_enabled?: boolean
   mcp_enabled?: boolean
   mcp_allow_writes?: boolean
+  self_service_app_disabled?: boolean
+  self_service_app_name?: string
+  self_service_accent_color?: string
+  self_service_welcome?: string
 }
 
 export interface APNsCert {

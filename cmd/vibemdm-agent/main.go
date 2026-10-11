@@ -139,7 +139,8 @@ Run as root.`,
 Calls the server with this Mac's device token and prints its version.`,
 	"selfservice": `vibemdm-agent selfservice
 
-Opens the local Self Service portal (http://127.0.0.1:8571) for the logged-in user.`,
+Opens the Self Service app for the logged-in user (or the local portal,
+http://127.0.0.1:8571, in the browser when the app is not installed).`,
 	"manage": `vibemdm-agent manage
 
 Reinstalls the launchd daemon (com.vibemdm.agent) and the login agent.
@@ -286,15 +287,19 @@ func main() {
 		}
 		fmt.Printf("Connected to %s (server version %s)\n", cfg.ServerURL, v)
 	case "selfservice":
+		// The Self Service app when it is installed, else the portal in the browser.
 		user := agent.ConsoleUser(ctx)
 		url := "http://" + agent.SelfServicePort
-		if user != "" && os.Geteuid() == 0 {
-			uid := agent.ConsoleUserUID(ctx, user)
-			err = exec.Command("launchctl", "asuser", fmt.Sprint(uid), "sudo", "-u", user, "open", url).Run()
-		} else {
-			err = exec.Command("open", url).Run()
+		open := func(args ...string) error {
+			if user != "" && os.Geteuid() == 0 {
+				uid := agent.ConsoleUserUID(ctx, user)
+				return exec.Command("launchctl", append([]string{"asuser", fmt.Sprint(uid), "sudo", "-u", user, "open"}, args...)...).Run()
+			}
+			return exec.Command("open", args...).Run()
 		}
-		if err == nil {
+		if err = open("-b", "com.vibemdm.selfservice"); err == nil {
+			fmt.Println("Opened the Self Service app")
+		} else if err = open(url); err == nil {
 			fmt.Println("Opened", url)
 		}
 	case "manage":

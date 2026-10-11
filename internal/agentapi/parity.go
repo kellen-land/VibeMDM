@@ -20,6 +20,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/onboarding"
 	"github.com/vibemdm/vibemdm/internal/policy"
+	"github.com/vibemdm/vibemdm/internal/selfservice"
 	"github.com/vibemdm/vibemdm/internal/store"
 	"github.com/vibemdm/vibemdm/internal/webhook"
 )
@@ -214,7 +215,8 @@ func (h *Handler) selfServiceList(w http.ResponseWriter, r *http.Request) {
 		if name == "" {
 			name = p.Name
 		}
-		items = append(items, model.SelfServiceItem{Kind: "policy", ID: p.ID, Name: name, Description: p.SelfService.Description, ButtonText: p.SelfService.ButtonText})
+		items = append(items, model.SelfServiceItem{Kind: "policy", ID: p.ID, Name: name, Description: p.SelfService.Description, ButtonText: p.SelfService.ButtonText,
+			Category: firstNonEmptyStr(p.SelfService.Category, p.Category), Featured: p.SelfService.Featured})
 	}
 	apps, err := h.st.ListMacApps(r.Context())
 	if err == nil {
@@ -230,7 +232,8 @@ func (h *Handler) selfServiceList(w http.ResponseWriter, r *http.Request) {
 			if name == "" {
 				name = a.Name
 			}
-			items = append(items, model.SelfServiceItem{Kind: "app", ID: a.ID, Name: name, Description: a.SelfService.Description, ButtonText: a.SelfService.ButtonText})
+			items = append(items, model.SelfServiceItem{Kind: "app", ID: a.ID, Name: name, Description: firstNonEmptyStr(a.SelfService.Description, a.Description),
+				ButtonText: a.SelfService.ButtonText, Category: firstNonEmptyStr(a.SelfService.Category, a.Category), Featured: a.SelfService.Featured, AppName: a.Name})
 		}
 	}
 	writeJSON(w, 200, map[string]any{"items": items, "org_name": func() string { s, _ := h.st.GetSettings(r.Context()); return s.OrgName }()})
@@ -378,4 +381,9 @@ func sanitizeName(s string) string {
 		}
 	}
 	return string(out)
+}
+
+// selfServiceConfig is the Self Service app configuration sent to agents.
+func selfServiceConfig(s model.Settings) *model.AgentSelfService {
+	return &model.AgentSelfService{Enabled: !s.SelfServiceAppDisabled, AppName: selfservice.AppName(s.SelfServiceAppName, s.OrgName), OrgName: s.OrgName, Accent: s.SelfServiceAccentColor, Welcome: s.SelfServiceWelcome}
 }

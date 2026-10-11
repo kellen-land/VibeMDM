@@ -10,7 +10,7 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Field, FormGrid, FormSection } from '../components/ui/Field'
 import { Input, Select, Textarea } from '../components/ui/Input'
-import { Toggle } from '../components/ui/Checkbox'
+import { Checkbox, Toggle } from '../components/ui/Checkbox'
 import { Tabs } from '../components/ui/Tabs'
 import { Alert } from '../components/ui/Alert'
 import { Badge } from '../components/ui/Badge'
@@ -190,7 +190,7 @@ export function AppEditorPage() {
           <CardHeader title="Self Service" description="Let users install this app themselves instead of (or in addition to) the automatic scope install." />
           <CardBody className="flex flex-col gap-5">
             <p className="text-xs text-ink-muted">
-              Shown in the Self Service portal on the Mac (<span className="font-mono">http://127.0.0.1:8571</span>, opened with <span className="font-mono">vibemdm-agent selfservice</span>).
+              Shown in the Self Service app on each Mac in scope (Settings → Self Service).
             </p>
             <Toggle checked={a.self_service.enabled} onChange={(v) => set({ self_service: { ...a.self_service, enabled: v } })} disabled={ro} label="Make available in Self Service" />
             <FormSection title="Listing">
@@ -203,6 +203,12 @@ export function AppEditorPage() {
                 </Field>
                 <Field label="Description" className="md:col-span-2">
                   <Textarea rows={3} value={a.self_service.description} onChange={(e) => set({ self_service: { ...a.self_service, description: e.target.value } })} disabled={ro || !a.self_service.enabled} />
+                </Field>
+                <Field label="Category" hint="Groups the item in Self Service.">
+                  <Input value={a.self_service.category ?? ''} onChange={(e) => set({ self_service: { ...a.self_service, category: e.target.value } })} disabled={ro || !a.self_service.enabled} placeholder={a.category || 'General'} />
+                </Field>
+                <Field label="Featured">
+                  <Checkbox checked={!!a.self_service.featured} onChange={(e) => set({ self_service: { ...a.self_service, featured: e.target.checked } })} disabled={ro || !a.self_service.enabled} label="Show on the Discover page" />
                 </Field>
               </FormGrid>
             </FormSection>

@@ -43,6 +43,7 @@ const groups: { heading: string; items: Item[] }[] = [
     items: [
       { key: 'network', label: 'Buildings and networks' },
       { key: 'mobile-attributes', label: 'Mobile device attributes' },
+      { key: 'self-service', label: 'Self Service' },
     ],
   },
   {
@@ -62,7 +63,7 @@ const groups: { heading: string; items: Item[] }[] = [
   },
 ]
 const all = groups.flatMap((g) => g.items)
-const generalSections: readonly string[] = ['general', 'enrollment', 'remote-shell', 'ai', 'logging', 'signing']
+const generalSections: readonly string[] = ['general', 'enrollment', 'remote-shell', 'ai', 'logging', 'signing', 'self-service']
 
 export function SettingsPage() {
   const { tab } = useParams()
