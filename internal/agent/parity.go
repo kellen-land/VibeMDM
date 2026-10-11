@@ -229,7 +229,7 @@ func (e *Executor) RegenerateFileVaultKey(ctx context.Context) ExecResult {
 		}
 		out.WriteString("Installing Escrow Buddy with Installomator…\n")
 		ictx, cancel := context.WithTimeout(ctx, 15*time.Minute)
-		r := runCmd(exec.CommandContext(ictx, "/bin/zsh", script, "escrowbuddy", "NOTIFY=silent", "INSTALL=force"))
+		r := runCmd(exec.CommandContext(ictx, "/bin/zsh", append([]string{script}, installomatorArgs([]string{"escrowbuddy", "NOTIFY=silent", "INSTALL=force"})...)...))
 		cancel()
 		out.WriteString(r.Combined)
 		if r.ExitCode != 0 {
@@ -258,7 +258,7 @@ func (e *Executor) runInstallomator(ctx context.Context, script, label string, a
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "/bin/zsh", append([]string{script}, args...)...)
+	cmd := exec.CommandContext(ctx, "/bin/zsh", append([]string{script}, installomatorArgs(args)...)...)
 	cmd.Dir = "/"
 	return runCmd(cmd)
 }
@@ -270,4 +270,15 @@ func (e *Executor) RunAppStep(ctx context.Context, step model.AgentAppStep) Exec
 		return ExecResult{ExitCode: -1, Err: err, Combined: err.Error()}
 	}
 	return e.runInstallomator(ctx, script, step.Label, step.Args)
+}
+
+// installomatorArgs makes sure Installomator really installs. The script defaults to DEBUG=1
+// (download only, exit 0); servers that predate the fix do not send DEBUG=0.
+func installomatorArgs(args []string) []string {
+	for _, a := range args {
+		if strings.HasPrefix(a, "DEBUG=") {
+			return args
+		}
+	}
+	return append(append([]string{}, args...), "DEBUG=0")
 }

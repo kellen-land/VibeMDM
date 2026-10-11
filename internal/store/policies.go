@@ -158,7 +158,7 @@ func (s *Store) CompletePolicyLog(ctx context.Context, logID, computerID string,
 		sub.Steps = []model.PolicyStep{}
 	}
 	res, err := s.DB.ExecContext(ctx, `UPDATE policy_logs SET status=$3, started_at=$4, completed_at=$5, log=$6, steps=$7::jsonb, trigger = CASE WHEN $8 <> '' THEN $8 ELSE trigger END
-		WHERE id=$1 AND computer_id=$2`, logID, computerID, status, sub.StartedAt, sub.CompletedAt, sub.Log, jsonArg(sub.Steps), sub.Trigger)
+		WHERE id=$1 AND computer_id=$2`, logID, computerID, status, sub.StartedAt, sub.CompletedAt, cleanText(sub.Log), jsonArg(sub.Steps), sub.Trigger)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (s *Store) InsertPolicyLog(ctx context.Context, policyID, computerID string
 		sub.Steps = []model.PolicyStep{}
 	}
 	_, err := s.DB.ExecContext(ctx, `INSERT INTO policy_logs (policy_id, computer_id, trigger, status, started_at, completed_at, log, steps) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb)`,
-		policyID, computerID, sub.Trigger, status, sub.StartedAt, sub.CompletedAt, sub.Log, jsonArg(sub.Steps))
+		policyID, computerID, sub.Trigger, status, sub.StartedAt, sub.CompletedAt, cleanText(sub.Log), jsonArg(sub.Steps))
 	return err
 }
 

@@ -389,7 +389,12 @@ func (h *Handler) taskResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.st.CompleteTask(r.Context(), r.PathValue("id"), comp.ID, res); err != nil {
-		writeErr(w, 404, "task not found")
+		if errors.Is(err, store.ErrNotFound) {
+			writeErr(w, 404, "task not found")
+			return
+		}
+		h.log.Error("storing a task result", "err", err, "computer", comp.Name, "task_id", r.PathValue("id"))
+		writeErr(w, 500, "could not store the task result")
 		return
 	}
 	if res.Status == "failed" {
@@ -408,7 +413,12 @@ func (h *Handler) policyLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.st.CompletePolicyLog(r.Context(), r.PathValue("id"), comp.ID, sub); err != nil {
-		writeErr(w, 404, "policy log not found")
+		if errors.Is(err, store.ErrNotFound) {
+			writeErr(w, 404, "policy log not found")
+			return
+		}
+		h.log.Error("storing a policy log", "err", err, "computer", comp.Name, "log_id", r.PathValue("id"))
+		writeErr(w, 500, "could not store the policy log")
 		return
 	}
 	ev := webhook.PolicyCompleted

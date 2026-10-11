@@ -70,13 +70,14 @@ func TestArgs(t *testing.T) {
 	}
 	joined := strings.Join(a, " | ")
 	for _, want := range []string{"valuesfromarguments", "name='Acme Tool'", "type='dmg'", "downloadURL='https://downloads.acme.example/Acme.dmg'",
-		"expectedTeamID='ABCDE12345'", "appNewVersion='2.1.0'", "blockingProcesses=( 'Acme Tool' 'Acme Helper' )", "NOTIFY='success'", "INSTALL='force'"} {
+		"expectedTeamID='ABCDE12345'", "appNewVersion='2.1.0'", "blockingProcesses=( 'Acme Tool' 'Acme Helper' )", "NOTIFY='success'", "INSTALL='force'", "DEBUG='0'"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("missing %q in %s", want, joined)
 		}
 	}
 	b, err := BuiltinArgs("googlechromepkg", Options{})
-	if err != nil || b[0] != "googlechromepkg" || b[1] != "NOTIFY='silent'" {
+	// DEBUG=0 always: the bundled script defaults to DEBUG=1, which downloads but never installs.
+	if err != nil || b[0] != "googlechromepkg" || b[1] != "DEBUG='0'" || b[2] != "NOTIFY='silent'" {
 		t.Fatalf("builtin args: %v %v", b, err)
 	}
 	if _, err := BuiltinArgs("x; rm -rf /", Options{}); err == nil {
