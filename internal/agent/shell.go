@@ -33,11 +33,13 @@ func shellOptedOut() bool {
 }
 
 func (d *Daemon) runShell(ctx context.Context, invite shellInvite) {
+	log := d.log.With("component", "shell", "session", invite.SessionID)
 	if shellOptedOut() {
-		d.log.Warn("refusing remote shell: disabled on this Mac", "session", invite.SessionID, "file", ShellOptOutFile)
+		log.Warn("refusing remote shell: disabled on this Mac", "file", ShellOptOutFile)
 		return
 	}
-	d.log.Info("opening remote shell session", "session", invite.SessionID)
+	log.Info("opening remote shell session")
+	start := time.Now()
 	wsURL := toWS(d.cfg.ServerURL) + "/agent/v1/shell?session=" + invite.SessionID + "&nonce=" + invite.Nonce
 	dialCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	c, _, err := websocket.Dial(dialCtx, wsURL, &websocket.DialOptions{
@@ -45,7 +47,7 @@ func (d *Daemon) runShell(ctx context.Context, invite shellInvite) {
 	})
 	cancel()
 	if err != nil {
-		d.log.Warn("remote shell dial failed", "err", err)
+		log.Warn("remote shell dial failed", "err", err)
 		return
 	}
 	conn := shell.Adapt(c)
@@ -122,7 +124,7 @@ func (d *Daemon) runShell(ctx context.Context, invite shellInvite) {
 		code = cmd.ProcessState.ExitCode()
 	}
 	conn.WriteFrame(context.Background(), shell.Frame{T: "x", Code: code})
-	d.log.Info("remote shell session ended", "session", invite.SessionID)
+	log.Info("remote shell session ended", "exit", code, "dur", time.Since(start))
 }
 
 type shellInvite struct {

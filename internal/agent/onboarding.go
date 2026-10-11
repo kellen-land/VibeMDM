@@ -236,9 +236,15 @@ func (d *progressDialog) finish(button string) {
 func (e *Executor) RunOnboarding(ctx context.Context, p model.AgentOnboarding) ExecResult {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Hour)
 	defer cancel()
+	log := e.log.With("component", "onboarding", "run_id", p.RunID)
+	log.Info("onboarding started", "steps", len(p.Steps), "fields", len(p.Fields))
+	runStart := time.Now()
 	var logb strings.Builder
+	// logf writes the run log the server shows, and the same line to the device log.
 	logf := func(format string, a ...any) {
-		fmt.Fprintf(&logb, time.Now().Format("15:04:05")+" "+format+"\n", a...)
+		msg := fmt.Sprintf(format, a...)
+		logb.WriteString(time.Now().Format("15:04:05") + " " + msg + "\n")
+		log.Info(msg)
 	}
 	sub := model.AgentOnboardingSubmit{Status: "completed", UserEntry: map[string]string{}}
 	si := CollectSystemInfo(ctx)
@@ -328,8 +334,9 @@ func (e *Executor) RunOnboarding(ctx context.Context, p model.AgentOnboarding) E
 	sub.Log = logb.String()
 	sctx, scancel := context.WithTimeout(context.Background(), time.Minute)
 	defer scancel()
+	log.Info("onboarding finished", "status", sub.Status, "steps", len(sub.Steps), "final_action", p.FinalAction, "dur", time.Since(runStart))
 	if err := e.client.SubmitOnboarding(sctx, p.RunID, sub); err != nil {
-		e.log.Error("submitting onboarding result", "err", err)
+		log.Error("submitting onboarding result", "err", err)
 	}
 	if sub.Status == "completed" {
 		switch p.FinalAction {

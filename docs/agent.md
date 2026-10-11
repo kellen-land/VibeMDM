@@ -20,7 +20,7 @@ The installer downloads the binary for the Mac's architecture to `/usr/local/bin
 | `/Library/LaunchDaemons/com.vibemdm.agent.plist` | daemon (`vibemdm-agent daemon`), KeepAlive |
 | `/Library/LaunchAgents/com.vibemdm.agent.login.plist` | fires the **login** trigger as each user logs in |
 | `/Library/Application Support/VibeMDM/agent.json` | server URL + device token (root only) |
-| `/var/log/vibemdm-agent.log` | daemon log |
+| `/Library/Logs/VibeMDM/vibemdm-agent.log` | agent log (rotated; Console → Log Reports), see `vibemdm-agent logs` |
 
 Add `--mdm` to `enroll` (the installer does, unless `install.sh?mdm=0`) and the agent downloads the MDM
 enrollment profile and opens *System Settings* so the user can approve it.
@@ -67,7 +67,9 @@ Output (stdout+stderr, 64 KB) and the exit code are recorded; non-zero marks the
 ```
 vibemdm-agent enroll --server URL [--token TOKEN] [--mdm] [--allow-insecure-http]
                                        # token can also come from VIBEMDM_ENROLL_TOKEN (keeps it out of ps)
-vibemdm-agent status                   # enrollment, connectivity, local components
+vibemdm-agent status                   # enrollment, connectivity, log level, local components
+vibemdm-agent logs [-n N] [-f] [--level L] [--component C] [--grep T]   # show or follow the agent log
+sudo vibemdm-agent logs --set-level debug                          # change the log level live
 vibemdm-agent policy [--event NAME]    # run policies now
 vibemdm-agent trigger NAME             # fire a trigger through the daemon
 vibemdm-agent recon                    # submit inventory

@@ -40,16 +40,105 @@ Both need adding to `docker-compose.yml` if your compose file does not pass them
 
 ## 18.2 Agent logs
 
-The agent logs to `/var/log/vibemdm-agent.log` on the Mac (the LaunchDaemon's stdout and stderr) and ships records
-at `info` and above to the server every 30 seconds (`POST /agent/v1/logs`). While the server is unreachable, up to
-5,000 records stay in memory; on shutdown they are spooled to
+The agent writes every record to three places:
+
+| Where | What | Read it with |
+| --- | --- | --- |
+| `/Library/Logs/VibeMDM/vibemdm-agent.log` | One line per record. Rotated at 10 MB, with five old copies kept (`.1` to `.5`, 60 MB at most). Owner `root:admin`, mode 0640 | `vibemdm-agent logs`, Console.app → **Log Reports** → *VibeMDM*, `tail -f` |
+| macOS unified logging | Subsystem `com.vibemdm.agent`, one **category** per component (below) | `vibemdm-agent logs --unified`, Console.app's live stream, `log show` / `log stream` |
+| The server | Records at `info` and above, every 30 seconds (`POST /agent/v1/logs`) | **Logs** → agent, each computer's **Logs** tab ([§18.3](#183-searching-and-live-tail)) |
+
+While the server is unreachable, up to 5,000 records stay in memory. On shutdown they are spooled to
 `/Library/Application Support/VibeMDM/spool/logs.ndjson` (capped at 5 MB) and sent after the next start.
 
-On the Mac:
+The daemon's own stdout and stderr (launchd) go to `/Library/Logs/VibeMDM/vibemdm-agent.launchd.log`. It stays
+empty unless the agent crashes, so a Go panic trace lands there. Agents before this release logged to
+`/var/log/vibemdm-agent.log`. That file is left in place, and diagnostic bundles still collect it.
+
+### Reading the log file
+
+```
+2026-10-11T13:54:11.043Z INFO  [policy] policy started policy="Onboard tools" policy_id=481f… trigger=manual log_id=a360… scripts=1 packages=0 apps=0 command=true inventory=true
+2026-10-11T13:54:11.056Z INFO  [policy] policy step finished policy="Onboard tools" step=script name="Set up dock" status=completed exit=0 dur=4ms output=done
+2026-10-11T13:54:11.062Z WARN  [policy] policy step failed policy="Onboard tools" step=command name="Execute Command" status=failed exit=2 dur=5ms output="cmd ok | ls: cannot access '/nonexistent-dir': No such file or directory"
+2026-10-11T13:54:11.081Z WARN  [policy] policy finished policy="Onboard tools" status=failed steps=3 dur=38ms
+```
+
+Each line has a timestamp, a level, a `[component]` and a message, followed by `key=value` attributes. Values with
+spaces are quoted, and newlines are escaped, so every record stays on one line and `grep` works. `output=` holds
+the last line of a step's output (the last three lines when it failed). With the log level at `debug`, a
+`policy step output` record also carries up to the last 4 KB.
+
+| Component | Records |
+| --- | --- |
+| `daemon` | Start-up (version, server, computer ID, log level, whether unified logging is built in), stop, connection lost and restored, tasks received, local triggers, log level changes |
+| `checkin` | `check-in accepted` (how many policies, tasks and app installs the server returned) and `check-in complete` with duration; failures with the error. A routine check-in with nothing to do is `debug`, so the default log is not one line every five minutes |
+| `policy` | `policy started`, one `policy step finished` / `policy step failed` per script, package, app, command and inventory step (exit code, duration, output summary), `policy finished`, scheduled restarts |
+| `task` | `task started` and `task finished` for every task from the console (task ID, type, status, exit code, duration, output summary). Task payloads are never logged |
+| `package` | Downloads (size, duration), cache hits (`debug`), checksum mismatches |
+| `apps` | Installomator installs: label, status, duration, output summary |
+| `inventory` | Collection and upload times, number of apps and extension attributes, upload failures |
+| `compliance` | Scan start (rules, remediation on or off) and result counts with duration |
+| `onboarding` | Every line of the onboarding run log, plus start and finish |
+| `shell` | Remote shell sessions opened and ended (exit code, duration), refusals |
+| `restricted`, `selfservice`, `spool` | Restricted-software kills, the Self Service portal, replay of undelivered results |
+
+### The `logs` command
 
 ```bash
-sudo tail -f /var/log/vibemdm-agent.log
+vibemdm-agent logs                          # last 50 lines
+vibemdm-agent logs -n 200 --component policy
+vibemdm-agent logs -f --level warn          # follow warnings and errors (Ctrl-C to stop)
+vibemdm-agent logs --grep "Install Zoom"
+vibemdm-agent logs --unified --last 2h      # the same records from unified logging
+sudo vibemdm-agent logs --set-level debug   # more detail, applied to the running daemon at once
+sudo vibemdm-agent logs --set-level info    # back to normal
+```
+
+Administrators can read the file without `sudo` (group `admin`). `--set-level` saves the level in
+`/Library/Application Support/VibeMDM/logging.json`, so it survives restarts, and tells the running daemon over its
+root-only socket. `sudo vibemdm-agent status` shows the current level, the log file's size and whether unified
+logging is available. Debug records stay on the Mac; the server only receives `info` and above. Commands run by
+hand as root (`policy`, `checkin`, `recon`) print their records to the terminal and append them to the same file.
+
+### Unified logging needs a Mac-built agent
+
+Writing to unified logging uses Apple's `os_log` C API, which Go can only call through cgo. The agent that `make
+agent` and the Docker image build is cross-compiled on Linux with `CGO_ENABLED=0`. It writes to the log file and
+the server only, and `status` reports `Unified logging: no`. To get unified logging, build the agent on a Mac with
+Xcode or the Command Line Tools installed:
+
+```bash
+make agent-macos    # both architectures, CGO_ENABLED=1, into bin/agents/
+```
+
+Then copy the two binaries into the server's agent directory (`VIBEMDM_AGENT_DIR`). Installs and re-installs from
+then on use them. Records are written with `%{public}`, so Console shows the text instead of `<private>`. `info`
+records are stored as the `default` type, because unified logging keeps `info` only in memory. Warnings are
+`default` records starting with `WARN`, since `os_log` has no warning type, and errors use the `error` type.
+
+```bash
+log show --last 1h --info --debug --predicate 'subsystem == "com.vibemdm.agent"'
+log stream --level debug --predicate 'subsystem == "com.vibemdm.agent" AND category == "policy"'
+```
+
+> **Untested on real hardware.** The file log, rotation, the `logs` command, live level changes and log shipping
+> were verified by running the agent against a test server on Linux. The `os_log` code path, how Console.app
+> lists the file under Log Reports, and the `root:admin` 0640 permissions on macOS still need checking on a Mac.
+
+### What is never logged
+
+Device tokens, enrollment tokens, the super service-account password, SCEP challenges and FileVault keys never reach
+the logger. As a safety net, any attribute whose name contains `token`, `password`, `passwd`, `secret`,
+`passphrase`, `challenge`, `recovery_key` or `credential` is written as `[redacted]` in all three destinations.
+Script parameters and task payloads are not logged. Step output summaries are the same output the server already
+stores with the policy log or task result.
+
+### Other useful commands on the Mac
+
+```bash
 sudo launchctl print system/com.vibemdm.agent | head -40     # is the daemon loaded and running?
+cat /Library/Logs/VibeMDM/vibemdm-agent.launchd.log           # crash output, if any
 ```
 
 ## 18.3 Searching and live tail
@@ -93,7 +182,9 @@ tarball and uploads it (`PUT /agent/v1/diagnostics/{id}`):
 
 | File | Contents |
 | --- | --- |
-| Agent log | Last 5 MB of `/var/log/vibemdm-agent.log`, plus the Installomator log |
+| `agent.log`, `agent.log.1`, `agent-launchd.log`, `agent-legacy.log` | The last 5 MB of the agent log and of its previous rotation, the launchd output (crashes), and the pre-upgrade `/var/log/vibemdm-agent.log` |
+| `agent-unified.ndjson` | The agent's unified log for the last two hours (only from Mac-built agents, [§18.2](#182-agent-logs)) |
+| `installomator.log` | Last 2 MB of `/var/log/Installomator.log` |
 | `mdmclient.ndjson` | The **mdmclient** unified log for the last two hours (`log show --style ndjson --last 2h --predicate 'process == "mdmclient" OR subsystem == "com.apple.ManagedClient"'`). This is the device's side of every MDM conversation and the best place to see why a profile or command failed |
 | `profiles-enrollment.txt` | `profiles status -type enrollment` |
 | `profiles-list.txt` | `profiles list` |

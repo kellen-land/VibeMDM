@@ -13,7 +13,6 @@ const (
 	ConfigPath   = SupportDir + "/agent.json"
 	DownloadsDir = SupportDir + "/Downloads"
 	TmpDir       = SupportDir + "/tmp"
-	LogPath      = "/var/log/vibemdm-agent.log"
 	SocketPath   = "/var/run/vibemdm-agent.sock"
 	LockPath     = "/var/run/vibemdm-agent.lock"
 	BinaryPath   = "/usr/local/bin/vibemdm-agent"

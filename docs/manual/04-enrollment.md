@@ -151,7 +151,8 @@ the script adds `--allow-insecure-http`.
    computer ID, org name, check-in interval);
 4. copies itself to `/usr/local/bin/vibemdm-agent` if needed and installs and loads:
    - `/Library/LaunchDaemons/com.vibemdm.agent.plist` (`vibemdm-agent daemon`, `RunAtLoad`, `KeepAlive`, output
-     to `/var/log/vibemdm-agent.log`);
+     to `/Library/Logs/VibeMDM/vibemdm-agent.launchd.log`, which only catches crashes; the agent writes its own
+     log to `/Library/Logs/VibeMDM/vibemdm-agent.log`, see [§18.2](18-logging-and-diagnostics.md#182-agent-logs));
    - `/Library/LaunchAgents/com.vibemdm.agent.login.plist` (`vibemdm-agent trigger login` in each Aqua session);
 5. with `--mdm`, if the Mac is not yet MDM-enrolled, downloads the enrollment profile with its device token, saves
    it with an exclusive create as `/Users/Shared/VibeMDM-Enrollment-*.mobileconfig`, opens it for the logged-in

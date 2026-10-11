@@ -81,6 +81,8 @@ func firstLines(s string, n int) string {
 func (e *Executor) RunComplianceScan(ctx context.Context, scan model.AgentComplianceScan) ExecResult {
 	ctx, cancel := context.WithTimeout(ctx, complianceScanTimeout)
 	defer cancel()
+	log := e.log.With("component", "compliance", "scan_id", scan.ScanID, "baseline", scan.Baseline)
+	log.Info("compliance scan started", "rules", len(scan.Rules), "remediate", scan.Remediate)
 	start := time.Now()
 	sub := model.AgentComplianceSubmit{OSVersion: CollectSystemInfo(ctx).OSVersion}
 	counts := map[string]int{}
@@ -96,12 +98,13 @@ func (e *Executor) RunComplianceScan(ctx context.Context, scan model.AgentCompli
 	sub.DurationMS = time.Since(start).Milliseconds()
 	summary := fmt.Sprintf("%s: %d passed, %d failed, %d remediated, %d errors in %s", scan.Baseline,
 		counts["pass"], counts["fail"], counts["remediated"], counts["error"], time.Since(start).Round(time.Second))
-	e.log.Info("compliance scan finished", "baseline", scan.Baseline, "pass", counts["pass"], "fail", counts["fail"],
-		"remediated", counts["remediated"], "error", counts["error"])
+	log.Info("compliance scan finished", "pass", counts["pass"], "fail", counts["fail"],
+		"remediated", counts["remediated"], "error", counts["error"], "dur", time.Since(start))
 	// The results go to their own endpoint; the server needs them even if this task's result is lost.
 	sctx, scancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer scancel()
 	if err := e.client.SubmitComplianceScan(sctx, scan.ScanID, sub); err != nil {
+		log.Error("submitting compliance results", "err", err)
 		return ExecResult{ExitCode: 1, Stdout: summary, Err: fmt.Errorf("submitting results: %w", err)}
 	}
 	return ExecResult{Stdout: summary}

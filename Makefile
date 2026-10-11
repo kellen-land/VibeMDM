@@ -2,7 +2,7 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 export PATH := /config/.local/node/bin:$(PATH)
 
-.PHONY: all build web agent sim server test vet docker up down logs dev-db clean
+.PHONY: all build web agent agent-macos sim server test vet docker up down logs dev-db clean
 
 all: web build agent sim
 
@@ -18,6 +18,12 @@ web:
 agent:
 	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/agents/vibemdm-agent-darwin-arm64 ./cmd/vibemdm-agent
 	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o bin/agents/vibemdm-agent-darwin-amd64 ./cmd/vibemdm-agent
+
+## Build the agent on a Mac with cgo, which adds macOS unified logging (os_log).
+## Needs Xcode or the Command Line Tools; cannot run on Linux.
+agent-macos:
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 CC="clang -arch arm64" go build -trimpath -ldflags "$(LDFLAGS)" -o bin/agents/vibemdm-agent-darwin-arm64 ./cmd/vibemdm-agent
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 CC="clang -arch x86_64" go build -trimpath -ldflags "$(LDFLAGS)" -o bin/agents/vibemdm-agent-darwin-amd64 ./cmd/vibemdm-agent
 
 ## Build the device simulator
 sim:

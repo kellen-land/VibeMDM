@@ -146,25 +146,35 @@ func (e *Executor) FetchPackage(ctx context.Context, p model.AgentPackageStep) (
 	dst := cachePath(p)
 	if p.SHA256 != "" {
 		if sum, err := fileSHA256(dst); err == nil && strings.EqualFold(sum, p.SHA256) {
-			e.log.Debug("package cache hit", "package", p.Name)
+			e.log.Debug("package cache hit", "component", "package", "package", p.Name)
 			return dst, nil
 		}
 	}
+	log := e.log.With("component", "package", "package", p.Name, "package_id", p.PackageID)
+	log.Info("downloading package", "file", filepath.Base(p.Filename))
+	start := time.Now()
 	tmp := dst + ".part"
 	if err := e.client.DownloadPackage(ctx, p.URL, tmp); err != nil {
 		os.Remove(tmp)
+		log.Warn("package download failed", "dur", time.Since(start), "err", err)
 		return "", fmt.Errorf("download: %w", err)
 	}
 	if p.SHA256 != "" {
 		sum, err := fileSHA256(tmp)
 		if err != nil || !strings.EqualFold(sum, p.SHA256) {
 			os.Remove(tmp)
+			log.Error("package checksum mismatch; refusing to install", "want_sha256", p.SHA256, "got_sha256", sum)
 			return "", errors.New("checksum mismatch; refusing to install")
 		}
 	}
 	if err := os.Rename(tmp, dst); err != nil {
 		return "", err
 	}
+	var size int64
+	if st, err := os.Stat(dst); err == nil {
+		size = st.Size()
+	}
+	log.Info("package downloaded", "bytes", size, "dur", time.Since(start))
 	return dst, nil
 }
 
@@ -343,7 +353,9 @@ func Dialog(ctx context.Context, title, message string) {
 
 // RunPolicy executes a policy and submits the log. Returns the submitted log.
 func (e *Executor) RunPolicy(ctx context.Context, p model.AgentPolicy) model.AgentPolicyLogSubmit {
-	e.log.Info("running policy", "policy", p.Name, "trigger", p.Trigger)
+	log := e.log.With("component", "policy", "policy", p.Name, "policy_id", p.PolicyID)
+	log.Info("policy started", "trigger", p.Trigger, "log_id", p.LogID, "scripts", len(p.Scripts), "packages", len(p.Packages),
+		"apps", len(p.Apps), "command", strings.TrimSpace(p.RunCommand) != "", "inventory", p.UpdateInventory)
 	sub := model.AgentPolicyLogSubmit{Trigger: p.Trigger, StartedAt: time.Now().UTC(), Steps: []model.PolicyStep{}}
 	var logb strings.Builder
 	failed := false
@@ -363,6 +375,7 @@ func (e *Executor) RunPolicy(ctx context.Context, p model.AgentPolicy) model.Age
 		}
 		sub.Steps = append(sub.Steps, model.PolicyStep{Type: typ, Name: name, Status: st, ExitCode: r.ExitCode, Output: out, DurationMS: r.Duration.Milliseconds()})
 		logf("%s %q %s (exit %d, %s)", typ, name, st, r.ExitCode, r.Duration.Round(time.Millisecond))
+		logStep(log, typ, name, st, r, out)
 	}
 	logf("Executing policy %q (trigger: %s)", p.Name, p.Trigger)
 	if p.UserInteraction.StartMessage != "" {
@@ -429,9 +442,14 @@ func (e *Executor) RunPolicy(ctx context.Context, p model.AgentPolicy) model.Age
 		Notify(ctx, p.Name, p.UserInteraction.CompleteMessage)
 	}
 	sub.Log = truncate(logb.String())
+	done := log.Info
+	if failed {
+		done = log.Warn
+	}
+	done("policy finished", "status", sub.Status, "steps", len(sub.Steps), "dur", sub.CompletedAt.Sub(sub.StartedAt))
 	if p.LogID != "" {
 		if err := e.client.SubmitPolicyLog(ctx, p.LogID, sub); err != nil {
-			e.log.Error("submitting policy log; spooling for retry", "err", err)
+			log.Error("submitting policy log; spooling for retry", "log_id", p.LogID, "err", err)
 			spoolWrite(spoolItem{Kind: "policy", ID: p.LogID, Policy: &sub, CreatedAt: time.Now().UTC()})
 		}
 	}
@@ -446,7 +464,7 @@ func (e *Executor) RunPolicy(ctx context.Context, p model.AgentPolicy) model.Age
 		if delay > 0 {
 			arg = fmt.Sprintf("+%d", delay)
 		}
-		e.log.Info("scheduling restart", "delay", arg)
+		log.Warn("policy scheduled a restart", "delay", arg)
 		exec.Command("/sbin/shutdown", "-r", arg).Start()
 	}
 	return sub
@@ -454,9 +472,11 @@ func (e *Executor) RunPolicy(ctx context.Context, p model.AgentPolicy) model.Age
 
 // Recon collects and submits full inventory.
 func (e *Executor) Recon(ctx context.Context) error {
+	log := e.log.With("component", "inventory")
+	log.Info("inventory started")
 	rc, err := e.client.ReconConfig(ctx)
 	if err != nil {
-		e.log.Warn("fetching recon config", "err", err)
+		log.Warn("fetching recon config; extension attributes skipped", "err", err)
 		rc = &model.AgentReconConfig{}
 	}
 	inv := CollectInventory(ctx, e.version, rc.ExtensionAttributes, func(ctx context.Context, ea model.ExtensionAttribute) string {
@@ -470,15 +490,20 @@ func (e *Executor) Recon(ctx context.Context) error {
 	})
 	start := time.Now()
 	err = e.client.SubmitInventory(ctx, inv)
-	if err == nil {
-		e.log.Info("inventory submitted", "apps", len(inv.Apps), "collect_ms", inv.CollectDurationMS, "upload", time.Since(start).Round(time.Millisecond))
+	if err != nil {
+		log.Warn("inventory upload failed", "collect_ms", inv.CollectDurationMS, "upload", time.Since(start), "err", err)
+		return err
 	}
-	return err
+	log.Info("inventory submitted", "apps", len(inv.Apps), "extension_attributes", len(rc.ExtensionAttributes),
+		"collect_ms", inv.CollectDurationMS, "upload", time.Since(start))
+	return nil
 }
 
 // RunTask executes an ad-hoc task and reports the result.
 func (e *Executor) RunTask(ctx context.Context, t model.AgentTask) {
-	e.log.Info("running task", "type", t.Type, "id", t.ID)
+	// The payload is never logged: it can carry secrets (install_super's auth_password).
+	log := e.log.With("component", "task", "task_id", t.ID, "task_type", t.Type)
+	log.Info("task started")
 	res := model.AgentTaskResult{StartedAt: time.Now().UTC(), Status: "completed"}
 	apply := func(r ExecResult) {
 		res.ExitCode, res.Stdout, res.Stderr = r.ExitCode, r.Stdout, r.Stderr
@@ -552,7 +577,7 @@ func (e *Executor) RunTask(ctx context.Context, t model.AgentTask) {
 		}
 		res.Stderr = redactSecret(res.Stderr, str(t.Payload["auth_password"]))
 		if err := e.Recon(ctx); err != nil {
-			e.log.Warn("inventory after installing super", "err", err)
+			log.Warn("inventory after installing super", "err", err)
 		}
 	case "onboarding":
 		var ob model.AgentOnboarding
@@ -589,25 +614,47 @@ func (e *Executor) RunTask(ctx context.Context, t model.AgentTask) {
 		res.Status, res.Error = "failed", "unknown task type "+t.Type
 	}
 	res.CompletedAt = time.Now().UTC()
+	attrs := []any{"status", res.Status, "exit", res.ExitCode, "dur", res.CompletedAt.Sub(res.StartedAt)}
+	if res.Error != "" {
+		attrs = append(attrs, "err", res.Error)
+	}
+	if res.Status == "completed" {
+		log.Info("task finished", append(attrs, "output", Summarize(res.Stdout, 1, 200))...)
+	} else {
+		out := res.Stdout // falls back to the combined output, which already holds stderr
+		if e := strings.TrimSpace(res.Stderr); e != "" && !strings.Contains(out, e) {
+			out += "\n" + res.Stderr
+		}
+		log.Warn("task finished", append(attrs, "output", Summarize(out, 3, 500))...)
+	}
 	if err := e.client.SubmitTaskResult(ctx, t.ID, res); err != nil {
-		e.log.Error("submitting task result; spooling for retry", "err", err, "task", t.ID)
+		log.Error("submitting task result; spooling for retry", "err", err)
 		spoolWrite(spoolItem{Kind: "task", ID: t.ID, Task: &res, CreatedAt: time.Now().UTC()})
 	}
 }
 
 // CheckinAndRun performs a check-in for a trigger and executes everything returned.
 func (e *Executor) CheckinAndRun(ctx context.Context, trigger string) (int, error) {
+	log := e.log.With("component", "checkin", "trigger", trigger)
+	start := time.Now()
 	si := CollectSystemInfo(ctx)
 	resp, err := e.client.Checkin(ctx, model.AgentCheckinRequest{
 		Trigger: trigger, ConsoleUser: si.ConsoleUser, Hostname: si.Hostname, ComputerName: si.ComputerName, OSVersion: si.OSVersion,
 		OSBuild: si.OSBuild, IPAddress: si.IP, AgentVersion: e.version, UptimeSecs: int64(si.Uptime.Seconds()),
 	})
 	if err != nil {
+		log.Warn("check-in failed", "dur", time.Since(start), "err", err)
 		return 0, err
 	}
 	if resp.CheckinIntervalSeconds >= 30 && resp.CheckinIntervalSeconds != e.cfg.CheckinIntervalSeconds {
+		log.Info("check-in interval changed by the server", "from_secs", e.cfg.CheckinIntervalSeconds, "to_secs", resp.CheckinIntervalSeconds)
 		e.cfg.CheckinIntervalSeconds = resp.CheckinIntervalSeconds
 		e.cfg.Save("")
+	}
+	work := len(resp.Policies) + len(resp.Tasks) + len(resp.AppInstalls)
+	if work > 0 || resp.InventoryRequested || trigger != "checkin" {
+		log.Info("check-in accepted", "policies", len(resp.Policies), "tasks", len(resp.Tasks), "app_installs", len(resp.AppInstalls),
+			"inventory_requested", resp.InventoryRequested, "console_user", si.ConsoleUser)
 	}
 	for _, p := range resp.Policies {
 		e.RunPolicy(ctx, p)
@@ -622,11 +669,32 @@ func (e *Executor) CheckinAndRun(ctx context.Context, trigger string) (int, erro
 		e.OnRestrictedRules(resp.RestrictedSoftware)
 	}
 	if resp.InventoryRequested {
-		if err := e.Recon(ctx); err != nil {
-			e.log.Warn("inventory submission failed", "err", err)
-		}
+		e.Recon(ctx) // Recon logs its own failures
 	}
+	// A routine check-in with nothing to do is debug-level so it does not flood the log.
+	done := log.Debug
+	if work > 0 || resp.InventoryRequested || trigger != "checkin" {
+		done = log.Info
+	}
+	done("check-in complete", "policies", len(resp.Policies), "dur", time.Since(start))
 	return len(resp.Policies), nil
+}
+
+// logStep records one policy step: a one-line summary at info (warn with more
+// output when it failed), and the full output at debug.
+func logStep(log *slog.Logger, typ, name, status string, r ExecResult, out string) {
+	attrs := []any{"step", typ, "name", name, "status", status, "exit", r.ExitCode, "dur", r.Duration}
+	if status == "failed" {
+		log.Warn("policy step failed", append(attrs, "output", Summarize(out, 3, 500))...)
+	} else {
+		log.Info("policy step finished", append(attrs, "output", Summarize(out, 1, 200))...)
+	}
+	if log.Enabled(context.Background(), slog.LevelDebug) && strings.TrimSpace(out) != "" {
+		if len(out) > 4096 {
+			out = out[len(out)-4096:]
+		}
+		log.Debug("policy step output", "step", typ, "name", name, "output", out)
+	}
 }
 
 // redactSecret removes a secret value from command output.

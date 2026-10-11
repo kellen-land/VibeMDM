@@ -32,6 +32,7 @@ Setup
 
 Everyday
   status            Show enrollment, connectivity and local component status
+  logs              Show or follow the agent log; change the log level
   policy            Check in and run policies for a trigger now
   trigger <event>   Ask the running daemon to fire a trigger
   recon             Collect inventory and submit it to the server
@@ -71,9 +72,39 @@ Example:
 	"status": `vibemdm-agent status
 
 Prints the server URL, computer ID, agent version, whether the daemon is
-running, whether the server is reachable with this Mac's credentials, and the
-state of local components (swiftDialog, super, remote shell opt-out). Safe to
-run without sudo, but some checks need root.`,
+running, whether the server is reachable with this Mac's credentials, the
+log level and log file, whether unified logging is built in, and the state of
+local components (swiftDialog, super, remote shell opt-out). Safe to run
+without sudo, but some checks need root.`,
+	"logs": `vibemdm-agent logs [-n N] [-f] [--level LEVEL] [--component NAME] [--grep TEXT]
+vibemdm-agent logs --unified [-f] [--last DURATION]
+vibemdm-agent logs --set-level LEVEL
+
+Shows the last N lines (default 50) of the agent log,
+/Library/Logs/VibeMDM/vibemdm-agent.log (rotated at 10 MB, five old copies
+kept as .1 to .5). The same file appears in Console.app under Log Reports.
+Members of the admin group can read it without sudo.
+
+  -n N                Number of lines to show (default 50).
+  -f                  Keep printing new lines as they are written (Ctrl-C to stop).
+  --level LEVEL       Only show LEVEL and above: debug, info, warn or error.
+  --component NAME    Only show one component: daemon, checkin, policy, task,
+                      package, apps, inventory, compliance, onboarding, shell,
+                      restricted, selfservice, spool.
+  --grep TEXT         Only show lines containing TEXT (case-insensitive).
+  --unified           Read macOS unified logging instead of the file, through
+                      log show (or log stream with -f), subsystem com.vibemdm.agent.
+                      Needs an agent built with unified logging (see status).
+  --last DURATION     With --unified: how far back to read (default 1h).
+  --set-level LEVEL   Change the log level (debug, info, warn, error). Saved in
+                      /Library/Application Support/VibeMDM/logging.json and applied
+                      to the running daemon immediately. Run as root. Debug
+                      records stay on the Mac; the server receives info and above.
+
+Examples:
+  vibemdm-agent logs -n 200 --component policy
+  vibemdm-agent logs -f --level warn
+  sudo vibemdm-agent logs --set-level debug`,
 	"policy": `vibemdm-agent policy [--event NAME]
 
 Checks in with the server and runs every policy scoped to this Mac for the
@@ -127,11 +158,20 @@ func main() {
 		fmt.Printf(usage, version)
 		os.Exit(2)
 	}
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	cmd, args := os.Args[1], os.Args[2:]
+	// Commands run by hand print their log to the terminal and, when root, also
+	// append it to the agent log file and unified logging, so a manual
+	// "sudo vibemdm-agent policy" leaves the same trail as the daemon.
+	level := new(slog.LevelVar)
+	level.Set(agent.LoadLogLevel(""))
+	logOpts := agent.LogOptions{Level: level, Stdout: os.Stdout, Unified: true}
+	if os.Geteuid() == 0 {
+		logOpts.File = agent.LogPath
+	}
+	logger := slog.New(agent.NewLocalHandler(logOpts))
 	var err error
 	switch cmd {
 	case "version", "-v", "--version":
@@ -147,6 +187,8 @@ func main() {
 		fmt.Printf(usage, version)
 	case "status":
 		err = cmdStatus(ctx)
+	case "logs":
+		err = cmdLogs(ctx, args)
 	case "enroll":
 		err = cmdEnroll(ctx, args, logger)
 	case "daemon":
@@ -155,11 +197,15 @@ func main() {
 			if err != nil {
 				return err
 			}
-			// Logs go to the local file (via launchd stdout) and are shipped to the server.
+			// The daemon owns the log file (and rotates it), writes to unified
+			// logging, and ships info and above to the server. Its stdout and
+			// stderr (launchd) only catch crashes.
+			local := agent.NewLocalHandler(agent.LogOptions{Level: level, File: agent.LogPath, Rotate: true, Unified: true})
 			ship := agent.NewLogShipper(agent.NewClient(cfg.ServerURL, cfg.DeviceToken, version), slog.LevelInfo)
-			dlog := slog.New(ship.Wrap(logger.Handler()))
+			dlog := slog.New(ship.Wrap(local))
 			d := agent.NewDaemon(cfg, version, dlog)
 			d.Ship = ship
+			d.LogLevel = level
 			return d.Run(ctx)
 		})
 	case "policy":
@@ -293,6 +339,17 @@ func cmdStatus(ctx context.Context) error {
 	fmt.Printf("Organization:      %s\n", cfg.OrgName)
 	fmt.Printf("Check-in interval: %ds\n", cfg.CheckinIntervalSeconds)
 	fmt.Printf("Daemon running:    %s\n", yesno(exists(agent.SocketPath)))
+	fmt.Printf("Log level:         %s\n", agent.LevelName(agent.LoadLogLevel("")))
+	if fi, err := os.Stat(agent.LogPath); err == nil {
+		fmt.Printf("Log file:          %s (%d KB)\n", agent.LogPath, fi.Size()>>10)
+	} else {
+		fmt.Printf("Log file:          %s (%v)\n", agent.LogPath, err)
+	}
+	if agent.UnifiedLoggingAvailable() {
+		fmt.Printf("Unified logging:   yes (subsystem %s)\n", agent.LogSubsystem)
+	} else {
+		fmt.Printf("Unified logging:   no (this agent was built without cgo; file and server logs only)\n")
+	}
 	if v, err := agent.NewClient(cfg.ServerURL, cfg.DeviceToken, version).ServerVersion(ctx); err != nil {
 		fmt.Printf("Server reachable:  no (%v)\n", err)
 	} else {
@@ -418,4 +475,80 @@ func run(ctx context.Context, name string, args ...string) string {
 	defer cancel()
 	out, _ := exec.CommandContext(ctx, name, args...).Output()
 	return string(out)
+}
+
+func cmdLogs(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("logs", flag.ExitOnError)
+	n := fs.Int("n", 50, "number of lines to show")
+	follow := fs.Bool("f", false, "follow new lines")
+	level := fs.String("level", "debug", "minimum level to show: debug, info, warn, error")
+	component := fs.String("component", "", "only show this component")
+	grep := fs.String("grep", "", "only show lines containing this text")
+	unified := fs.Bool("unified", false, "read macOS unified logging instead of the log file")
+	last := fs.String("last", "1h", "with --unified: how far back to read")
+	setLevel := fs.String("set-level", "", "change the log level: debug, info, warn, error")
+	fs.Parse(args)
+	if *n < 1 {
+		*n = 1
+	}
+
+	if *setLevel != "" {
+		l, err := agent.ParseLogLevel(*setLevel)
+		if err != nil {
+			return err
+		}
+		return requireRoot(func() error {
+			if err := agent.SaveLogLevel("", l); err != nil {
+				return err
+			}
+			if err := agent.SendLocalLogLevel(agent.LevelName(l)); err != nil {
+				fmt.Printf("Log level saved as %s; it applies when the daemon next starts (%v).\n", agent.LevelName(l), err)
+				return nil
+			}
+			fmt.Printf("Log level set to %s.\n", agent.LevelName(l))
+			return nil
+		})
+	}
+
+	if *unified {
+		if !agent.UnifiedLoggingAvailable() {
+			fmt.Fprintln(os.Stderr, "note: this agent was built without unified logging; only older or other builds' records will appear")
+		}
+		pred := `subsystem == "` + agent.LogSubsystem + `"`
+		if *component != "" {
+			pred += fmt.Sprintf(` AND category == %q`, *component)
+		}
+		var c *exec.Cmd
+		if *follow {
+			c = exec.CommandContext(ctx, "/usr/bin/log", "stream", "--style", "compact", "--level", "debug", "--predicate", pred)
+		} else {
+			c = exec.CommandContext(ctx, "/usr/bin/log", "show", "--style", "compact", "--info", "--debug", "--last", *last, "--predicate", pred)
+		}
+		fmt.Fprintln(os.Stderr, "$", strings.Join(c.Args, " "))
+		c.Stdout, c.Stderr = os.Stdout, os.Stderr
+		return c.Run()
+	}
+
+	min, err := agent.ParseLogLevel(*level)
+	if err != nil {
+		return err
+	}
+	f := agent.LogFilter{MinLevel: min, Component: *component, Contains: *grep}
+	lines, err := agent.TailLogs(agent.LogPath, *n, f)
+	if err != nil {
+		if os.IsPermission(err) {
+			return fmt.Errorf("%w (members of the admin group can read the log; otherwise use sudo)", err)
+		}
+		return err
+	}
+	if len(lines) == 0 && !*follow {
+		fmt.Fprintf(os.Stderr, "no matching log lines in %s\n", agent.LogPath)
+	}
+	for _, l := range lines {
+		fmt.Println(l)
+	}
+	if *follow {
+		return agent.FollowLogs(ctx, agent.LogPath, os.Stdout, f)
+	}
+	return nil
 }

@@ -43,7 +43,10 @@ func InstallLaunchd(binary string) error {
 	if binary == "" {
 		binary = BinaryPath
 	}
-	if err := os.WriteFile(DaemonPlist, []byte(fmt.Sprintf(daemonPlistTemplate, DaemonLabel, binary, LogPath, LogPath)), 0o644); err != nil {
+	// launchd does not create directories for StandardOutPath.
+	os.MkdirAll(LogDir, 0o750)
+	os.Lchown(LogDir, 0, adminGID)
+	if err := os.WriteFile(DaemonPlist, []byte(fmt.Sprintf(daemonPlistTemplate, DaemonLabel, binary, LaunchdLogPath, LaunchdLogPath)), 0o644); err != nil {
 		return err
 	}
 	os.MkdirAll("/Library/LaunchAgents", 0o755)

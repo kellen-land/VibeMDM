@@ -142,13 +142,13 @@ func (d *Daemon) serveSelfService(ctx context.Context) {
 	srv := &http.Server{Addr: SelfServicePort, Handler: selfServiceGuard(mux), ReadHeaderTimeout: 10 * time.Second}
 	ln, err := net.Listen("tcp", SelfServicePort)
 	if err != nil {
-		d.log.Warn("self service portal not started", "err", err)
+		d.log.Warn("self service portal not started", "component", "selfservice", "err", err)
 		return
 	}
 	go func() {
 		<-ctx.Done()
 		srv.Close()
 	}()
-	d.log.Info("self service portal available", "url", "http://"+SelfServicePort)
+	d.log.Info("self service portal available", "component", "selfservice", "url", "http://"+SelfServicePort)
 	srv.Serve(ln)
 }

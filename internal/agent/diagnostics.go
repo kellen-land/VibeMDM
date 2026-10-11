@@ -63,8 +63,15 @@ func (e *Executor) CollectDiagnostics(ctx context.Context, bundleID string) Exec
 		time.Now().UTC().Format(time.RFC3339), e.version, e.cfg.ServerURL, e.cfg.ComputerID)
 	add("README.txt", summary.Bytes())
 	add("agent.log", tail(LogPath, 5<<20))
+	add("agent.log.1", tail(LogPath+".1", 5<<20))
+	add("agent-launchd.log", tail(LaunchdLogPath, 1<<20))              // crashes and panics
+	add("agent-legacy.log", tail("/var/log/vibemdm-agent.log", 1<<20)) // log location before this release
 	add("installomator.log", tail("/var/log/Installomator.log", 2<<20))
 	// mdmclient is the macOS MDM client: its log shows check-ins, commands and errors from the device's side.
+	if unifiedAvailable {
+		add("agent-unified.ndjson", cmd(time.Minute, 10<<20, "/usr/bin/log", "show", "--style", "ndjson", "--last", "2h", "--info", "--debug",
+			"--predicate", `subsystem == "`+LogSubsystem+`"`))
+	}
 	add("mdmclient.ndjson", cmd(3*time.Minute, 20<<20, "/usr/bin/log", "show", "--style", "ndjson", "--last", "2h",
 		"--predicate", `process == "mdmclient" OR subsystem == "com.apple.ManagedClient"`))
 	add("profiles-enrollment.txt", cmd(30*time.Second, 1<<20, "/usr/bin/profiles", "status", "-type", "enrollment"))

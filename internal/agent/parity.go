@@ -42,22 +42,28 @@ func (e *Executor) ensureInstallomator(ctx context.Context) (string, error) {
 
 // InstallApp runs an app-catalog install through Installomator and reports the result.
 func (e *Executor) InstallApp(ctx context.Context, app model.AgentAppInstall) {
-	e.log.Info("installing app", "app", app.Name, "label", app.Label)
-	status, logText := "completed", ""
+	log := e.log.With("component", "apps", "app", app.Name, "label", app.Label, "log_id", app.LogID)
+	log.Info("app install started")
+	start := time.Now()
+	status, logText, exit := "completed", "", 0
 	script, err := e.ensureInstallomator(ctx)
 	if err != nil {
-		status, logText = "failed", err.Error()
+		status, logText, exit = "failed", err.Error(), -1
 	} else {
 		r := e.runInstallomator(ctx, script, app.Label, app.Args)
-		logText = r.Combined
+		logText, exit = r.Combined, r.ExitCode
 		if r.ExitCode != 0 {
 			status = "failed"
 		}
 	}
-	if err := e.client.SubmitAppInstallResult(ctx, app.LogID, status, logText); err != nil {
-		e.log.Error("submitting app install result", "err", err, "app", app.Name)
+	if status == "completed" {
+		log.Info("app install finished", "status", status, "dur", time.Since(start), "output", Summarize(logText, 1, 200))
+	} else {
+		log.Warn("app install finished", "status", status, "exit", exit, "dur", time.Since(start), "output", Summarize(logText, 3, 500))
 	}
-	e.log.Info("app install finished", "app", app.Name, "status", status)
+	if err := e.client.SubmitAppInstallResult(ctx, app.LogID, status, logText); err != nil {
+		log.Error("submitting app install result", "err", err)
+	}
 }
 
 // ---- restricted software enforcement ----

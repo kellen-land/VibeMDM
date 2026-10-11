@@ -13,9 +13,18 @@ Components you'll see: `mdm` (VibeMDM's MDM hooks), `nanomdm` (protocol engine),
 
 ## Agent logs
 
-The agent logs to `/var/log/vibemdm-agent.log` on the Mac and ships records at `info` and above to the server every 30
-seconds. While the server is unreachable, up to 5,000 records stay in memory; on shutdown they are spooled to
-`/Library/Application Support/VibeMDM/spool/logs.ndjson` (capped at 5 MB) and sent after the next start.
+On the Mac, the agent writes one line per record to `/Library/Logs/VibeMDM/vibemdm-agent.log` (rotated at 10 MB,
+five copies kept; Console.app lists it under **Log Reports**) and, when built on a Mac with cgo (`make agent-macos`),
+to unified logging under subsystem `com.vibemdm.agent` with one category per component (`daemon`, `checkin`,
+`policy`, `task`, `package`, `apps`, `inventory`, `compliance`, `onboarding`, `shell`, …). Every task and policy step
+is logged with its ID, status, exit code, duration and an output summary. `vibemdm-agent logs` shows, filters and
+follows the file; `sudo vibemdm-agent logs --set-level debug` changes the level live. Attributes whose names look
+like secrets (`token`, `password`, `secret`, …) are always written as `[redacted]`.
+
+Records at `info` and above are also shipped to the server every 30 seconds. While the server is unreachable, up to
+5,000 records stay in memory; on shutdown they are spooled to `/Library/Application Support/VibeMDM/spool/logs.ndjson`
+(capped at 5 MB) and sent after the next start. Details, examples and what still needs testing on a Mac:
+[manual §18.2](manual/18-logging-and-diagnostics.md#182-agent-logs).
 
 ## Searching and tailing
 
@@ -45,7 +54,8 @@ The console's **Logs** page and each computer's **Logs** tab use these, with a 2
 
 `POST /api/v1/computers/{id}/diagnostics` (admin) asks the agent for a gzipped tarball containing:
 
-- the agent log (last 5 MB) and Installomator log
+- the agent log (last 5 MB of the current file and of the previous rotation), its launchd crash output, the
+  pre-upgrade `/var/log/vibemdm-agent.log`, the agent's unified log (Mac-built agents), and the Installomator log
 - the **mdmclient** unified log for the last two hours (`log show --predicate 'process == "mdmclient" OR subsystem ==
   "com.apple.ManagedClient"'`). This is the device's side of every MDM conversation, and the best place to see why a
   profile or command failed.

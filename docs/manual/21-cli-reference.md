@@ -61,7 +61,8 @@ vibemdm-agent help <command>        detailed help for one command
 | Setup | `enroll` | yes | Enroll with a server and install the launchd services |
 | | `manage` | yes | (Re)install the LaunchDaemon and login LaunchAgent |
 | | `remove-framework` | yes | Unenroll and remove the agent |
-| Everyday | `status` | no (more detail with sudo) | Show enrollment, connectivity and local components |
+| Everyday | `status` | no (more detail with sudo) | Show enrollment, connectivity, logging and local components |
+| | `logs` | no to read (admin group); yes for `--set-level` | Show, filter or follow the agent log; change the log level |
 | | `policy` | yes | Check in and run policies for a trigger |
 | | `trigger <event>` | no for `login`/`checkin`/`network_change`; yes for custom | Ask the running daemon to fire a trigger |
 | | `recon` | yes | Collect and submit inventory |
@@ -109,12 +110,35 @@ sudo VIBEMDM_ENROLL_TOKEN=… vibemdm-agent enroll --server https://mdm.example.
 
 Prints the agent version; whether it is enrolled (and since when), server URL, computer ID, organization and check-in
 interval; whether the daemon is running (the local trigger socket exists); whether the server is reachable with the
-device token; and whether swiftDialog (`/usr/local/bin/dialog`), super (`/usr/local/bin/super`) and the remote-shell
-veto file are present, plus the Self Service URL.
+device token; the log level, the log file and its size, and whether unified logging is built in; and whether
+swiftDialog (`/usr/local/bin/dialog`), super (`/usr/local/bin/super`) and the remote-shell veto file are present,
+plus the Self Service URL.
 
 `agent.json` is readable only by root, so **without sudo** `status` reports `Enrolled: no (…permission denied)`. Run
 `sudo vibemdm-agent status` for the real picture. "Daemon running" is inferred from the socket file and can be stale
 after a crash; `sudo launchctl print system/com.vibemdm.agent` is authoritative.
+
+### `logs`
+
+```
+vibemdm-agent logs [-n N] [-f] [--level LEVEL] [--component NAME] [--grep TEXT]
+vibemdm-agent logs --unified [-f] [--last DURATION] [--component NAME]
+vibemdm-agent logs --set-level LEVEL
+```
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `-n N` | `50` | Lines to show from the end of `/Library/Logs/VibeMDM/vibemdm-agent.log` (continuing into `.1` if needed) |
+| `-f` | `false` | Keep printing new lines; follows the file across rotations |
+| `--level LEVEL` | `debug` (all) | Minimum level: `debug`, `info`, `warn`, `error`. Lines without a level (crash output) are always shown |
+| `--component NAME` | all | One component: `daemon`, `checkin`, `policy`, `task`, `package`, `apps`, `inventory`, `compliance`, `onboarding`, `shell`, `restricted`, `selfservice`, `spool` |
+| `--grep TEXT` | none | Case-insensitive substring |
+| `--unified` | `false` | Run `log show` (or `log stream` with `-f`) for subsystem `com.vibemdm.agent` instead of reading the file; prints the command it runs |
+| `--last DURATION` | `1h` | With `--unified`: how far back to read |
+| `--set-level LEVEL` | none | Save the level to `/Library/Application Support/VibeMDM/logging.json` and apply it to the running daemon at once. Root only |
+
+The format, the components and the unified-logging build requirement are described in
+[§18.2](18-logging-and-diagnostics.md#182-agent-logs).
 
 ### `policy`
 
@@ -193,7 +217,9 @@ trigger sockets. You normally never run it by hand.
 | `/Library/Application Support/VibeMDM/Installomator.sh` | Cached Installomator |
 | `/Library/Application Support/VibeMDM/disable-remote-shell` | Optional remote-shell veto |
 | `/Library/LaunchDaemons/com.vibemdm.agent.plist`, `/Library/LaunchAgents/com.vibemdm.agent.login.plist` | launchd jobs |
-| `/var/log/vibemdm-agent.log` | Log |
+| `/Library/Logs/VibeMDM/vibemdm-agent.log` (`.1` to `.5`) | Agent log, rotated at 10 MB (`root:admin`, 0640) |
+| `/Library/Logs/VibeMDM/vibemdm-agent.launchd.log` | The daemon's stdout/stderr (crashes only) |
+| `/Library/Application Support/VibeMDM/logging.json` | Saved log level |
 | `/var/run/vibemdm-agent.sock`, `/var/run/vibemdm-agent.sock.root` | Trigger sockets |
 
 ## 21.3 `vibemdm-sim`
@@ -284,7 +310,8 @@ copyright content are skipped (that content is not CC BY 4.0).
 | `make` / `make all` | `web`, `build`, `agent`, `sim` |
 | `make build` (`server`) | `bin/vibemdm` (embeds whatever is in `internal/webui/dist`) |
 | `make web` | Builds the React console into `internal/webui/dist` |
-| `make agent` | `bin/agents/vibemdm-agent-darwin-arm64` and `-amd64` |
+| `make agent` | `bin/agents/vibemdm-agent-darwin-arm64` and `-amd64`, cross-compiled without cgo (no unified logging) |
+| `make agent-macos` | The same two binaries built on a Mac with cgo, adding unified logging (needs Xcode or the Command Line Tools) |
 | `make sim` | `bin/vibemdm-sim` |
 | `make test` / `make vet` | Go tests; `go vet` and the web type check |
 | `make docker` | Builds the image `vibemdm/vibemdm:<version>` and `:latest` |

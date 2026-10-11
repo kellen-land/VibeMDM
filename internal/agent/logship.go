@@ -162,6 +162,10 @@ func (h *shipHandler) Handle(ctx context.Context, r slog.Record) error {
 			e.Component = v.String()
 			return
 		}
+		if isSecretKey(a.Key) {
+			e.Attrs[a.Key] = "[redacted]"
+			return
+		}
 		if errv, ok := v.Any().(error); ok {
 			e.Attrs[a.Key] = errv.Error()
 			return
@@ -175,6 +179,8 @@ func (h *shipHandler) Handle(ctx context.Context, r slog.Record) error {
 			e.Attrs[a.Key] = v.Bool()
 		case slog.KindFloat64:
 			e.Attrs[a.Key] = v.Float64()
+		case slog.KindDuration:
+			e.Attrs[a.Key] = v.Duration().Round(time.Millisecond).String()
 		default:
 			e.Attrs[a.Key] = fmt.Sprint(v.Any())
 		}

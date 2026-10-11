@@ -35,7 +35,21 @@ The server URL must use https unless
 is given. Requires root.
 .TP
 .B status
-Show enrollment, server reachability and local component status.
+Show enrollment, server reachability, log level, log file, whether unified
+logging is built in, and local component status.
+.TP
+.B logs \fR[\fB\-n\fP \fIN\fP] [\fB\-f\fP] [\fB\-\-level\fP \fILEVEL\fP] [\fB\-\-component\fP \fINAME\fP] [\fB\-\-grep\fP \fITEXT\fP]
+Show the last lines of the agent log, filtered by level, component or text;
+.B \-f
+follows new lines.
+.B \-\-unified
+reads unified logging (subsystem com.vibemdm.agent) through
+.BR log (1)
+instead.
+.B \-\-set\-level
+.I LEVEL
+(debug, info, warn, error) saves the log level and applies it to the running
+daemon; requires root.
 .TP
 .B policy \fR[\fB\-\-event\fP \fINAME\fP]
 Check in and run policies for a trigger (default
@@ -83,6 +97,16 @@ Server URL and device credentials (mode 0600).
 .I /Library/Application Support/VibeMDM/disable\-remote\-shell
 If present and owned by root, the Mac refuses remote shell sessions.
 .TP
+.I /Library/Logs/VibeMDM/vibemdm\-agent.log
+Agent log, rotated at 10 MB with five old copies; readable by the admin group.
+Console.app lists it under Log Reports.
+.TP
+.I /Library/Logs/VibeMDM/vibemdm\-agent.launchd.log
+The daemon's standard output and error (crash output).
+.TP
+.I /Library/Application Support/VibeMDM/logging.json
+Saved log level.
+.TP
 .I /var/run/vibemdm\-agent.sock
 Trigger socket for built-in triggers (any user).
 .TP
@@ -98,10 +122,13 @@ launchd job for the daemon.
 sudo VIBEMDM_ENROLL_TOKEN=xxxx vibemdm\-agent enroll \-\-server https://mdm.example.com \-\-mdm
 sudo vibemdm\-agent policy \-\-event install_zoom
 vibemdm\-agent status
+vibemdm\-agent logs \-f \-\-level warn
+sudo vibemdm\-agent logs \-\-set\-level debug
 .fi
 .SH SEE ALSO
 .BR vibemdm (8),
 .BR launchctl (1),
+.BR log (1),
 .BR profiles (1)
 .PP
 The VibeMDM administrator manual, docs/manual/ in the source tree.
