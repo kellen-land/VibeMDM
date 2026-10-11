@@ -187,7 +187,7 @@ Booleans accept `1`, `true`, `yes`, `on` and `0`, `false`, `no`, `off`.
 | --- | --- | --- |
 | `POSTGRES_PASSWORD` | none (required) | Password for the `vibemdm` database user. Compose builds `VIBEMDM_DATABASE_URL` from it |
 | `VIBEMDM_IMAGE` | `vibemdm/vibemdm:latest` | Image name/tag |
-| `VIBEMDM_VERSION` | `dev` | Build argument stamped into the binaries (`vibemdm version`) |
+| `VIBEMDM_VERSION` | `dev` | Build argument stamped into the server and agent binaries (`vibemdm version`). When unset, the build time is used (`dev-YYYYMMDD.HHMM`), so each rebuild, and each agent built with it, is distinguishable |
 
 ### Agent-side variable
 

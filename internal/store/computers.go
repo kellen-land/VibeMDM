@@ -595,9 +595,20 @@ func (s *Store) ListComputerApps(ctx context.Context, computerID string) ([]mode
 	return out, rows.Err()
 }
 
+// currentProfileSource limits computer_profiles rows (alias a) to the source whose report is newest.
+func currentProfileSource(a string) string {
+	return a + `.source = (SELECT n.source FROM computer_profiles n WHERE n.computer_id = ` + a + `.computer_id ORDER BY n.reported_at DESC LIMIT 1)`
+}
+
 // ListComputerProfiles lists installed profiles.
 func (s *Store) ListComputerProfiles(ctx context.Context, computerID string) ([]model.ComputerProfile, error) {
-	rows, err := s.DB.QueryContext(ctx, `SELECT identifier, uuid, display_name, organization, is_managed, source FROM computer_profiles WHERE computer_id = $1 ORDER BY lower(display_name), identifier`, computerID)
+	// The agent and MDM report the installed profiles separately; show the most recent report
+	// once (an older one may still list removed profiles), managed if either source says so.
+	rows, err := s.DB.QueryContext(ctx, `SELECT p.identifier, p.uuid, p.display_name, p.organization,
+		p.is_managed OR EXISTS (SELECT 1 FROM computer_profiles o WHERE o.computer_id = p.computer_id AND o.identifier = p.identifier AND o.is_managed),
+		p.source
+		FROM computer_profiles p WHERE p.computer_id = $1 AND `+currentProfileSource("p")+`
+		ORDER BY lower(p.display_name), p.identifier`, computerID)
 	if err != nil {
 		return nil, err
 	}

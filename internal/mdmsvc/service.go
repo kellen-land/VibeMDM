@@ -13,6 +13,7 @@ import (
 	"github.com/micromdm/nanomdm/service"
 	"howett.net/plist"
 
+	"github.com/vibemdm/vibemdm/internal/commands"
 	"github.com/vibemdm/vibemdm/internal/escrow"
 	"github.com/vibemdm/vibemdm/internal/inspector"
 	"github.com/vibemdm/vibemdm/internal/model"
@@ -350,12 +351,14 @@ func (s *Service) processResult(ctx context.Context, results *mdm.CommandResults
 			status = "failed"
 		}
 		s.st.SetDeploymentStatusByCommand(ctx, results.CommandUUID, status, errText)
+		s.refreshProfileList(ctx, comp, compErr, errText)
 	case "RemoveProfile":
 		status := "removed"
 		if errText != "" {
 			status = "failed"
 		}
 		s.st.SetDeploymentStatusByCommand(ctx, results.CommandUUID, status, errText)
+		s.refreshProfileList(ctx, comp, compErr, errText)
 	}
 	if compErr == nil && requestType != "" {
 		s.log.Debug("mdm: command result", "type", requestType, "status", results.Status, "computer", comp.Name)
@@ -427,4 +430,19 @@ func firstNonEmptyStr(vals ...string) string {
 		}
 	}
 	return ""
+}
+
+// refreshProfileList asks a Mac for its profiles after an install or removal succeeded, so the
+// record does not keep showing the old list until the next scheduled inventory.
+func (s *Service) refreshProfileList(ctx context.Context, comp *model.Computer, compErr error, errText string) {
+	if compErr != nil || errText != "" || s.cmdr == nil {
+		return
+	}
+	cmd, err := commands.ProfileList()
+	if err != nil {
+		return
+	}
+	if _, err := s.cmdr.Enqueue(ctx, comp, cmd, "inventory", "", "system"); err != nil {
+		s.log.Debug("profile list refresh", "err", err, "computer", comp.Name)
+	}
 }
