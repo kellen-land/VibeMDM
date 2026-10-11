@@ -90,3 +90,34 @@ func TestPolicyAccountPasswordsAreSealedAndKept(t *testing.T) {
 		t.Fatalf("finished run: %v", err)
 	}
 }
+
+func TestComputerProfilesShowTheNewestReportOnce(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	stamp := time.Now().Format("150405.000")
+	c, _ := s.UpsertComputerFromAuthenticate(ctx, MDMAuthenticateInfo{UDID: "PROF-" + stamp, SerialNumber: "PROFC" + stamp, DeviceName: "prof", Model: "Mac14,2", ProductName: "Mac14,2"})
+	t.Cleanup(func() { s.DeleteComputer(ctx, c.ID) })
+	// MDM's older ProfileList still has the CIS profile; the agent's newer report does not.
+	s.ReplaceComputerProfiles(ctx, c.ID, "mdm", []model.ComputerProfile{{Identifier: "com.vibemdm.enrollment", IsManaged: true}, {Identifier: "com.vibemdm.compliance.cis", IsManaged: true}})
+	time.Sleep(5 * time.Millisecond)
+	s.ReplaceComputerProfiles(ctx, c.ID, "agent", []model.ComputerProfile{{Identifier: "com.vibemdm.enrollment"}})
+	list, err := s.ListComputerProfiles(ctx, c.ID)
+	if err != nil || len(list) != 1 || list[0].Identifier != "com.vibemdm.enrollment" || !list[0].IsManaged {
+		t.Fatalf("want the enrollment profile once, managed: %+v %v", list, err)
+	}
+	ids, err := s.PreviewCriteria(ctx, []model.Criterion{{Field: "profile_identifier", Operator: "is", Value: "com.vibemdm.compliance.cis"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range ids {
+		if id == c.ID {
+			t.Fatal("a smart group still matches a removed profile")
+		}
+	}
+	// A newer MDM report wins again.
+	time.Sleep(5 * time.Millisecond)
+	s.ReplaceComputerProfiles(ctx, c.ID, "mdm", []model.ComputerProfile{{Identifier: "com.vibemdm.enrollment", IsManaged: true}, {Identifier: "com.example.new", IsManaged: true}})
+	if list, _ := s.ListComputerProfiles(ctx, c.ID); len(list) != 2 {
+		t.Fatalf("newer MDM report: %+v", list)
+	}
+}

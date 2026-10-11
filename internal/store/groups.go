@@ -77,8 +77,8 @@ var fieldDefs = map[string]fieldDef{
 	"application_title":       {"Application Title", "string", "", `EXISTS (SELECT 1 FROM computer_apps x WHERE x.computer_id = c.id AND %s)`},
 	"application_version":     {"Application Version", "string", "", `EXISTS (SELECT 1 FROM computer_apps x WHERE x.computer_id = c.id AND %s)`},
 	"application_bundle_id":   {"Application Bundle ID", "string", "", `EXISTS (SELECT 1 FROM computer_apps x WHERE x.computer_id = c.id AND %s)`},
-	"profile_identifier":      {"Profile Identifier", "string", "", `EXISTS (SELECT 1 FROM computer_profiles x WHERE x.computer_id = c.id AND %s)`},
-	"profile_name":            {"Profile Name", "string", "", `EXISTS (SELECT 1 FROM computer_profiles x WHERE x.computer_id = c.id AND %s)`},
+	"profile_identifier":      {"Profile Identifier", "string", "", `EXISTS (SELECT 1 FROM computer_profiles x WHERE x.computer_id = c.id AND ` + currentProfileSource("x") + ` AND %s)`},
+	"profile_name":            {"Profile Name", "string", "", `EXISTS (SELECT 1 FROM computer_profiles x WHERE x.computer_id = c.id AND ` + currentProfileSource("x") + ` AND %s)`},
 	"local_username":          {"Local User Account", "string", "", `EXISTS (SELECT 1 FROM computer_local_users x WHERE x.computer_id = c.id AND %s)`},
 	"group_membership":        {"Computer Group", "group", "", ""},
 }
