@@ -32,4 +32,5 @@
 - [ ] vibemdm-agent binary LAPS solution
 - [ ] Remove Caddy, I will be using NGinx Proxy Manager with my own certificate from Let's Encrypt.
 - [ ] Better logging from vibemdm-agent needed on device (e.g. what is shown under reports in Console) right now the logging is very sparse and unhelpful
-- [ ] Policies and Mac Apps are broken with JSON errors. Cannot save any policies.
+- [x] Policies and Mac Apps are broken with JSON errors. Cannot save any policies.
+    - The console's blank forms sent `created_at`/`updated_at` as empty strings, which Go cannot parse into `time.Time`, so the shared request decoder now ignores empty server-owned timestamps (fixing policies, Mac Apps and the other editors that do the same), with regression tests using the UI's exact bodies.

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -117,11 +118,41 @@ func (h *Handler) fail(w http.ResponseWriter, err error, what string) {
 }
 
 func decode(r *http.Request, v any) error {
-	dec := json.NewDecoder(http.MaxBytesReader(nil, r.Body, 64<<20))
-	if err := dec.Decode(v); err != nil {
+	body, err := io.ReadAll(http.MaxBytesReader(nil, r.Body, 64<<20))
+	if err != nil {
+		return errors.New("invalid JSON body: " + err.Error())
+	}
+	if err := json.Unmarshal(dropEmptyTimestamps(body), v); err != nil {
 		return errors.New("invalid JSON body: " + err.Error())
 	}
 	return nil
+}
+
+// dropEmptyTimestamps removes top-level created_at/updated_at keys whose value is
+// an empty string. The console's "new object" forms start from a blank record
+// with those fields set to "", and Go cannot parse "" into a time.Time, which made
+// every such save fail with a 400. The server owns both fields, so ignoring an
+// empty client value is always safe. Anything else is passed through unchanged.
+func dropEmptyTimestamps(body []byte) []byte {
+	var raw map[string]json.RawMessage
+	if json.Unmarshal(body, &raw) != nil {
+		return body
+	}
+	changed := false
+	for _, k := range []string{"created_at", "updated_at"} {
+		if string(raw[k]) == `""` {
+			delete(raw, k)
+			changed = true
+		}
+	}
+	if !changed {
+		return body
+	}
+	out, err := json.Marshal(raw)
+	if err != nil {
+		return body
+	}
+	return out
 }
 
 // decodeSmall decodes a small JSON body (public endpoints).
