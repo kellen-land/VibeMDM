@@ -1,0 +1,28 @@
+{
+  "title": "Restrictions: Users & Groups",
+  "description": "Stops users changing account details in Users & Groups.",
+  "__id": "com.apple.preference.users",
+  "__payloadtype": "com.apple.preference.users",
+  "__platform": "macos",
+  "__category": "Restrictions",
+  "__order": 70,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Restrictions → Preferences",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "DisableUsingiCloudPassword": {
+      "title": "Disable usingiCloud password",
+      "description": "If true, disables the iCloud password for local accounts.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000
+    }
+  }
+}

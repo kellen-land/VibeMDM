@@ -1,0 +1,45 @@
+{
+  "title": "Identity Preference",
+  "description": "Chooses which identity certificate the Mac uses for a server.",
+  "__id": "com.apple.security.identitypreference",
+  "__payloadtype": "com.apple.security.identitypreference",
+  "__platform": "macos",
+  "__category": "Certificates",
+  "__order": 70,
+  "__multiple": true,
+  "__channels": [
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "Name",
+    "PayloadCertificateUUID"
+  ],
+  "properties": {
+    "Name": {
+      "title": "Name",
+      "description": "The email address (in RFC 822 format), DNS host name, or other name that uniquely identifies a service requiring this identity.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "PayloadCertificateUUID": {
+      "title": "Payload certificate UUID",
+      "description": "The UUID of the certificate payload within the same profile to use for the identity credential.",
+      "type": "string",
+      "format": "payload-ref",
+      "property_order": 1001,
+      "x-ref-types": [
+        "com.apple.security.pkcs1",
+        "com.apple.security.root",
+        "com.apple.security.pem",
+        "com.apple.security.pkcs12",
+        "com.apple.security.scep",
+        "com.apple.security.acme",
+        "com.apple.ADCertificate.managed"
+      ]
+    }
+  }
+}

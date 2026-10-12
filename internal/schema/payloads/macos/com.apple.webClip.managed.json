@@ -1,0 +1,47 @@
+{
+  "title": "Web Clips",
+  "description": "Puts a website shortcut on the Home Screen (iOS) or in the Dock (macOS).",
+  "__id": "com.apple.webClip.managed",
+  "__payloadtype": "com.apple.webClip.managed",
+  "__platform": "macos",
+  "__category": "Apps and Home Screen",
+  "__order": 20,
+  "__multiple": true,
+  "__channels": [
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "URL",
+    "Label"
+  ],
+  "properties": {
+    "Icon": {
+      "title": "Icon",
+      "description": "The PNG icon to show on the Home Screen. If not set, the system displays a white square. For best results, provide a square image that's no larger than 400 x 400 pixels and less than 1 MB when uncompressed. The graphics file is automatically scaled and cropped to fit, if necessary, and converted to PNG format. Web clip icons are 144 x 144 pixels for iPad devices with a Retina display, and 114 x 114 pixels for iPhone devices. To prevent the device from adding a shine to the image, set Precomposed to true.",
+      "type": "string",
+      "format": "data",
+      "property_order": 1003
+    },
+    "Label": {
+      "title": "Label",
+      "description": "The name of the web clip that the system displays on the Home Screen.",
+      "type": "string",
+      "property_order": 1005
+    },
+    "URL": {
+      "title": "URL",
+      "description": "The URL of the web clip.",
+      "type": "string",
+      "property_order": 1002,
+      "options": {
+        "inputAttributes": {
+          "placeholder": "https://intranet.example.com"
+        }
+      }
+    }
+  }
+}

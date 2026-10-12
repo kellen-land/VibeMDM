@@ -24,6 +24,7 @@ import { ScopeEditor } from '../components/pickers/ScopeEditor'
 import { DeploymentCounts } from './ProfilesPage'
 import { managedProfiles, schemaIdFromSource } from '../components/schema/schema'
 import { Link } from 'react-router-dom'
+import { PayloadProfileEditorPage } from './profiles/PayloadProfileEditorPage'
 
 type Tab = 'general' | 'scope' | 'deployments'
 
@@ -49,7 +50,18 @@ function parsePayloadMeta(xml: string): { identifier?: string; uuid?: string; di
   }
 }
 
+/** Profiles built with the payload editors open in the editor; uploaded ones in the XML view. */
 export function ProfileEditorPage() {
+  const { id } = useParams()
+  const isNew = !id || id === 'new'
+  const [sp] = useSearchParams()
+  const profile = useProfile(isNew ? undefined : id)
+  if (!isNew && profile.isPending) return <LoadingBlock />
+  const editor = isNew ? sp.get('upload') !== '1' : Array.isArray(profile.data?.payloads)
+  return editor ? <PayloadProfileEditorPage /> : <UploadedProfileEditorPage />
+}
+
+function UploadedProfileEditorPage() {
   const { id } = useParams()
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
@@ -138,7 +150,7 @@ export function ProfileEditorPage() {
     <>
       <PageHeader
         crumbs={[{ label: 'Configuration Profiles', to: '/profiles' }, { label: isNew ? 'New profile' : p?.name ?? '' }]}
-        title={isNew ? 'New configuration profile' : p?.name}
+        title={isNew ? 'Upload a profile' : p?.name}
         meta={
           p ? (
             <>
@@ -277,7 +289,7 @@ export function ProfileEditorPage() {
   )
 }
 
-function DeploymentsTab({ profileId }: { profileId: string }) {
+export function DeploymentsTab({ profileId }: { profileId: string }) {
   const { isAdmin } = useAuth()
   const toast = useToast()
   const invalidate = useInvalidate()

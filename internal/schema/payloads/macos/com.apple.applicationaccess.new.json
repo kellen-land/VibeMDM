@@ -1,0 +1,475 @@
+{
+  "title": "Restrictions: Applications",
+  "description": "Allows or blocks apps by path or bundle ID (legacy Parental Controls application restrictions).",
+  "__id": "com.apple.applicationaccess.new",
+  "__payloadtype": "com.apple.applicationaccess.new",
+  "__platform": "macos",
+  "__category": "Restrictions",
+  "__order": 20,
+  "__multiple": true,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__deprecated": "27.0",
+  "__jamf": "Restrictions → Applications",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "familyControlsEnabled"
+  ],
+  "properties": {
+    "allowList": {
+      "title": "Allow list",
+      "description": "The allow list of app item dictionaries.",
+      "type": "array",
+      "property_order": 1001,
+      "items": {
+        "title": "Item",
+        "type": "object",
+        "required": [
+          "bundleID",
+          "appID"
+        ],
+        "properties": {
+          "appID": {
+            "title": "app ID",
+            "description": "The identifier of the app. Obtain this value from the Security framework using SecCodeCopyDesignatedRequirement.",
+            "type": "string",
+            "format": "data",
+            "property_order": 1001
+          },
+          "bundleID": {
+            "title": "Bundle ID",
+            "description": "The bundle ID of the app.",
+            "type": "string",
+            "property_order": 1000
+          },
+          "detachedSignature": {
+            "title": "Detached signature",
+            "description": "The signature for an unsigned binary.",
+            "type": "string",
+            "format": "data",
+            "property_order": 1002
+          },
+          "disabled": {
+            "title": "Disabled",
+            "description": "If true, this app isn't added to the allow list.",
+            "type": "boolean",
+            "default": false,
+            "property_order": 1003
+          },
+          "displayName": {
+            "title": "Display name",
+            "description": "The name used for display purposes.",
+            "type": "string",
+            "property_order": 1005
+          },
+          "subApps": {
+            "title": "Sub apps",
+            "description": "An array of nested helper applications.",
+            "type": "array",
+            "property_order": 1004,
+            "items": {
+              "title": "Sub app",
+              "type": "object",
+              "required": [
+                "bundleID",
+                "appID"
+              ],
+              "properties": {
+                "appID": {
+                  "title": "app ID",
+                  "description": "The identifier of the app. Obtain this value from the Security framework using SecCodeCopyDesignatedRequirement.",
+                  "type": "string",
+                  "format": "data",
+                  "property_order": 1001
+                },
+                "bundleID": {
+                  "title": "Bundle ID",
+                  "description": "The bundle ID of the app.",
+                  "type": "string",
+                  "property_order": 1000
+                },
+                "detachedSignature": {
+                  "title": "Detached signature",
+                  "description": "The signature for an unsigned binary.",
+                  "type": "string",
+                  "format": "data",
+                  "property_order": 1002
+                },
+                "disabled": {
+                  "title": "Disabled",
+                  "description": "If true, this app isn't added to the allow list.",
+                  "type": "boolean",
+                  "default": false,
+                  "property_order": 1003
+                },
+                "displayName": {
+                  "title": "Display name",
+                  "description": "The name used for display purposes.",
+                  "type": "string",
+                  "property_order": 1005
+                },
+                "subApps": {
+                  "title": "Sub apps",
+                  "description": "An array of nested helper applications.",
+                  "type": "array",
+                  "property_order": 1004,
+                  "items": {
+                    "title": "Sub app",
+                    "type": "object",
+                    "required": [
+                      "bundleID",
+                      "appID"
+                    ],
+                    "properties": {
+                      "appID": {
+                        "title": "app ID",
+                        "description": "The identifier of the app. Obtain this value from the Security framework using SecCodeCopyDesignatedRequirement.",
+                        "type": "string",
+                        "format": "data",
+                        "property_order": 1001
+                      },
+                      "bundleID": {
+                        "title": "Bundle ID",
+                        "description": "The bundle ID of the app.",
+                        "type": "string",
+                        "property_order": 1000
+                      },
+                      "detachedSignature": {
+                        "title": "Detached signature",
+                        "description": "The signature for an unsigned binary.",
+                        "type": "string",
+                        "format": "data",
+                        "property_order": 1002
+                      },
+                      "disabled": {
+                        "title": "Disabled",
+                        "description": "If true, this app isn't added to the allow list.",
+                        "type": "boolean",
+                        "default": false,
+                        "property_order": 1003
+                      },
+                      "displayName": {
+                        "title": "Display name",
+                        "description": "The name used for display purposes.",
+                        "type": "string",
+                        "property_order": 1005
+                      },
+                      "subApps": {
+                        "title": "Sub apps",
+                        "description": "An array of nested helper applications.",
+                        "type": "array",
+                        "property_order": 1004,
+                        "items": {
+                          "title": "Sub app",
+                          "type": "object",
+                          "required": [
+                            "bundleID",
+                            "appID"
+                          ],
+                          "properties": {
+                            "appID": {
+                              "title": "app ID",
+                              "description": "The identifier of the app. Obtain this value from the Security framework using SecCodeCopyDesignatedRequirement.",
+                              "type": "string",
+                              "format": "data",
+                              "property_order": 1001
+                            },
+                            "bundleID": {
+                              "title": "Bundle ID",
+                              "description": "The bundle ID of the app.",
+                              "type": "string",
+                              "property_order": 1000
+                            },
+                            "detachedSignature": {
+                              "title": "Detached signature",
+                              "description": "The signature for an unsigned binary.",
+                              "type": "string",
+                              "format": "data",
+                              "property_order": 1002
+                            },
+                            "disabled": {
+                              "title": "Disabled",
+                              "description": "If true, this app isn't added to the allow list.",
+                              "type": "boolean",
+                              "default": false,
+                              "property_order": 1003
+                            },
+                            "displayName": {
+                              "title": "Display name",
+                              "description": "The name used for display purposes.",
+                              "type": "string",
+                              "property_order": 1005
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "familyControlsEnabled": {
+      "title": "Family controls enabled",
+      "description": "If true, enables app access restrictions.",
+      "type": "boolean",
+      "property_order": 1000
+    },
+    "pathAllowList": {
+      "title": "Path allow list",
+      "description": "The paths to apps in the allow list.",
+      "type": "array",
+      "property_order": 1005,
+      "items": {
+        "title": "Item",
+        "type": "string"
+      }
+    },
+    "pathBlackList": {
+      "title": "Path black list",
+      "description": "The paths to apps in the deny list. This property is deprecated in macOS 10.15 and later - use pathDenyList instead.",
+      "type": "array",
+      "property_order": 1004,
+      "items": {
+        "title": "Item",
+        "type": "string"
+      },
+      "x-deprecated": "macOS 10.15"
+    },
+    "pathDenyList": {
+      "title": "Path deny list",
+      "description": "The paths to apps in the deny list.",
+      "type": "array",
+      "property_order": 1003,
+      "items": {
+        "title": "Item",
+        "type": "string"
+      }
+    },
+    "pathWhiteList": {
+      "title": "Path white list",
+      "description": "The paths to apps in the allow list. This property is deprecated in macOS 10.15 and later - use pathAllowList instead.",
+      "type": "array",
+      "property_order": 1006,
+      "items": {
+        "title": "Item",
+        "type": "string"
+      },
+      "x-deprecated": "macOS 10.15"
+    },
+    "whiteList": {
+      "title": "White list",
+      "description": "The allow list of app item dictionaries. This property is deprecated in macOS 10.15 and later - use allowList instead.",
+      "type": "array",
+      "property_order": 1002,
+      "items": {
+        "title": "Item",
+        "type": "object",
+        "required": [
+          "bundleID",
+          "appID"
+        ],
+        "properties": {
+          "appID": {
+            "title": "app ID",
+            "description": "The identifier of the app. Obtain this value from the Security framework using SecCodeCopyDesignatedRequirement.",
+            "type": "string",
+            "format": "data",
+            "property_order": 1001
+          },
+          "bundleID": {
+            "title": "Bundle ID",
+            "description": "The bundle ID of the app.",
+            "type": "string",
+            "property_order": 1000
+          },
+          "detachedSignature": {
+            "title": "Detached signature",
+            "description": "The signature for an unsigned binary.",
+            "type": "string",
+            "format": "data",
+            "property_order": 1002
+          },
+          "disabled": {
+            "title": "Disabled",
+            "description": "If true, this app isn't added to the allow list.",
+            "type": "boolean",
+            "default": false,
+            "property_order": 1003
+          },
+          "displayName": {
+            "title": "Display name",
+            "description": "The name used for display purposes.",
+            "type": "string",
+            "property_order": 1005
+          },
+          "subApps": {
+            "title": "Sub apps",
+            "description": "An array of nested helper applications.",
+            "type": "array",
+            "property_order": 1004,
+            "items": {
+              "title": "Sub app",
+              "type": "object",
+              "required": [
+                "bundleID",
+                "appID"
+              ],
+              "properties": {
+                "appID": {
+                  "title": "app ID",
+                  "description": "The identifier of the app. Obtain this value from the Security framework using SecCodeCopyDesignatedRequirement.",
+                  "type": "string",
+                  "format": "data",
+                  "property_order": 1001
+                },
+                "bundleID": {
+                  "title": "Bundle ID",
+                  "description": "The bundle ID of the app.",
+                  "type": "string",
+                  "property_order": 1000
+                },
+                "detachedSignature": {
+                  "title": "Detached signature",
+                  "description": "The signature for an unsigned binary.",
+                  "type": "string",
+                  "format": "data",
+                  "property_order": 1002
+                },
+                "disabled": {
+                  "title": "Disabled",
+                  "description": "If true, this app isn't added to the allow list.",
+                  "type": "boolean",
+                  "default": false,
+                  "property_order": 1003
+                },
+                "displayName": {
+                  "title": "Display name",
+                  "description": "The name used for display purposes.",
+                  "type": "string",
+                  "property_order": 1005
+                },
+                "subApps": {
+                  "title": "Sub apps",
+                  "description": "An array of nested helper applications.",
+                  "type": "array",
+                  "property_order": 1004,
+                  "items": {
+                    "title": "Sub app",
+                    "type": "object",
+                    "required": [
+                      "bundleID",
+                      "appID"
+                    ],
+                    "properties": {
+                      "appID": {
+                        "title": "app ID",
+                        "description": "The identifier of the app. Obtain this value from the Security framework using SecCodeCopyDesignatedRequirement.",
+                        "type": "string",
+                        "format": "data",
+                        "property_order": 1001
+                      },
+                      "bundleID": {
+                        "title": "Bundle ID",
+                        "description": "The bundle ID of the app.",
+                        "type": "string",
+                        "property_order": 1000
+                      },
+                      "detachedSignature": {
+                        "title": "Detached signature",
+                        "description": "The signature for an unsigned binary.",
+                        "type": "string",
+                        "format": "data",
+                        "property_order": 1002
+                      },
+                      "disabled": {
+                        "title": "Disabled",
+                        "description": "If true, this app isn't added to the allow list.",
+                        "type": "boolean",
+                        "default": false,
+                        "property_order": 1003
+                      },
+                      "displayName": {
+                        "title": "Display name",
+                        "description": "The name used for display purposes.",
+                        "type": "string",
+                        "property_order": 1005
+                      },
+                      "subApps": {
+                        "title": "Sub apps",
+                        "description": "An array of nested helper applications.",
+                        "type": "array",
+                        "property_order": 1004,
+                        "items": {
+                          "title": "Sub app",
+                          "type": "object",
+                          "required": [
+                            "bundleID",
+                            "appID"
+                          ],
+                          "properties": {
+                            "appID": {
+                              "title": "app ID",
+                              "description": "The identifier of the app. Obtain this value from the Security framework using SecCodeCopyDesignatedRequirement.",
+                              "type": "string",
+                              "format": "data",
+                              "property_order": 1001
+                            },
+                            "bundleID": {
+                              "title": "Bundle ID",
+                              "description": "The bundle ID of the app.",
+                              "type": "string",
+                              "property_order": 1000
+                            },
+                            "detachedSignature": {
+                              "title": "Detached signature",
+                              "description": "The signature for an unsigned binary.",
+                              "type": "string",
+                              "format": "data",
+                              "property_order": 1002
+                            },
+                            "disabled": {
+                              "title": "Disabled",
+                              "description": "If true, this app isn't added to the allow list.",
+                              "type": "boolean",
+                              "default": false,
+                              "property_order": 1003
+                            },
+                            "displayName": {
+                              "title": "Display name",
+                              "description": "The name used for display purposes.",
+                              "type": "string",
+                              "property_order": 1005
+                            },
+                            "subApps": {
+                              "title": "Sub apps",
+                              "description": "An array of nested helper applications.",
+                              "type": "array",
+                              "property_order": 1004,
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "x-deprecated": "macOS 10.15"
+    }
+  }
+}

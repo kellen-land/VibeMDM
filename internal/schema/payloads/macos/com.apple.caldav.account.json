@@ -1,0 +1,66 @@
+{
+  "title": "Calendar",
+  "description": "Adds a CalDAV calendar account.",
+  "__id": "com.apple.caldav.account",
+  "__payloadtype": "com.apple.caldav.account",
+  "__platform": "macos",
+  "__category": "Accounts",
+  "__order": 50,
+  "__multiple": true,
+  "__channels": [
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "CalDAVHostName"
+  ],
+  "properties": {
+    "CalDAVAccountDescription": {
+      "title": "Account description",
+      "description": "The description of the account.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "CalDAVHostName": {
+      "title": "Account hostname",
+      "description": "The server's address.",
+      "type": "string",
+      "property_order": 1001
+    },
+    "CalDAVPassword": {
+      "title": "Account password",
+      "description": "The user's password. Only use this in encrypted profiles.",
+      "type": "string",
+      "property_order": 1003,
+      "x-secret": true
+    },
+    "CalDAVPort": {
+      "title": "Port number",
+      "description": "The server's port.",
+      "type": "integer",
+      "property_order": 1006
+    },
+    "CalDAVPrincipalURL": {
+      "title": "Principal URL",
+      "description": "The base URL to the user's calendar.",
+      "type": "string",
+      "property_order": 1004
+    },
+    "CalDAVUseSSL": {
+      "title": "Use SSL",
+      "description": "If true, the system enables SSL.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1005
+    },
+    "CalDAVUsername": {
+      "title": "Account username",
+      "description": "The user name for logins. If this profile is part of a non-interactive install, the system requires this field.",
+      "type": "string",
+      "property_order": 1002
+    }
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "title": "Home Screen Layout",
+  "description": "Sets and locks the order of apps, folders and web clips on the Home Screen and Dock. Supervised only.",
+  "__id": "com.apple.homescreenlayout",
+  "__payloadtype": "com.apple.homescreenlayout",
+  "__platform": "ios",
+  "__category": "Apps and Home Screen",
+  "__order": 10,
+  "__multiple": false,
+  "__supervised": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "Pages"
+  ],
+  "properties": {
+    "Dock": {
+      "title": "Dock",
+      "description": "Icons in the Dock, left to right. Empty means an empty Dock.",
+      "type": "array",
+      "property_order": 10,
+      "items": {
+        "title": "Item",
+        "type": "object",
+        "required": [
+          "Type"
+        ],
+        "properties": {
+          "BundleID": {
+            "title": "App bundle ID",
+            "description": "For apps.",
+            "type": "string",
+            "property_order": 2,
+            "options": {
+              "inputAttributes": {
+                "placeholder": "com.apple.mobilesafari"
+              }
+            }
+          },
+          "DisplayName": {
+            "title": "Folder name",
+            "description": "For folders. Folder contents can't be edited here yet.",
+            "type": "string",
+            "property_order": 4
+          },
+          "Type": {
+            "title": "Type",
+            "description": "What this icon is.",
+            "type": "string",
+            "enum": [
+              "Application",
+              "WebClip",
+              "Folder"
+            ],
+            "default": "Application",
+            "property_order": 1,
+            "options": {
+              "enum_titles": [
+                "App",
+                "Web clip",
+                "Folder"
+              ]
+            }
+          },
+          "URL": {
+            "title": "Web clip URL",
+            "description": "For web clips: the URL of a web clip installed by another payload. iOS 11.3+.",
+            "type": "string",
+            "property_order": 3
+          }
+        }
+      }
+    },
+    "Pages": {
+      "title": "Pages",
+      "description": "Home Screen pages in order. Apps you don't list are placed after these.",
+      "type": "array",
+      "property_order": 11,
+      "items": {
+        "title": "Page",
+        "type": "object",
+        "properties": {
+          "Items": {
+            "title": "Icons",
+            "description": "Icons on this page, in order.",
+            "type": "array",
+            "items": {
+              "title": "Item",
+              "type": "object",
+              "required": [
+                "Type"
+              ],
+              "properties": {
+                "BundleID": {
+                  "title": "App bundle ID",
+                  "description": "For apps.",
+                  "type": "string",
+                  "property_order": 2,
+                  "options": {
+                    "inputAttributes": {
+                      "placeholder": "com.apple.mobilesafari"
+                    }
+                  }
+                },
+                "DisplayName": {
+                  "title": "Folder name",
+                  "description": "For folders. Folder contents can't be edited here yet.",
+                  "type": "string",
+                  "property_order": 4
+                },
+                "Type": {
+                  "title": "Type",
+                  "description": "What this icon is.",
+                  "type": "string",
+                  "enum": [
+                    "Application",
+                    "WebClip",
+                    "Folder"
+                  ],
+                  "default": "Application",
+                  "property_order": 1,
+                  "options": {
+                    "enum_titles": [
+                      "App",
+                      "Web clip",
+                      "Folder"
+                    ]
+                  }
+                },
+                "URL": {
+                  "title": "Web clip URL",
+                  "description": "For web clips: the URL of a web clip installed by another payload. iOS 11.3+.",
+                  "type": "string",
+                  "property_order": 3
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

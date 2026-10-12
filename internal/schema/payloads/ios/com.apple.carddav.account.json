@@ -1,0 +1,91 @@
+{
+  "title": "Contacts",
+  "description": "Adds a CardDAV contacts account.",
+  "__id": "com.apple.carddav.account",
+  "__payloadtype": "com.apple.carddav.account",
+  "__platform": "ios",
+  "__category": "Accounts",
+  "__order": 60,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "CardDAVHostName"
+  ],
+  "properties": {
+    "CardDAVAccountDescription": {
+      "title": "Account description",
+      "description": "The description of the account.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "CardDAVHostName": {
+      "title": "Account hostname",
+      "description": "The server's address.",
+      "type": "string",
+      "property_order": 1001
+    },
+    "CardDAVPassword": {
+      "title": "Account password",
+      "description": "The user's password. Only use this in encrypted profiles.",
+      "type": "string",
+      "property_order": 1003,
+      "x-secret": true
+    },
+    "CardDAVPort": {
+      "title": "Port number",
+      "description": "The server's port.",
+      "type": "integer",
+      "property_order": 1006
+    },
+    "CardDAVPrincipalURL": {
+      "title": "Principal URL",
+      "description": "The base URL to the user's address book.",
+      "type": "string",
+      "property_order": 1004
+    },
+    "CardDAVUseSSL": {
+      "title": "Use SSL",
+      "description": "If true, the system enables SSL.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1005
+    },
+    "CardDAVUsername": {
+      "title": "Account username",
+      "description": "The user name for logins.",
+      "type": "string",
+      "property_order": 1002
+    },
+    "CommunicationServiceRules": {
+      "title": "Communication service rules",
+      "description": "An array of communication service rules for this account.",
+      "type": "object",
+      "property_order": 1007,
+      "properties": {
+        "DefaultServiceHandlers": {
+          "title": "Default service handlers",
+          "description": "A dictionary of service handlers for contacts from this account.",
+          "type": "object",
+          "property_order": 1000,
+          "properties": {
+            "AudioCall": {
+              "title": "App for audio calls",
+              "description": "The bundle identifier for the default application that handles audio calls to contacts from this account.",
+              "type": "string",
+              "property_order": 1000
+            }
+          }
+        }
+      }
+    },
+    "VPNUUID": {
+      "title": "VPNUUID",
+      "description": "The VPNUUID of the per-app VPN the account uses for network communication.",
+      "type": "string",
+      "property_order": 1008
+    }
+  }
+}

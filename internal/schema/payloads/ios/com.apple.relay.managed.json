@@ -1,0 +1,147 @@
+{
+  "title": "Relay",
+  "description": "Sends app or domain traffic through HTTP/3 or HTTP/2 relay servers instead of a VPN.",
+  "__id": "com.apple.relay.managed",
+  "__payloadtype": "com.apple.relay.managed",
+  "__platform": "ios",
+  "__category": "Network",
+  "__order": 90,
+  "__multiple": true,
+  "__os": "iOS 17.0+",
+  "__deprecated": "27.0",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "Relays"
+  ],
+  "properties": {
+    "AllowDNSFailover": {
+      "title": "Allow DNS failover",
+      "description": "If true, the device allows the relay to failover to the default system DNS resolver.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1007,
+      "x-os": "iOS 26.0+"
+    },
+    "ExcludedDomains": {
+      "title": "Excluded domains",
+      "description": "A list of domain strings to exclude from routing through the servers in Relays. Any connection that matches a domain in the list exactly or is a subdomain of the listed domain won't use the relay server.",
+      "type": "array",
+      "property_order": 1002,
+      "items": {
+        "title": "Excluded domain",
+        "type": "string"
+      }
+    },
+    "ExcludedFQDNs": {
+      "title": "Excluded FQDNs",
+      "description": "A list of Fully Qualified Domain Names (FQDNs) to exclude from routing through the servers contained in Relays. Any connection that matches an FQDN in the list exactly won't use the relay server. When MatchDomains is also present, any FQDN listed in the list should be a subdomain of at least one MatchDomain value, otherwise it won't have any effect.",
+      "type": "array",
+      "property_order": 1004,
+      "items": {
+        "title": "Excluded FQDN",
+        "type": "string"
+      },
+      "x-os": "iOS 18.4+"
+    },
+    "MatchDomains": {
+      "title": "Match domains",
+      "description": "A list of domain strings that the system uses to determine which connection to route through the servers in Relays.\n\nAny connection that matches a domain in the list exactly or is a subdomain of the listed domain uses the relay servers, unless it matches a domain in ExcludedDomains.\n\nIf this list and MatchFQDNs are empty, the system routes traffic to all domains to the relay servers, except those that match an excluded domain or excluded FQDN.",
+      "type": "array",
+      "property_order": 1001,
+      "items": {
+        "title": "Match domain",
+        "type": "string"
+      }
+    },
+    "MatchFQDNs": {
+      "title": "Match FQDNs",
+      "description": "A list of Fully Qualified Domain Names (FQDNs) to route through the servers contained in Relays. Any connection that matches an FQDN in the list exactly uses the relay servers. If this list and MatchDomains are empty, the system routes traffic to all domains to the relay servers, except those that match an excluded domain or excluded FQDN.",
+      "type": "array",
+      "property_order": 1003,
+      "items": {
+        "title": "Match FQDN",
+        "type": "string"
+      },
+      "x-os": "iOS 18.4+"
+    },
+    "RelayUUID": {
+      "title": "Relay UUID",
+      "description": "A globally unique identifier for this relay configuration. The system uses this UUID to route managed apps through the servers in Relays. This key is required for user enrollment.",
+      "type": "string",
+      "property_order": 1005
+    },
+    "Relays": {
+      "title": "Relays",
+      "description": "An array of dictionaries that describe one or more relay servers that the system can chain together.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "Network relay",
+        "type": "object",
+        "properties": {
+          "AdditionalHTTPHeaderFields": {
+            "title": "Additional HTTP header fields",
+            "description": "A dictionary that contains custom HTTP header keys and values to add to each request. The dictionary key name represents the HTTP header field name to use, and the dictionary value is the string to use as the HTTP header field value.",
+            "type": "object",
+            "property_order": 1002,
+            "additionalProperties": {
+              "title": "ANY",
+              "description": "The HTTP header field value for the corresponding header field name.",
+              "type": "string"
+            }
+          },
+          "HTTP2RelayURL": {
+            "title": "HTTP/2 relay URL",
+            "description": "The URL or URI template, as defined in RFC 9298, of a relay server that's reachable using HTTP/2 and supports proxying TCP and UDP using the CONNECT method.\n\nEach relay needs to include either HTTP2RelayURL or HTTP3RelayURL, or it can include both.",
+            "type": "string",
+            "property_order": 1001
+          },
+          "HTTP3RelayURL": {
+            "title": "HTTP/3 relay URL",
+            "description": "The URL or URI template, as defined in RFC 9298, of a relay server that's reachable using HTTP/3 and supports proxying TCP and UDP using the CONNECT method.\n\nEach relay needs to include either HTTP2RelayURL or HTTP3RelayURL, or it can include both.",
+            "type": "string",
+            "property_order": 1000
+          },
+          "PayloadCertificateUUID": {
+            "title": "Certificate UUID",
+            "description": "The UUID that points to an identity certificate payload, which the system uses to authenticate the user to the relay server.",
+            "type": "string",
+            "format": "payload-ref",
+            "property_order": 1003,
+            "x-ref-types": [
+              "com.apple.security.pkcs1",
+              "com.apple.security.root",
+              "com.apple.security.pem",
+              "com.apple.security.pkcs12",
+              "com.apple.security.scep",
+              "com.apple.security.acme",
+              "com.apple.ADCertificate.managed"
+            ]
+          },
+          "RawPublicKeys": {
+            "title": "Raw public keys",
+            "description": "An array of DER-encoded raw public keys that the system uses to authenticate the server during a TLS handshake. The server needs to use one of the keys in the handshake to authenticate.\n\nIf this array is empty, the system uses the default TLS trust evaluation.",
+            "type": "array",
+            "property_order": 1004,
+            "items": {
+              "title": "Raw public key",
+              "type": "string",
+              "format": "data"
+            }
+          }
+        }
+      }
+    },
+    "UIToggleEnabled": {
+      "title": "UI toggle enabled",
+      "description": "If true, the device allows the user to disable this network relay configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1006,
+      "x-os": "iOS 26.0+"
+    }
+  }
+}

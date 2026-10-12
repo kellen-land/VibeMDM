@@ -1,0 +1,109 @@
+{
+  "title": "Cellular Private Network",
+  "description": "Configures a private 5G or LTE network.",
+  "__id": "com.apple.cellularprivatenetwork.managed",
+  "__payloadtype": "com.apple.cellularprivatenetwork.managed",
+  "__platform": "ios",
+  "__category": "Network",
+  "__order": 110,
+  "__multiple": true,
+  "__os": "iOS 17.0+",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "DataSetName",
+    "VersionNumber"
+  ],
+  "properties": {
+    "CellularDataPreferred": {
+      "title": "Cellular data preferred",
+      "description": "Set to true to prefer this private network over Wi-Fi.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003
+    },
+    "CsgNetworkIdentifier": {
+      "title": "Csg network identifier",
+      "description": "A string using the 3GPP \"CSG_ID\" format (defined in 3GPP 23.003, Section 4.7). The device uses this value to match a SIM present on the device.\n\nAll combinations of NetworkIdentifier and CsgNetworkIdentifier must be unique across all profiles installed on the device.",
+      "type": "string",
+      "property_order": 1006,
+      "x-os": "iOS 18.0+"
+    },
+    "DataSetName": {
+      "title": "Data set name",
+      "description": "The name of the private network configuration data set.",
+      "type": "string",
+      "property_order": 1001
+    },
+    "EnableNRStandalone": {
+      "title": "Enable NR standalone",
+      "description": "Set to true if this private network is NR Standalone.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1004
+    },
+    "Geofences": {
+      "title": "Geofences",
+      "description": "A list of up to 1000 geofences for private networks. Geofencing is only used on iPhone.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "Geofence",
+        "type": "object",
+        "required": [
+          "Longitude",
+          "Latitude",
+          "Radius",
+          "GeofenceId"
+        ],
+        "properties": {
+          "GeofenceId": {
+            "title": "Geofence ID",
+            "description": "A geofence identifier that's unique within a list of geofences.",
+            "type": "string",
+            "property_order": 1003
+          },
+          "Latitude": {
+            "title": "Latitude",
+            "description": "The latitude of the geofence.",
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90,
+            "property_order": 1001
+          },
+          "Longitude": {
+            "title": "Longitude",
+            "description": "The longitude of the geofence.",
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180,
+            "property_order": 1000
+          },
+          "Radius": {
+            "title": "Radius",
+            "description": "Specifies the radius of the geofence in meters. Set this value slightly greater than the private cellular network coverage area.",
+            "type": "number",
+            "minimum": 100,
+            "maximum": 6500,
+            "property_order": 1002
+          }
+        }
+      }
+    },
+    "NetworkIdentifier": {
+      "title": "Network identifier",
+      "description": "A string using the 3GPP \"Coordinated NID\" (option 1 or option 2) format (defined in 3GPP 31.102, Section 12.7.1). The device uses this value to match a SIM present on the device.\n\nAll combinations of NetworkIdentifier and CsgNetworkIdentifier must be unique across all profiles installed on the device.",
+      "type": "string",
+      "property_order": 1005,
+      "x-os": "iOS 18.0+"
+    },
+    "VersionNumber": {
+      "title": "Version number",
+      "description": "The version number of this dataset that the system uses to track updates.",
+      "type": "string",
+      "property_order": 1002
+    }
+  }
+}

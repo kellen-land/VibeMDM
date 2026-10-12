@@ -1,0 +1,111 @@
+{
+  "title": "Per-App VPN",
+  "description": "A VPN connection used only by the apps that are assigned to it.",
+  "__id": "com.apple.vpn.managed.applayer",
+  "__payloadtype": "com.apple.vpn.managed.applayer",
+  "__platform": "ios",
+  "__category": "Network",
+  "__order": 40,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "VPNUUID"
+  ],
+  "properties": {
+    "AssociatedDomains": {
+      "title": "Associated domains",
+      "description": "An array with entries that must each specify a domain that triggers this VPN. The domains must also be part of the apple-app-site-association file, as described in Supporting associated domains.",
+      "type": "array",
+      "property_order": 1006,
+      "items": {
+        "title": "Associated domain",
+        "type": "string"
+      }
+    },
+    "CalendarDomains": {
+      "title": "Calendar domains",
+      "description": "An array with entries that must each specify a domain that triggers this VPN connection in Calendar. Each entry is in the format www.apple.com.\n\nThis property is deprecated in iOS 13.4 and later; use the VPNUUID property of the CalDAV payload instead.",
+      "type": "array",
+      "property_order": 1004,
+      "items": {
+        "title": "Calendar domain",
+        "type": "string"
+      },
+      "x-deprecated": "iOS 13.4"
+    },
+    "CellularSliceUUID": {
+      "title": "Cellular Slice UUID",
+      "description": "A string representing the data network name (DNN) or app category identifying a Cellular Slice. The device forces the VPN tunnel to use the specified Cellular Slice.",
+      "type": "string",
+      "property_order": 1001,
+      "x-os": "iOS 18.0+"
+    },
+    "ContactsDomains": {
+      "title": "Contacts domains",
+      "description": "An array with entries that must each specify a domain that triggers this VPN connection in Contacts. Each entry is in the format www.apple.com.\n\nThis property is deprecated in iOS 13.4 and later; use the VPNUUID property of the CardDAV payload instead.",
+      "type": "array",
+      "property_order": 1005,
+      "items": {
+        "title": "Contacts domain",
+        "type": "string"
+      },
+      "x-deprecated": "iOS 13.4"
+    },
+    "ExcludedDomains": {
+      "title": "Excluded domains",
+      "description": "An array with entries that each specify a domain that doesn't trigger this VPN for connections to the domain.",
+      "type": "array",
+      "property_order": 1007,
+      "items": {
+        "title": "Excluded domain",
+        "type": "string"
+      }
+    },
+    "MailDomains": {
+      "title": "Mail domains",
+      "description": "An array with entries that must each specify a domain that triggers this VPN connection in Mail. Each entry is in the format www.apple.com.\n\nThis property is deprecated in iOS 13.4 and later; use the VPNUUID property of the Mail or ExchangeActiveSync payload instead.",
+      "type": "array",
+      "property_order": 1003,
+      "items": {
+        "title": "Mail domain",
+        "type": "string"
+      },
+      "x-deprecated": "iOS 13.4"
+    },
+    "OnDemandMatchAppEnabled": {
+      "title": "On demand match app enabled",
+      "description": "If true, automatically connects the VPN when associated apps for this per-app VPN service initiate network communication. Otherwise, the user must initiate the connection manually before those apps can initiate network communication. If this key isn't present, the value of the OnDemandEnabled key determines the status of per-app VPN On Demand.",
+      "type": "boolean",
+      "property_order": 1008
+    },
+    "SMBDomains": {
+      "title": "SMB domains",
+      "description": "An array of SMB domains that's accessible through this VPN connection.",
+      "type": "array",
+      "property_order": 1009,
+      "items": {
+        "title": "SMB domain",
+        "type": "string"
+      }
+    },
+    "SafariDomains": {
+      "title": "Safari domains",
+      "description": "An array with entries that must each specify a domain that triggers the VPN connection in Safari. Each entry is in the format www.apple.com.",
+      "type": "array",
+      "property_order": 1002,
+      "items": {
+        "title": "Safari domain",
+        "type": "string"
+      }
+    },
+    "VPNUUID": {
+      "title": "VPNUUID",
+      "description": "A globally unique identifier for this VPN configuration.",
+      "type": "string",
+      "property_order": 1000
+    }
+  }
+}

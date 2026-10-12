@@ -1,0 +1,224 @@
+{
+  "title": "Cellular",
+  "description": "Sets the cellular access point (APN) and its authentication.",
+  "__id": "com.apple.cellular",
+  "__payloadtype": "com.apple.cellular",
+  "__platform": "ios",
+  "__category": "Network",
+  "__order": 100,
+  "__multiple": false,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "APNs": {
+      "title": "AP ns",
+      "description": "An array of access point name (APN) dictionaries.",
+      "type": "array",
+      "property_order": 1001,
+      "items": {
+        "title": "AP n",
+        "type": "object",
+        "required": [
+          "Name"
+        ],
+        "properties": {
+          "AllowedProtocolMask": {
+            "title": "Supported IP versions",
+            "description": "The Internet Protocol versions that the system supports. Allowed values:\n\n- 1: IPv4\n- 2: IPv6\n- 3: Both",
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "property_order": 1007,
+            "options": {
+              "enum_titles": [
+                "IPv4",
+                "IPv6",
+                "Both"
+              ]
+            }
+          },
+          "AllowedProtocolMaskInDomesticRoaming": {
+            "title": "Supported roaming IP versions",
+            "description": "The Internet Protocol versions that the system supports while roaming. Allowed values:\n\n- 1: IPv4\n- 2: IPv6\n- 3: Both",
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "property_order": 1009,
+            "options": {
+              "enum_titles": [
+                "IPv4",
+                "IPv6",
+                "Both"
+              ]
+            }
+          },
+          "AllowedProtocolMaskInRoaming": {
+            "title": "Supported roaming IP versions",
+            "description": "The Internet Protocol versions that the system supports while roaming. Allowed values:\n\n- 1: IPv4\n- 2: IPv6\n- 3: Both",
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "property_order": 1008,
+            "options": {
+              "enum_titles": [
+                "IPv4",
+                "IPv6",
+                "Both"
+              ]
+            }
+          },
+          "AuthenticationType": {
+            "title": "Authentication type",
+            "description": "The authentication type for logging in.",
+            "type": "string",
+            "enum": [
+              "CHAP",
+              "PAP"
+            ],
+            "default": "PAP",
+            "property_order": 1001,
+            "options": {
+              "enum_titles": [
+                "CHAP",
+                "PAP"
+              ]
+            }
+          },
+          "DefaultProtocolMask": {
+            "title": "Default protocol mask",
+            "description": "The default Internet Protocol versions. Allowed values:\n\n- 1: IPv4\n- 2: IPv6\n- 3: Both",
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "property_order": 1006,
+            "options": {
+              "enum_titles": [
+                "IPv4",
+                "IPv6",
+                "Both"
+              ]
+            },
+            "x-deprecated": "iOS 11.0"
+          },
+          "EnableXLAT464": {
+            "title": "Enable XLAT464",
+            "description": "If true, the system enables XLAT464.",
+            "type": "boolean",
+            "default": false,
+            "property_order": 1010
+          },
+          "Name": {
+            "title": "Name",
+            "description": "The name for this configuration.",
+            "type": "string",
+            "property_order": 1000
+          },
+          "Password": {
+            "title": "Password",
+            "description": "The user's password for the APN.",
+            "type": "string",
+            "property_order": 1003,
+            "x-secret": true
+          },
+          "ProxyPort": {
+            "title": "Proxy port",
+            "description": "The proxy server's port number.",
+            "type": "integer",
+            "property_order": 1005
+          },
+          "ProxyServer": {
+            "title": "Proxy server",
+            "description": "The proxy server's address.",
+            "type": "string",
+            "property_order": 1004
+          },
+          "Username": {
+            "title": "User name",
+            "description": "The user name for the APN.",
+            "type": "string",
+            "property_order": 1002
+          }
+        }
+      }
+    },
+    "AttachAPN": {
+      "title": "Attach APN",
+      "description": "A configuration dictionary.",
+      "type": "object",
+      "required": [
+        "Name"
+      ],
+      "property_order": 1000,
+      "properties": {
+        "AllowedProtocolMask": {
+          "title": "Supported IP versions",
+          "description": "The Internet Protocol versions that the system supports. Allowed values:\n\n- 1: IPv4\n- 2: IPv6\n- 3: Both",
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3
+          ],
+          "property_order": 1004,
+          "options": {
+            "enum_titles": [
+              "IPv4",
+              "IPv6",
+              "Both"
+            ]
+          }
+        },
+        "AuthenticationType": {
+          "title": "Authentication type",
+          "description": "The authentication type.",
+          "type": "string",
+          "enum": [
+            "CHAP",
+            "PAP"
+          ],
+          "default": "PAP",
+          "property_order": 1001,
+          "options": {
+            "enum_titles": [
+              "CHAP",
+              "PAP"
+            ]
+          }
+        },
+        "Name": {
+          "title": "Name",
+          "description": "The name for this configuration.",
+          "type": "string",
+          "property_order": 1000
+        },
+        "Password": {
+          "title": "Password",
+          "description": "The password for the user.",
+          "type": "string",
+          "property_order": 1003,
+          "x-secret": true
+        },
+        "Username": {
+          "title": "User name",
+          "description": "The user name.",
+          "type": "string",
+          "property_order": 1002
+        }
+      }
+    }
+  }
+}

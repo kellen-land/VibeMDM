@@ -1,0 +1,83 @@
+{
+  "title": "Finder",
+  "description": "Sets Finder options such as which items appear on the desktop and the warning for emptying the Trash.",
+  "__id": "com.apple.finder",
+  "__payloadtype": "com.apple.finder",
+  "__platform": "macos",
+  "__category": "General",
+  "__order": 120,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "ProhibitBurn": {
+      "title": "Prohibit burn",
+      "description": "If true, the system disables the Finder's burn support.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000
+    },
+    "ProhibitConnectTo": {
+      "title": "Prohibit connect to",
+      "description": "If true, the system disables Connect to Server.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    },
+    "ProhibitEject": {
+      "title": "Prohibit eject",
+      "description": "If true, the system disables Eject.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1002
+    },
+    "ProhibitGoToFolder": {
+      "title": "Prohibit go to folder",
+      "description": "If true, the system disables Go to Folder.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003
+    },
+    "ShowExternalHardDrivesOnDesktop": {
+      "title": "Show external hard drives on desktop",
+      "description": "If false, the system doesn't show external hard drives on the Desktop.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1004
+    },
+    "ShowHardDrivesOnDesktop": {
+      "title": "Show hard drives on desktop",
+      "description": "If false, the system doesn't show internal hard drives on the Desktop.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1005
+    },
+    "ShowMountedServersOnDesktop": {
+      "title": "Show mounted servers on desktop",
+      "description": "If false, the system doesn't show mounted file servers on the Desktop.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1006
+    },
+    "ShowRemovableMediaOnDesktop": {
+      "title": "Show removable media on desktop",
+      "description": "If false, the system doesn't show removable media items on the Desktop.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1007
+    },
+    "WarnOnEmptyTrash": {
+      "title": "Warn on empty trash",
+      "description": "If false, the system doesn't warn the user before emptying the trash.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1008
+    }
+  }
+}

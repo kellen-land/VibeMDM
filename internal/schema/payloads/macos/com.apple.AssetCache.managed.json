@@ -1,0 +1,345 @@
+{
+  "title": "Content Caching",
+  "description": "Configures the content caching service on a Mac that serves Apple software and iCloud data to devices on the network.",
+  "__id": "com.apple.AssetCache.managed",
+  "__payloadtype": "com.apple.AssetCache.managed",
+  "__platform": "macos",
+  "__category": "Network",
+  "__order": 120,
+  "__multiple": false,
+  "__channels": [
+    "device"
+  ],
+  "__deprecated": "27.0",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "AllowCacheDelete": {
+      "title": "Allow cache delete",
+      "description": "If true, the system purges content from the cache automatically when it needs disk space for other apps when free disk space runs low on the computer. Set to false to maximize effectiveness of Content Caching.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1000
+    },
+    "AllowPersonalCaching": {
+      "title": "Allow personal caching",
+      "description": "If true, the system caches the user's iCloud data. Changes to this value don't have an immediate effect. Clients may take some time, such as hours or days, to react to changes.\n\n> Note:\n> At least one of the AllowPersonalCaching or AllowSharedCaching keys need to be true.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1001
+    },
+    "AllowSharedCaching": {
+      "title": "Allow shared caching",
+      "description": "If true, the system caches non-iCloud content, such as apps and software updates. Changes to this value don't have an immediate effect. Clients may take some time, such as hours or days, to react to changes.\n\n> Note:\n> At least one of the AllowPersonalCaching or AllowSharedCaching keys need to be true.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1002
+    },
+    "AutoActivation": {
+      "title": "Auto activation",
+      "description": "If true, the system automatically activates the content cache when possible and prevents disabling it. If allowContentCaching is false, AutoActivation is also false.\n\nRemoving a profile that set AutoActivation to true doesn't deactivate the Content Cache.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003
+    },
+    "AutoEnableTetheredCaching": {
+      "title": "Auto enable tethered caching",
+      "description": "If true, the system automatically enables Internet connection sharing when possible and prevent disabling Internet connection sharing. DenyTetheredCaching overrides AutoEnableTetheredCaching. Tethered caching requires Content Caching.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1004
+    },
+    "CacheLimit": {
+      "title": "Cache limit",
+      "description": "The maximum number of bytes of disk space to use for the content cache. Set to 0 for unlimited disk space.",
+      "type": "integer",
+      "default": 0,
+      "property_order": 1005
+    },
+    "DataPath": {
+      "title": "Data path",
+      "description": "The path to the directory used to store cached content. Changing this setting manually doesn't automatically move cached content from the old location to the new one. To move content automatically, use the Sharing preference's Content Caching pane. The value must be (or end with) /Library/Application Support/Apple/AssetCache/Data.\n\nThe system creates a directory and its intermediates for the given data path if it doesn't already exist. The directory is owned by _assetcache:_assetcache and has mode 0750.",
+      "type": "string",
+      "default": "/Library/Application Support/Apple/AssetCache/Data",
+      "property_order": 1006
+    },
+    "DenyTetheredCaching": {
+      "title": "Deny tethered caching",
+      "description": "If true, the system disables tethered caching.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1007
+    },
+    "DisplayAlerts": {
+      "title": "Display alerts",
+      "description": "If true, Content Caching displays exceptional conditions (alerts) as system notifications in the upper corner of the screen. The device automatically displayed alerts starting in macOS 10.13. In macOS 10.15 the alerts are off by default, but still available through this setting.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1008
+    },
+    "KeepAwake": {
+      "title": "Keep awake",
+      "description": "If true, the system prevents the computer from sleeping as long as Content Caching is on (System Preferences > Sharing > Content Caching is on). Customers who want Content Caching to be as available as much as possible should turn this setting on.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1009
+    },
+    "ListenRanges": {
+      "title": "Listen ranges",
+      "description": "An array of dictionaries that describe a range of client IP addresses to serve.",
+      "type": "array",
+      "property_order": 1010,
+      "items": {
+        "title": "Listen range",
+        "type": "object",
+        "required": [
+          "first",
+          "last"
+        ],
+        "properties": {
+          "first": {
+            "title": "First",
+            "description": "The first IP address in the range.",
+            "type": "string",
+            "property_order": 1001
+          },
+          "last": {
+            "title": "Last",
+            "description": "The last IP address in the range.",
+            "type": "string",
+            "property_order": 1002
+          },
+          "type": {
+            "title": "Type",
+            "description": "The IP address type.",
+            "type": "string",
+            "enum": [
+              "IPv4",
+              "IPv6"
+            ],
+            "default": "IPv4",
+            "property_order": 1000,
+            "options": {
+              "enum_titles": [
+                "I pv4",
+                "I pv6"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "ListenRangesOnly": {
+      "title": "Listen ranges only",
+      "description": "If true, the content cache provides content to the clients in the ListenRanges.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1011
+    },
+    "ListenWithPeersAndParents": {
+      "title": "Listen with peers and parents",
+      "description": "If true, the content cache provides content to the clients in the union of the ListenRanges, PeerListenRanges and Parents.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1012
+    },
+    "LocalSubnetsOnly": {
+      "title": "Local subnets only",
+      "description": "If true, the content cache offers content to clients only on the same immediate local network only. No content is offered to clients on other networks reachable by the content cache. If LocalSubnetsOnly is true, the system ignores ListenRanges.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1013
+    },
+    "LogClientIdentity": {
+      "title": "Log client identity",
+      "description": "If true, the Content Cache logs the IP address and port number of the clients that request content.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1014
+    },
+    "ParentSelectionPolicy": {
+      "title": "Parent selection policy",
+      "description": "The policy to implement when choosing among more than one configured parent content cache. With every policy, the system skips parent caches that are temporarily unavailable. Allowed values:\n\n* first-available: Always use the first available parent in the Parents list. Use this policy to designate permanent primary, secondary, and subsequent parents.\n* url-path-hash: Hash the path part of the requested URL so that the same parent is always used for the same URL. This is useful for maximizing the size of the combined caches of     the parents.\n* random: Choose a parent at random.",
+      "type": "string",
+      "enum": [
+        "first-available",
+        "url-path-hash",
+        "random",
+        "round-robin",
+        "sticky-available"
+      ],
+      "default": "round-robin",
+      "property_order": 1016,
+      "options": {
+        "enum_titles": [
+          "First available",
+          "URL path hash",
+          "Choose a parent at random",
+          "Round robin",
+          "Sticky available"
+        ]
+      }
+    },
+    "Parents": {
+      "title": "Parents",
+      "description": "An array of the local IP addresses of other content caches that this cache should download from or upload to, instead of downloading from or uploading to Apple directly. The system ignores invalid addresses and addresses of computers that aren't content caches. The system skips Parent caches that become unavailable. If all parent content caches become unavailable, the content cache downloads from or uploads to Apple directly, until a parent content cache becomes available again.",
+      "type": "array",
+      "property_order": 1015,
+      "items": {
+        "title": "Parent",
+        "type": "string"
+      }
+    },
+    "PeerFilterRanges": {
+      "title": "Peer filter ranges",
+      "description": "An array of dictionaries describing a range of peer IP addresses that the content cache uses to filter its list of peers to query for content. The content cache only queries peers in PeerFilterRanges. When PeerFilterRanges is an empty array, the content cache doesn't query any peers.",
+      "type": "array",
+      "property_order": 1017,
+      "items": {
+        "title": "Peer filter range",
+        "type": "object",
+        "required": [
+          "first",
+          "last"
+        ],
+        "properties": {
+          "first": {
+            "title": "First",
+            "description": "The first IP address in the range.",
+            "type": "string",
+            "property_order": 1001
+          },
+          "last": {
+            "title": "Last",
+            "description": "The last IP address in the range.",
+            "type": "string",
+            "property_order": 1002
+          },
+          "type": {
+            "title": "Type",
+            "description": "The IP address type.",
+            "type": "string",
+            "enum": [
+              "IPv4",
+              "IPv6"
+            ],
+            "default": "IPv4",
+            "property_order": 1000,
+            "options": {
+              "enum_titles": [
+                "I pv4",
+                "I pv6"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "PeerListenRanges": {
+      "title": "Peer listen ranges",
+      "description": "An array of dictionaries describing a range of peer IP addresses the content cache responds to. When PeerListenRanges is an empty array, the content cache responds with an error to all cache queries.",
+      "type": "array",
+      "property_order": 1018,
+      "items": {
+        "title": "Peer listen range",
+        "type": "object",
+        "required": [
+          "first",
+          "last"
+        ],
+        "properties": {
+          "first": {
+            "title": "First",
+            "description": "The first IP address in the range.",
+            "type": "string",
+            "property_order": 1001
+          },
+          "last": {
+            "title": "Last",
+            "description": "The last IP address in the range.",
+            "type": "string",
+            "property_order": 1002
+          },
+          "type": {
+            "title": "Type",
+            "description": "The IP address type.",
+            "type": "string",
+            "enum": [
+              "IPv4",
+              "IPv6"
+            ],
+            "default": "IPv4",
+            "property_order": 1000,
+            "options": {
+              "enum_titles": [
+                "I pv4",
+                "I pv6"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "PeerLocalSubnetsOnly": {
+      "title": "Peer local subnets only",
+      "description": "If true, the content cache only peers with other content caches on the same immediate local network, rather than with content caches that use the same public IP address as the device. When PeerLocalSubnetsOnly is true, it overrides the configuration of PeerFilterRanges and PeerListenRanges. If the network changes, the local network peering restrictions update appropriately. If false, the content cache defers to PeerFilterRanges and PeerListenRanges for configuring the peering restrictions.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1019
+    },
+    "Port": {
+      "title": "Port",
+      "description": "The TCP port number on which the content cache accepts requests for uploads or downloads. Set to 0 to pick a random, available port.",
+      "type": "integer",
+      "default": 0,
+      "property_order": 1020
+    },
+    "PublicRanges": {
+      "title": "Public ranges",
+      "description": "An array of dictionaries describing a range of public IP addresses that the cloud servers should use for matching clients to content caches.",
+      "type": "array",
+      "property_order": 1021,
+      "items": {
+        "title": "Public range",
+        "type": "object",
+        "required": [
+          "first",
+          "last"
+        ],
+        "properties": {
+          "first": {
+            "title": "First",
+            "description": "The first IP address in the range.",
+            "type": "string",
+            "property_order": 1001
+          },
+          "last": {
+            "title": "Last",
+            "description": "The last IP address in the range.",
+            "type": "string",
+            "property_order": 1002
+          },
+          "type": {
+            "title": "Type",
+            "description": "The IP address type.",
+            "type": "string",
+            "enum": [
+              "IPv4",
+              "IPv6"
+            ],
+            "default": "IPv4",
+            "property_order": 1000,
+            "options": {
+              "enum_titles": [
+                "I pv4",
+                "I pv6"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

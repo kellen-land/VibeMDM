@@ -1,0 +1,178 @@
+{
+  "title": "Proxies",
+  "description": "Sets HTTP, HTTPS, SOCKS and automatic (PAC) proxies for the network services on the Mac.",
+  "__id": "com.apple.SystemConfiguration",
+  "__payloadtype": "com.apple.SystemConfiguration",
+  "__platform": "macos",
+  "__category": "Network",
+  "__order": 50,
+  "__multiple": false,
+  "__channels": [
+    "device"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "Proxies"
+  ],
+  "properties": {
+    "Proxies": {
+      "title": "Proxies",
+      "description": "The dictionary containing all the proxies for this device.",
+      "type": "object",
+      "property_order": 1000,
+      "properties": {
+        "ExceptionsList": {
+          "title": "Exceptions list",
+          "description": "The list of hosts and domains that should bypass proxy settings.",
+          "type": "array",
+          "property_order": 1023,
+          "items": {
+            "title": "Exception",
+            "type": "string"
+          }
+        },
+        "FTPEnable": {
+          "title": "FTP enable",
+          "description": "If true, enables FTP proxy.",
+          "type": "integer",
+          "property_order": 1000
+        },
+        "FTPPassive": {
+          "title": "FTP passive",
+          "description": "If true, enables passive FTP mode.",
+          "type": "integer",
+          "property_order": 1001
+        },
+        "FTPPort": {
+          "title": "FTP port",
+          "description": "The FTP proxy port.",
+          "type": "integer",
+          "property_order": 1002
+        },
+        "FTPProxy": {
+          "title": "FTP proxy",
+          "description": "The host name or IP address for the FTP proxy.",
+          "type": "string",
+          "property_order": 1003
+        },
+        "FallBackAllowed": {
+          "title": "Fall back allowed",
+          "description": "If 1, enables fallback. Default is 1.\n\nFor managed devices, if not supplied, the default is 0.",
+          "type": "integer",
+          "property_order": 1022
+        },
+        "GopherEnable": {
+          "title": "Gopher enable",
+          "description": "If true, enables gopher proxy.",
+          "type": "integer",
+          "property_order": 1004
+        },
+        "GopherPort": {
+          "title": "Gopher port",
+          "description": "The gopher proxy port.",
+          "type": "integer",
+          "property_order": 1005
+        },
+        "GopherProxy": {
+          "title": "Gopher proxy",
+          "description": "The host name or IP address for the gopher proxy.",
+          "type": "string",
+          "property_order": 1006
+        },
+        "HTTPEnable": {
+          "title": "HTTP enable",
+          "description": "If true, enables web proxy.",
+          "type": "integer",
+          "property_order": 1007
+        },
+        "HTTPPort": {
+          "title": "HTTP port",
+          "description": "The web proxy port.",
+          "type": "integer",
+          "property_order": 1008
+        },
+        "HTTPProxy": {
+          "title": "HTTP proxy",
+          "description": "The host name or IP address for the web proxy.",
+          "type": "string",
+          "property_order": 1009
+        },
+        "HTTPSEnable": {
+          "title": "HTTPS enable",
+          "description": "If true, enables secure web proxy.",
+          "type": "integer",
+          "property_order": 1010
+        },
+        "HTTPSPort": {
+          "title": "HTTPS port",
+          "description": "The secure web proxy port.",
+          "type": "integer",
+          "property_order": 1011
+        },
+        "HTTPSProxy": {
+          "title": "HTTPS proxy",
+          "description": "The host name or IP address for the secure web proxy.",
+          "type": "string",
+          "property_order": 1012
+        },
+        "ProxyAutoConfigEnable": {
+          "title": "Proxy auto config enable",
+          "description": "If true, enables automatic proxy configuration.",
+          "type": "integer",
+          "property_order": 1013
+        },
+        "ProxyAutoConfigURLString": {
+          "title": "Proxy auto config URL string",
+          "description": "The automatic proxy configuration URL.",
+          "type": "string",
+          "property_order": 1014
+        },
+        "ProxyCaptiveLoginAllowed": {
+          "title": "Proxy captive login allowed",
+          "description": "If 1, allows client to log into captive portal network.",
+          "type": "integer",
+          "property_order": 1015
+        },
+        "RTSPEnable": {
+          "title": "RTSP enable",
+          "description": "If true, enable streaming proxy.",
+          "type": "integer",
+          "property_order": 1016
+        },
+        "RTSPPort": {
+          "title": "RTSP port",
+          "description": "The streaming proxy port.",
+          "type": "integer",
+          "property_order": 1017
+        },
+        "RTSPProxy": {
+          "title": "RTSP proxy",
+          "description": "The host name or IP address for the streaming proxy.",
+          "type": "string",
+          "property_order": 1018
+        },
+        "SOCKSEnable": {
+          "title": "SOCKS enable",
+          "description": "If true, enable the SOCKS proxy.",
+          "type": "integer",
+          "property_order": 1019
+        },
+        "SOCKSPortinteger": {
+          "title": "SOCKS portinteger",
+          "description": "The SOCKS proxy port.",
+          "type": "integer",
+          "property_order": 1020
+        },
+        "SOCKSProxy": {
+          "title": "SOCKS proxy",
+          "description": "The host name or IP address for the SOCKS proxy.",
+          "type": "string",
+          "property_order": 1021
+        }
+      }
+    }
+  }
+}

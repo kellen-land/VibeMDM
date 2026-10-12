@@ -1,0 +1,79 @@
+{
+  "title": "Global HTTP Proxy",
+  "description": "Sends all HTTP traffic through a proxy. Supervised only.",
+  "__id": "com.apple.proxy.http.global",
+  "__payloadtype": "com.apple.proxy.http.global",
+  "__platform": "ios",
+  "__category": "Network",
+  "__order": 60,
+  "__multiple": false,
+  "__supervised": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "ProxyCaptiveLoginAllowed": {
+      "title": "Proxy bypass allowed",
+      "description": "If true, allows the device to bypass the proxy server to display the login page for captive networks.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1007
+    },
+    "ProxyPACFallbackAllowed": {
+      "title": "Proxy PAC fallback allowed",
+      "description": "If true, allows connecting directly to the destination if the proxy autoconfiguration (PAC) file is unreachable.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1006
+    },
+    "ProxyPACURL": {
+      "title": "Proxy PAC URL",
+      "description": "The URL of the PAC file that defines the proxy configuration. Starting in iOS 13 and macOS 10.15, only URLs that begin with http:// or https:// are allowed. This is only used if ProxyType is set to Automatic, and is ignored if ProxyType is set to Manual.",
+      "type": "string",
+      "property_order": 1005
+    },
+    "ProxyPassword": {
+      "title": "Proxy password",
+      "description": "The password used to authenticate to the proxy server. The device only uses this if ProxyType is set to Manual, and ignores it if ProxyType is set to Automatic.",
+      "type": "string",
+      "property_order": 1004,
+      "x-secret": true
+    },
+    "ProxyServer": {
+      "title": "Proxy server",
+      "description": "The proxy server's network address. The device requires this if ProxyType is set to Manual, and ignores it if ProxyType is set to Automatic.",
+      "type": "string",
+      "property_order": 1001
+    },
+    "ProxyServerPort": {
+      "title": "Proxy server port",
+      "description": "The proxy server's port number. The device requires this if ProxyType is set to Manual, and ignores this if ProxyType is set to Automatic.",
+      "type": "integer",
+      "property_order": 1002
+    },
+    "ProxyType": {
+      "title": "Proxy type",
+      "description": "The proxy type. For a manual proxy type, the profile contains the proxy server address, including its port, and optionally a user name and password. For an auto proxy type, you can enter a PAC URL.",
+      "type": "string",
+      "enum": [
+        "Manual",
+        "Auto"
+      ],
+      "default": "Manual",
+      "property_order": 1000,
+      "options": {
+        "enum_titles": [
+          "Manual",
+          "Auto"
+        ]
+      }
+    },
+    "ProxyUsername": {
+      "title": "Proxy username",
+      "description": "The user name used to authenticate to the proxy server. The device only uses this if ProxyType is set to Manual, and ignores it if ProxyType is set to Automatic.",
+      "type": "string",
+      "property_order": 1003
+    }
+  }
+}

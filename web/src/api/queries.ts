@@ -789,5 +789,10 @@ export function useMobileDeviceProfileDeployments(id: string | undefined) {
 }
 
 export function useMobilePayloads() {
-  return useQuery({ queryKey: qk.mobilePayloads, queryFn: () => api.get<ListResponse<MobilePayloadDef>>('/api/v1/mobile-device-payloads'), staleTime: Infinity })
+  return usePayloadEditors('ios')
+}
+
+/** The payload editors for Computer (macos) or Mobile Device (ios) Configuration Profiles. */
+export function usePayloadEditors(platform: 'ios' | 'macos') {
+  return useQuery({ queryKey: [...qk.mobilePayloads, platform], queryFn: () => api.get<ListResponse<MobilePayloadDef>>('/api/v1/profile-payloads', { query: { platform } }), staleTime: Infinity })
 }

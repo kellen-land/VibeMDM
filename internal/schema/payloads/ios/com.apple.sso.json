@@ -1,0 +1,85 @@
+{
+  "title": "Single Sign-On",
+  "description": "Kerberos single sign-on for apps and URLs (legacy; use Single Sign-On Extensions on newer devices).",
+  "__id": "com.apple.sso",
+  "__payloadtype": "com.apple.sso",
+  "__platform": "ios",
+  "__category": "Single Sign-On",
+  "__order": 30,
+  "__multiple": false,
+  "__deprecated": "26.0",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "Name"
+  ],
+  "properties": {
+    "Kerberos": {
+      "title": "Kerberos",
+      "description": "The Kerberos dictionary.",
+      "type": "object",
+      "required": [
+        "Realm"
+      ],
+      "property_order": 1001,
+      "properties": {
+        "AppIdentifierMatches": {
+          "title": "app identifier matches",
+          "description": "The list of app identifiers that the system allows to use this login. If this field missing, the system matches all app identifiers with this login.\n\nDon't set an empty array. The array needs to contain strings that match App Bundle IDs. These strings can be exact matches such as com.mycompany.myapp, or they may specify a prefix match on the Bundle ID by using the \\* wildcard character. The wildcard character needs to appear after a period (.), and may only appear once, at the end of the string, for example, com.mycompany.\\*.",
+          "type": "array",
+          "property_order": 1004,
+          "items": {
+            "title": "app identifier match",
+            "type": "string"
+          }
+        },
+        "PayloadCertificateUUID": {
+          "title": "Payload certificate UUID",
+          "description": "The PayloadUUID of an identity certificate payload that the system can use to renew the Kerberos credential without user interaction. Set the payload type to either com.apple.security.pkcs12 or com.apple.security.scep in the certificate payload. The configuration file needs to contain both the SSO payload and the identity certificate payload.",
+          "type": "string",
+          "format": "payload-ref",
+          "property_order": 1001,
+          "x-ref-types": [
+            "com.apple.security.pkcs1",
+            "com.apple.security.root",
+            "com.apple.security.pem",
+            "com.apple.security.pkcs12",
+            "com.apple.security.scep",
+            "com.apple.security.acme",
+            "com.apple.ADCertificate.managed"
+          ]
+        },
+        "PrincipalName": {
+          "title": "Principal name",
+          "description": "The principal name. If not provided, the system prompts the user for one during profile installation. Required for MDM installation.",
+          "type": "string",
+          "property_order": 1000
+        },
+        "Realm": {
+          "title": "Realm",
+          "description": "The properly capitalized realm name.",
+          "type": "string",
+          "property_order": 1002
+        },
+        "URLPrefixMatches": {
+          "title": "URL prefix matches",
+          "description": "The list of URL prefixes to match in order to use this account for Kerberos authentication over HTTP. If this key is missing, the system makes the account eligible to match all http:// and https:// URLs.\n\nBegin the URL matching patterns with either http:// or https://. The system performs a simple string match, so the URL prefix http://www.apple.com/ doesn't match http://www.apple.com:80/. However, if a matching pattern doesn't end in /, the system automatically append a / to it.",
+          "type": "array",
+          "property_order": 1003,
+          "items": {
+            "title": "URL prefix match",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Name": {
+      "title": "Name",
+      "description": "The human-readable name for the account.",
+      "type": "string",
+      "property_order": 1000
+    }
+  }
+}

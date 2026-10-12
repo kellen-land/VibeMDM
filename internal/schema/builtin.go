@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-//go:embed builtin/*.json mobile/*.json
+//go:embed builtin/*.json payloads/ios/*.json payloads/macos/*.json
 var builtinFS embed.FS
 
 // Builtin is a schema VibeMDM ships (written for VibeMDM from each project's

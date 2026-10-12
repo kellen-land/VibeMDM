@@ -1,0 +1,72 @@
+{
+  "title": "AirPrint",
+  "description": "Adds AirPrint printers so users can print without finding them on the network.",
+  "__id": "com.apple.airprint",
+  "__payloadtype": "com.apple.airprint",
+  "__platform": "ios",
+  "__category": "General",
+  "__order": 20,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "AirPrint"
+  ],
+  "properties": {
+    "AirPrint": {
+      "title": "Printers",
+      "description": "AirPrint printers shown to the user.",
+      "type": "array",
+      "property_order": 10,
+      "items": {
+        "title": "Printer",
+        "type": "object",
+        "required": [
+          "IPAddress",
+          "ResourcePath"
+        ],
+        "properties": {
+          "ForceTLS": {
+            "title": "Require TLS",
+            "description": "On secures the connection with TLS. iOS 11+.",
+            "type": "boolean",
+            "default": false,
+            "property_order": 4
+          },
+          "IPAddress": {
+            "title": "Address",
+            "description": "IP address or host name of the printer.",
+            "type": "string",
+            "property_order": 1,
+            "options": {
+              "inputAttributes": {
+                "placeholder": "printer.example.com"
+              }
+            }
+          },
+          "Port": {
+            "title": "Port",
+            "description": "Printer port. iOS 11+.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 65535,
+            "property_order": 3
+          },
+          "ResourcePath": {
+            "title": "Resource path",
+            "description": "The printer's rp value from Bonjour.",
+            "type": "string",
+            "property_order": 2,
+            "options": {
+              "inputAttributes": {
+                "placeholder": "ipp/print"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

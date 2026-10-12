@@ -1,0 +1,65 @@
+{
+  "title": "Google Account",
+  "description": "Adds a Google account; the user signs in to finish setting it up.",
+  "__id": "com.apple.google-oauth",
+  "__payloadtype": "com.apple.google-oauth",
+  "__platform": "ios",
+  "__category": "Accounts",
+  "__order": 30,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "EmailAddress"
+  ],
+  "properties": {
+    "AccountDescription": {
+      "title": "Account description",
+      "description": "A user-visible description of the Google account, shown in the Mail and Settings apps.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "AccountName": {
+      "title": "Account name",
+      "description": "The user's full name for the Google account. This name appears in sent messages.",
+      "type": "string",
+      "property_order": 1001
+    },
+    "CommunicationServiceRules": {
+      "title": "Communication service rules",
+      "description": "The communication service handler rules for this account.",
+      "type": "object",
+      "property_order": 1003,
+      "properties": {
+        "DefaultServiceHandlers": {
+          "title": "Default service handlers",
+          "description": "A dictionary that defines which app to use for audio calls from this account.",
+          "type": "object",
+          "property_order": 1000,
+          "properties": {
+            "AudioCall": {
+              "title": "App for audio calls",
+              "description": "The bundle identifier for the default application that handles audio calls to contacts from this account.",
+              "type": "string",
+              "property_order": 1000
+            }
+          }
+        }
+      }
+    },
+    "EmailAddress": {
+      "title": "Email address",
+      "description": "The full Google email address for the account.",
+      "type": "string",
+      "property_order": 1002
+    },
+    "VPNUUID": {
+      "title": "VPNUUID",
+      "description": "The VPNUUID of the per-app VPN the account uses for network communication.",
+      "type": "string",
+      "property_order": 1004
+    }
+  }
+}

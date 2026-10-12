@@ -1,0 +1,306 @@
+{
+  "title": "Content Filter",
+  "description": "Filters web content with Apple's built-in filter (iOS) or a filter app's network extension.",
+  "__id": "com.apple.webcontent-filter",
+  "__payloadtype": "com.apple.webcontent-filter",
+  "__platform": "ios",
+  "__category": "Security",
+  "__order": 100,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "FilterType"
+  ],
+  "properties": {
+    "AllowListBookmarks": {
+      "title": "Only allow these sites",
+      "description": "If set, the device can visit only these sites, shown as bookmarks. iOS 14.5+.",
+      "type": "array",
+      "property_order": 14,
+      "items": {
+        "title": "Site",
+        "type": "object",
+        "required": [
+          "URL",
+          "Title"
+        ],
+        "properties": {
+          "Title": {
+            "title": "Title",
+            "description": "Bookmark name.",
+            "type": "string",
+            "property_order": 2
+          },
+          "URL": {
+            "title": "URL",
+            "description": "The URL of the bookmark in the allow list.",
+            "type": "string",
+            "property_order": 1,
+            "options": {
+              "inputAttributes": {
+                "placeholder": "https://example.com"
+              }
+            }
+          }
+        }
+      }
+    },
+    "AutoFilterEnabled": {
+      "title": "Limit adult websites",
+      "description": "On filters adult content automatically.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 10
+    },
+    "BlacklistedURLs": {
+      "title": "Blacklisted UR ls",
+      "description": "Use DenyListURLs instead.",
+      "type": "array",
+      "property_order": 1004,
+      "items": {
+        "title": "Blacklisted url items",
+        "type": "string"
+      },
+      "x-deprecated": "iOS 14.5"
+    },
+    "ContentFilterUUID": {
+      "title": "Content filter UUID",
+      "description": "A globally unique identifier for this content filter configuration. The content filter processes network traffic for managed apps with the same ContentFilterUUID in their app attributes. Use when FilterType is Plugin.This key must be present for unsupervised devices and user enrollment.",
+      "type": "string",
+      "property_order": 1025
+    },
+    "DenyListURLs": {
+      "title": "Always block",
+      "description": "Sites that are always blocked (up to 500). iOS 14.5+.",
+      "type": "array",
+      "property_order": 12,
+      "items": {
+        "title": "Denylisted url items",
+        "type": "string"
+      }
+    },
+    "FilterBrowsers": {
+      "title": "Filter browsers",
+      "description": "If true, the system enables filtering WebKit traffic. Use when FilterType is Plugin.\n\n> Note:\n> At least one of FilterBrowsers or FilterSockets needs to be true.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1017
+    },
+    "FilterDataProviderBundleIdentifier": {
+      "title": "Filter data provider bundle identifier",
+      "description": "The bundle identifier string of the filter data provider system extension. This string identifies the filter data provider when the filter starts running. Required if FilterSockets is true.",
+      "type": "string",
+      "property_order": 1020
+    },
+    "FilterSockets": {
+      "title": "Filter sockets",
+      "description": "If true, enables the filtering of socket traffic. Use when FilterType is Plugin.\n\n> Note:\n> At least one of FilterBrowsers or FilterSockets needs to be true.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1018
+    },
+    "FilterType": {
+      "title": "Filter type",
+      "description": "The built-in web filter.",
+      "type": "string",
+      "enum": [
+        "BuiltIn",
+        "Plugin"
+      ],
+      "default": "BuiltIn",
+      "property_order": 1,
+      "options": {
+        "enum_titles": [
+          "Built in",
+          "Plugin"
+        ]
+      }
+    },
+    "FilterURLs": {
+      "title": "Filter UR ls",
+      "description": "If true, the system filters URL requests. Use when FilterType is Plugin.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1026,
+      "x-os": "iOS 26.0+"
+    },
+    "HideDenyListURLs": {
+      "title": "Hide the block list in Settings",
+      "description": "On hides the blocked sites in the profile details. iOS 18+.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 13,
+      "x-os": "iOS 18.0+"
+    },
+    "Organization": {
+      "title": "Organization",
+      "description": "The organization string to pass to the third-party plug-in. Use when FilterType is Plugin.",
+      "type": "string",
+      "property_order": 1015
+    },
+    "Password": {
+      "title": "Password",
+      "description": "The password for the service. Use when FilterType is Plugin.",
+      "type": "string",
+      "property_order": 1013,
+      "x-secret": true
+    },
+    "PayloadCertificateUUID": {
+      "title": "Certificate UUID",
+      "description": "The UUID of the certificate payload within the same profile that the system uses to authenticate the user. Use when FilterType is Plugin.",
+      "type": "string",
+      "format": "payload-ref",
+      "property_order": 1014,
+      "x-ref-types": [
+        "com.apple.security.pkcs1",
+        "com.apple.security.root",
+        "com.apple.security.pem",
+        "com.apple.security.pkcs12",
+        "com.apple.security.scep",
+        "com.apple.security.acme",
+        "com.apple.ADCertificate.managed"
+      ]
+    },
+    "PermittedURLs": {
+      "title": "Always allow",
+      "description": "Sites allowed even when adult content is limited.",
+      "type": "array",
+      "property_order": 11,
+      "items": {
+        "title": "Permitted url items",
+        "type": "string"
+      }
+    },
+    "PluginBundleID": {
+      "title": "Plugin bundle ID",
+      "description": "The bundle ID of the plug-in that provides filtering service. Required when FilterType is Plugin. Otherwise, it ignores this value. Consult your filtering solution vendor to determine what to specify for this value. Required when FilterType is Plugin.",
+      "type": "string",
+      "property_order": 1010
+    },
+    "SafariHistoryRetentionEnabled": {
+      "title": "Safari history retention enabled",
+      "description": "If true, this payload enforces a policy which requires retention of browsing history. This causes Safari to disable clearing of browsing history, and prevents the use of private browsing mode because that mode doesn't keep browsing history.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1001,
+      "x-supervised": true,
+      "x-os": "iOS 26.0+"
+    },
+    "ServerAddress": {
+      "title": "Server address",
+      "description": "The server address, which may be the IP address, hostname, or URL. Use when FilterType is Plugin.",
+      "type": "string",
+      "property_order": 1011
+    },
+    "URLFilterParameters": {
+      "title": "URL filter parameters",
+      "description": "A dictionary containing URL filter parameters. Required when FilterURLs is true.",
+      "type": "object",
+      "required": [
+        "URLFilterControlProviderBundleIdentifier",
+        "PIRServerURL",
+        "PIRPrivacyPassIssuerURL",
+        "PIRAuthenticationToken"
+      ],
+      "property_order": 1027,
+      "properties": {
+        "PIRAuthenticationToken": {
+          "title": "Authentication token",
+          "description": "The per-user authentication token string, which is an HTTP bearer token for the person using your app. The system uses this token to attest that it is a valid user when requesting anonymous authentication tokens for PIR exchanges.",
+          "type": "string",
+          "property_order": 1004
+        },
+        "PIRPrivacyPassIssuerURL": {
+          "title": "Privacy pass issuer URL",
+          "description": "The URL containing the domain name of Privacy Pass Issuer.",
+          "type": "string",
+          "property_order": 1003
+        },
+        "PIRServerURL": {
+          "title": "Private information retrieval server URL",
+          "description": "The URL containing the domain name of the private information retrieval server.",
+          "type": "string",
+          "property_order": 1002
+        },
+        "URLFilterControlProviderBundleIdentifier": {
+          "title": "URL filter control provider bundle identifier",
+          "description": "The bundle identifier string of the URL filter control provider app extension. The system uses this string to identify the URL filter control provider when the filter starts running.",
+          "type": "string",
+          "property_order": 1001
+        },
+        "URLFilterControlProviderDesignatedRequirement": {
+          "title": "URL filter control provider designated requirement",
+          "description": "The designated requirement string in the code signature of the URL filter control provider app extension. The system uses this string to identify the URL filter control provider when the filter starts running. Required in macOS.",
+          "type": "string",
+          "property_order": 1000
+        },
+        "URLFilterFailClosed": {
+          "title": "URL filter fail closed",
+          "description": "If true, the system blocks URLs if the filter is enabled, but it fails to make any filtering decision; for example, if there's a communication failure with the PIR server. If false, the system allows URLs if the filter is enabled, but it fails to make any filtering decision.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1005
+        },
+        "URLPrefilterFetchFrequency": {
+          "title": "URL prefilter fetch frequency",
+          "description": "The time interval in seconds that the system uses to periodically run the NEURLFilterControlProvider app extension. The default value is 86400 seconds (1 day). The minimum allowed value is 2700 seconds (45 minutes). The system allows NEURLFilterControlProvider implementations to download prefilter Bloom filter data onto the device periodically at the specified interval. Implementations need to allow for a slight difference between the scheduled time and the actual runtime of the task, due to the scheduling mechanism on the system.",
+          "type": "integer",
+          "default": 86400,
+          "minimum": 2700,
+          "property_order": 1006
+        }
+      },
+      "x-os": "iOS 26.0+"
+    },
+    "UserDefinedName": {
+      "title": "Name",
+      "description": "Name shown in Settings.",
+      "type": "string",
+      "property_order": 2
+    },
+    "UserName": {
+      "title": "Username",
+      "description": "The user name for the service. Use when FilterType is Plugin.",
+      "type": "string",
+      "property_order": 1012
+    },
+    "VendorConfig": {
+      "title": "Vendor config",
+      "description": "The custom dictionary that the filtering service plug-in needs. Use when FilterType is Plugin.",
+      "type": "object",
+      "property_order": 1016
+    },
+    "WhitelistedBookmarks": {
+      "title": "White list",
+      "description": "Use AllowListBookmarks instead.",
+      "type": "array",
+      "property_order": 1007,
+      "items": {
+        "title": "Identifier",
+        "type": "object",
+        "required": [
+          "URL",
+          "Title"
+        ],
+        "properties": {
+          "Title": {
+            "title": "Title",
+            "description": "The title of the bookmark.",
+            "type": "string",
+            "property_order": 1001
+          },
+          "URL": {
+            "title": "URL",
+            "description": "The URL of the bookmark in the allow list.",
+            "type": "string",
+            "property_order": 1000
+          }
+        }
+      },
+      "x-deprecated": "iOS 14.5"
+    }
+  }
+}

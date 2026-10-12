@@ -1,0 +1,32 @@
+{
+  "title": "Time Server",
+  "description": "Sets the network time server and time zone.",
+  "__id": "com.apple.MCX(TimeServer)",
+  "__payloadtype": "com.apple.MCX",
+  "__platform": "macos",
+  "__category": "System",
+  "__order": 40,
+  "__multiple": false,
+  "__channels": [
+    "device"
+  ],
+  "__jamf": "Date & Time",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "timeServer": {
+      "title": "Time server",
+      "description": "The NTP server to connect to. In macOS 10.13 and later, only one time server is supported.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "timeZone": {
+      "title": "Time zone",
+      "description": "The time zone path location string in /usr/share/zoneinfo/; for example, America/Denver or Zulu.",
+      "type": "string",
+      "property_order": 1001
+    }
+  }
+}

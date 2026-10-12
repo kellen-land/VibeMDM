@@ -1,5 +1,5 @@
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { AlertCircle, ExternalLink, FileUp, Info, Plus, Trash2, X } from 'lucide-react'
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { AlertCircle, Eye, EyeOff, ExternalLink, FileUp, Info, Plus, Trash2, X } from 'lucide-react'
 import type { SchemaFieldError, SchemaNode, SchemaValues } from '../../api/types'
 import { Button } from '../ui/Button'
 import { Input, Select } from '../ui/Input'
@@ -24,6 +24,16 @@ import {
   searchText,
 } from './schema'
 
+/** A payload elsewhere in the same profile that a "payload-ref" field (e.g. a Wi-Fi network's certificate) can point to. */
+export interface PayloadRefTarget {
+  uuid: string
+  type: string
+  label: string
+}
+
+/** Payload editors provide the profile's other payloads to reference fields. */
+export const PayloadRefContext = createContext<PayloadRefTarget[]>([])
+
 export interface SchemaFormProps {
   schema: SchemaNode
   value: SchemaValues
@@ -43,8 +53,9 @@ export interface SchemaFormProps {
  */
 export function SchemaForm({ schema, value, onChange, errors, disabled, exclude, toolbar, className }: SchemaFormProps) {
   const [q, setQ] = useState('')
-  const [onlySet, setOnlySet] = useState(false)
   const keys = useMemo(() => orderedKeys(schema).filter((k) => !exclude?.includes(k)), [schema, exclude])
+  // Long forms that already have values open on what is configured.
+  const [onlySet, setOnlySet] = useState(() => keys.length > 12 && keys.some((k) => isSet(value[k])))
   const index = useMemo(() => Object.fromEntries(keys.map((k) => [k, searchText(k, schema.properties![k])])), [keys, schema])
   const needle = q.trim().toLowerCase()
   const shown = keys.filter((k) => (!needle || index[k].includes(needle)) && (!onlySet || isSet(value[k])))
@@ -214,6 +225,7 @@ function FieldLabel({
           )}
         </span>
         {node.title && node.title !== name && <code className="rounded bg-surface-sunken px-1 py-px font-mono text-[11px] text-ink-muted">{name}</code>}
+        <FieldNotes node={node} />
         {info && (
           <span className="inline-flex cursor-help text-ink-faint hover:text-ink-muted" title={info} aria-label={info} tabIndex={0} role="note">
             <Info className="size-3.5" aria-hidden="true" />
@@ -236,7 +248,7 @@ function FieldLabel({
           </span>
         )}
       </div>
-      {node.description && <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-ink-muted">{node.description}</p>}
+      {node.description && <Description text={node.description} />}
       {node.links && node.links.length > 0 && (
         <p className="mt-1 flex flex-wrap gap-x-3 text-xs">
           {node.links
@@ -248,6 +260,47 @@ function FieldLabel({
               </a>
             ))}
         </p>
+      )}
+    </div>
+  )
+}
+
+/** Quiet notes from Apple's schema: supervision, the OS version a key needs, deprecation, level. */
+function FieldNotes({ node }: { node: SchemaNode }) {
+  const notes = [
+    node['x-supervised'] && 'Supervised',
+    node['x-os'],
+    node['x-channel'] === 'user' && 'User level only',
+    node['x-channel'] === 'device' && 'Computer level only',
+  ].filter(Boolean) as string[]
+  if (!notes.length && !node['x-deprecated']) return null
+  return (
+    <>
+      {notes.map((n) => (
+        <span key={n} className="rounded border border-line px-1 py-px text-[10px] leading-tight text-ink-muted">
+          {n}
+        </span>
+      ))}
+      {node['x-deprecated'] && (
+        <span className="rounded border border-warning/40 px-1 py-px text-[10px] leading-tight text-warning" title={`Deprecated by Apple in ${node['x-deprecated']}`}>
+          Deprecated
+        </span>
+      )}
+    </>
+  )
+}
+
+/** Descriptions longer than two lines are clamped, with "More" to read the rest. */
+function Description({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  const long = text.length > 180 || text.split('\n').length > 2
+  return (
+    <div className="mt-1 text-xs leading-relaxed text-ink-muted">
+      <p className={cn('whitespace-pre-line', long && !open && 'line-clamp-2')}>{text}</p>
+      {long && (
+        <button type="button" onClick={() => setOpen(!open)} className="rounded text-[11px] text-accent-700 hover:underline focus-ring dark:text-accent-300">
+          {open ? 'Less' : 'More'}
+        </button>
       )}
     </div>
   )
@@ -286,10 +339,16 @@ function ValueEditor(props: EditorProps) {
       return <NumberEditor {...props} />
     case 'array':
       return <ArrayEditor {...props} />
-    case 'object':
+    case 'object': {
+      const add = typeof node.additionalProperties === 'object' ? node.additionalProperties : undefined
+      if (add) return <MapEditor {...props} entry={add} />
       return node.properties && Object.keys(node.properties).length > 0 ? <ObjectEditor {...props} /> : <KeyValueEditor {...props} />
+    }
     default:
-      return node.format === 'data' ? <DataEditor {...props} /> : <StringEditor {...props} />
+      if (node.format === 'data') return <DataEditor {...props} />
+      if (node.format === 'payload-ref') return <RefEditor {...props} />
+      if (node.format === 'date-time') return <DateEditor {...props} />
+      return <StringEditor {...props} />
   }
 }
 
@@ -422,22 +481,69 @@ function NumberEditor({ node, value, onChange, disabled, label }: EditorProps) {
   )
 }
 
+/** format "payload-ref": pick another payload in this profile (its PayloadUUID is stored). */
+function RefEditor({ node, value, onChange, disabled, label }: EditorProps) {
+  const targets = useContext(PayloadRefContext).filter((t) => !node['x-ref-types']?.length || node['x-ref-types'].includes(t.type))
+  const v = typeof value === 'string' ? value : ''
+  const known = targets.some((t) => t.uuid.toUpperCase() === v.toUpperCase())
+  return (
+    <div className="flex flex-col gap-1">
+      <Select value={known ? targets.find((t) => t.uuid.toUpperCase() === v.toUpperCase())!.uuid : v ? '__missing' : ''} disabled={disabled} aria-label={label} onChange={(e) => onChange(e.target.value || undefined)}>
+        <option value="">Not set</option>
+        {targets.map((t) => (
+          <option key={t.uuid} value={t.uuid}>
+            {t.label}
+          </option>
+        ))}
+        {v && !known && <option value="__missing">Removed payload</option>}
+      </Select>
+      {targets.length === 0 && <p className="text-[11px] text-ink-faint">Add a certificate payload (Certificate, SCEP or ACME) to this profile first.</p>}
+    </div>
+  )
+}
+
+/** format "date-time": a local date and time, sent as an ISO timestamp. */
+function DateEditor({ value, onChange, disabled, label }: EditorProps) {
+  const v = typeof value === 'string' ? value.slice(0, 16) : ''
+  return (
+    <Input
+      type="datetime-local"
+      value={v}
+      disabled={disabled}
+      aria-label={label}
+      className="max-w-60"
+      onChange={(e) => onChange(e.target.value ? new Date(e.target.value).toISOString() : undefined)}
+    />
+  )
+}
+
 function StringEditor({ node, value, onChange, disabled, label }: EditorProps) {
+  const [reveal, setReveal] = useState(false)
+  const secret = !!node['x-secret']
   const hints: string[] = []
   if (node.minLength !== undefined && node.maxLength !== undefined) hints.push(`${node.minLength}–${node.maxLength} characters`)
   else if (node.minLength !== undefined) hints.push(`at least ${node.minLength} characters`)
   else if (node.maxLength !== undefined) hints.push(`at most ${node.maxLength} characters`)
   return (
     <div className="flex flex-col gap-1">
-      <Input
-        value={typeof value === 'string' ? value : value === undefined || value === null ? '' : String(value)}
-        disabled={disabled}
-        aria-label={label}
-        maxLength={node.maxLength}
-        placeholder={node.options?.inputAttributes?.placeholder ?? 'Not set'}
-        spellCheck={false}
-        onChange={(e) => onChange(e.target.value === '' ? undefined : e.target.value)}
-      />
+      <div className="flex items-center gap-1.5">
+        <Input
+          type={secret && !reveal ? 'password' : 'text'}
+          autoComplete={secret ? 'new-password' : undefined}
+          value={typeof value === 'string' ? value : value === undefined || value === null ? '' : String(value)}
+          disabled={disabled}
+          aria-label={label}
+          maxLength={node.maxLength}
+          placeholder={node.options?.inputAttributes?.placeholder ?? 'Not set'}
+          spellCheck={false}
+          onChange={(e) => onChange(e.target.value === '' ? undefined : e.target.value)}
+        />
+        {secret && !disabled && (
+          <button type="button" onClick={() => setReveal(!reveal)} className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-ink-faint hover:bg-line/40 hover:text-ink focus-ring" aria-label={reveal ? 'Hide' : 'Show'}>
+            {reveal ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          </button>
+        )}
+      </div>
       {(hints.length > 0 || node.pattern) && (
         <p className="text-[11px] text-ink-faint">
           {hints.join(' · ')}
@@ -512,6 +618,17 @@ function DataEditor({ value, onChange, disabled, label }: EditorProps) {
 function ObjectEditor({ node, value, onChange, path, errors, disabled }: EditorProps) {
   const obj = value && typeof value === 'object' && !Array.isArray(value) ? (value as SchemaValues) : {}
   const required = node.required ?? []
+  const keys = orderedKeys(node)
+  // Big groups (EAP settings, IKEv2 parameters, …) stay folded until something in them is set.
+  const [open, setOpen] = useState(() => keys.length <= 4 || Object.keys(obj).length > 0 || errorsUnder(errors, path) > 0)
+  if (!open)
+    return (
+      <div>
+        <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
+          Show {keys.length} settings
+        </Button>
+      </div>
+    )
   const setChild = (k: string, v: unknown) => {
     const next = { ...obj }
     if (v === undefined || (typeof v === 'string' && v === '')) delete next[k]
@@ -814,6 +931,63 @@ function KeyValueEditor({ value, onChange, disabled, label }: EditorProps) {
       ) : (
         rows.length === 0 && <span className="text-xs text-ink-faint">No keys</span>
       )}
+    </div>
+  )
+}
+
+/** Objects keyed by names you choose (team IDs, bundle IDs, domains), each value edited by the entry schema. */
+function MapEditor({ node, value, onChange, path, errors, disabled, label, entry }: EditorProps & { entry: SchemaNode }) {
+  const obj = value && typeof value === 'object' && !Array.isArray(value) ? (value as SchemaValues) : {}
+  const [draft, setDraft] = useState('')
+  const keys = Object.keys(obj)
+  const emit = (next: SchemaValues) => onChange(Object.keys(next).length ? next : undefined)
+  const add = () => {
+    const k = draft.trim()
+    if (!k || k in obj) return
+    emit({ ...obj, [k]: emptyItem(entry) ?? (nodeKind(entry) === 'string' ? '' : undefined) })
+    setDraft('')
+  }
+  const keyName = entry.title && entry.title !== node.title ? entry.title : 'Key'
+  return (
+    <div className="flex flex-col gap-2">
+      {keys.map((k) => (
+        <div key={k} className="rounded-lg border border-line bg-surface-sunken/30">
+          <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-1.5">
+            <code className="truncate font-mono text-xs text-ink">{k}</code>
+            {!disabled && (
+              <Button
+                size="xs"
+                variant="ghost"
+                icon={<Trash2 />}
+                onClick={() => {
+                  const next = { ...obj }
+                  delete next[k]
+                  emit(next)
+                }}
+                aria-label={`Remove ${k}`}
+              >
+                Remove
+              </Button>
+            )}
+          </div>
+          <div className={cn(nodeKind(entry) === 'object' && entry.properties ? '' : 'p-3')}>
+            {nodeKind(entry) === 'object' && entry.properties ? (
+              <ObjectItem node={entry} value={obj[k]} onChange={(nv) => emit({ ...obj, [k]: nv ?? {} })} path={joinPath(path, k)} errors={errors} disabled={disabled} />
+            ) : (
+              <ValueEditor node={entry} value={obj[k]} onChange={(nv) => emit({ ...obj, [k]: nv })} path={joinPath(path, k)} errors={errors} disabled={disabled} label={`${label} ${k}`} noUnset />
+            )}
+          </div>
+        </div>
+      ))}
+      {!disabled && (
+        <div className="flex items-center gap-2">
+          <Input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), add())} placeholder={`${keyName}, for example a team ID`} aria-label={`${label}: new key`} className="max-w-72" spellCheck={false} />
+          <Button size="sm" icon={<Plus />} onClick={add} disabled={!draft.trim()}>
+            Add
+          </Button>
+        </div>
+      )}
+      {keys.length === 0 && disabled && <span className="text-xs text-ink-faint">None</span>}
     </div>
   )
 }

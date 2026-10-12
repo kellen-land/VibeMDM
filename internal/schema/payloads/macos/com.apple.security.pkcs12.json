@@ -1,0 +1,58 @@
+{
+  "title": "Certificate (identity)",
+  "description": "Installs a certificate with its private key (.p12 or .pfx), for example for Wi-Fi, VPN or email authentication.",
+  "__id": "com.apple.security.pkcs12",
+  "__payloadtype": "com.apple.security.pkcs12",
+  "__platform": "macos",
+  "__category": "Certificates",
+  "__order": 20,
+  "__multiple": true,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Certificate (.p12)",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "PayloadContent"
+  ],
+  "properties": {
+    "AllowAllAppsAccess": {
+      "title": "Allow all apps access",
+      "description": "If true, the system allows apps access to the private key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003
+    },
+    "KeyIsExtractable": {
+      "title": "Key is extractable",
+      "description": "If false, the system doesn't tag the private key data as extractable in the keychain.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1004
+    },
+    "Password": {
+      "title": "Password",
+      "description": "The password to the identity.",
+      "type": "string",
+      "property_order": 1002,
+      "x-secret": true
+    },
+    "PayloadCertificateFileName": {
+      "title": "File name",
+      "description": "The file name of the enclosed certificate.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "PayloadContent": {
+      "title": "Identity file",
+      "description": "The binary representation of the payload, encoded in Base64.",
+      "type": "string",
+      "format": "data",
+      "property_order": 1001
+    }
+  }
+}

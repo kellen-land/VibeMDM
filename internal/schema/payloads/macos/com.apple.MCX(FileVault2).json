@@ -1,0 +1,41 @@
+{
+  "title": "Security & Privacy: FileVault options",
+  "description": "Stops users turning FileVault off and keeps the prompt from being deferred.",
+  "__id": "com.apple.MCX(FileVault2)",
+  "__payloadtype": "com.apple.MCX",
+  "__platform": "macos",
+  "__category": "Security",
+  "__order": 31,
+  "__multiple": false,
+  "__channels": [
+    "device"
+  ],
+  "__jamf": "Security & Privacy → FileVault",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "DestroyFVKeyOnStandby": {
+      "title": "Destroy FV key on standby",
+      "description": "If true, the system won't store th FileVault key across restarts.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1002
+    },
+    "dontAllowFDEDisable": {
+      "title": "Dont allow FDE disable",
+      "description": "If true, the system won't disable FileVault.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000
+    },
+    "dontAllowFDEEnable": {
+      "title": "Dont allow FDE enable",
+      "description": "If true, the system won't enable FileVault.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    }
+  }
+}

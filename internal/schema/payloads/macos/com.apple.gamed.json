@@ -1,0 +1,52 @@
+{
+  "title": "Restrictions: Game Center",
+  "description": "Controls Game Center features (legacy Parental Controls).",
+  "__id": "com.apple.gamed",
+  "__payloadtype": "com.apple.gamed",
+  "__platform": "macos",
+  "__category": "Restrictions",
+  "__order": 80,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Restrictions → Applications",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "GKFeatureAccountModificationAllowed": {
+      "title": "GK feature account modification allowed",
+      "description": "If true, allows account modifications.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1001
+    },
+    "GKFeatureAddingGameCenterFriendsAllowed": {
+      "title": "GK feature adding Game Center friends allowed",
+      "description": "If true, allows adding Game Center friends.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1002,
+      "x-deprecated": "macOS 10.13"
+    },
+    "GKFeatureGameCenterAllowed": {
+      "title": "GK feature Game Center allowed",
+      "description": "If true, enables Game Center.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1000,
+      "x-deprecated": "macOS 10.13"
+    },
+    "GKFeatureMultiplayerGamingAllowed": {
+      "title": "GK feature multiplayer gaming allowed",
+      "description": "If true, allows multiplayer gaming.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1003,
+      "x-deprecated": "macOS 10.13"
+    }
+  }
+}

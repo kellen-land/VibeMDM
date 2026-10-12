@@ -1,0 +1,45 @@
+{
+  "title": "Certificate Preference",
+  "description": "Chooses which certificate the Mac prefers for a name or email address.",
+  "__id": "com.apple.security.certificatepreference",
+  "__payloadtype": "com.apple.security.certificatepreference",
+  "__platform": "macos",
+  "__category": "Certificates",
+  "__order": 60,
+  "__multiple": true,
+  "__channels": [
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "Name",
+    "PayloadCertificateUUID"
+  ],
+  "properties": {
+    "Name": {
+      "title": "Name",
+      "description": "An email address (in RFC 822 format) or other name for which a preferred certificate is requested.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "PayloadCertificateUUID": {
+      "title": "Payload certificate UUID",
+      "description": "The UUID of the certificate payload within the same profile to use for the identity credential.",
+      "type": "string",
+      "format": "payload-ref",
+      "property_order": 1001,
+      "x-ref-types": [
+        "com.apple.security.pkcs1",
+        "com.apple.security.root",
+        "com.apple.security.pem",
+        "com.apple.security.pkcs12",
+        "com.apple.security.scep",
+        "com.apple.security.acme",
+        "com.apple.ADCertificate.managed"
+      ]
+    }
+  }
+}

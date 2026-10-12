@@ -1,0 +1,93 @@
+{
+  "title": "APN",
+  "description": "Sets the cellular access point name (legacy; use Cellular instead).",
+  "__id": "com.apple.apn.managed",
+  "__payloadtype": "com.apple.apn.managed",
+  "__platform": "ios",
+  "__category": "Network",
+  "__order": 105,
+  "__multiple": false,
+  "__deprecated": "7.0",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "DefaultsData",
+    "DefaultsDomainName"
+  ],
+  "properties": {
+    "DefaultsData": {
+      "title": "Defaults data",
+      "description": "The list of access point names (APNs).",
+      "type": "object",
+      "required": [
+        "apns"
+      ],
+      "property_order": 1000,
+      "properties": {
+        "apns": {
+          "title": "Apns",
+          "description": "An array of APN dictionaries.",
+          "type": "array",
+          "property_order": 1000,
+          "items": {
+            "title": "Apn",
+            "type": "object",
+            "required": [
+              "apn"
+            ],
+            "properties": {
+              "apn": {
+                "title": "Apn",
+                "description": "The access point name.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "password": {
+                "title": "Password",
+                "description": "The password for the user. For obfuscation purposes, the system encodes the password. If missing, the device prompts for the password during profile installation.",
+                "type": "string",
+                "format": "data",
+                "property_order": 1002,
+                "x-secret": true
+              },
+              "proxy": {
+                "title": "Proxy",
+                "description": "The IP address or URL of the APN proxy.",
+                "type": "string",
+                "property_order": 1003
+              },
+              "proxyPort": {
+                "title": "Proxy port",
+                "description": "The port number of the APN proxy.",
+                "type": "integer",
+                "property_order": 1004
+              },
+              "username": {
+                "title": "Username",
+                "description": "The user name. If missing, the device prompts for it during profile installation.",
+                "type": "string",
+                "property_order": 1001
+              }
+            }
+          }
+        }
+      }
+    },
+    "DefaultsDomainName": {
+      "title": "Defaults domain name",
+      "description": "The domain name.",
+      "type": "string",
+      "enum": [
+        "com.apple.managedCarrier"
+      ],
+      "property_order": 1001,
+      "options": {
+        "enum_titles": [
+          "Com Apple managed carrier"
+        ]
+      }
+    }
+  }
+}

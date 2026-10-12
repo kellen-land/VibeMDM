@@ -1,0 +1,184 @@
+{
+  "title": "Single App Mode",
+  "description": "Locks the device to one app, for kiosks and shared devices.",
+  "__id": "com.apple.app.lock",
+  "__payloadtype": "com.apple.app.lock",
+  "__platform": "ios",
+  "__category": "Security",
+  "__order": 110,
+  "__multiple": false,
+  "__supervised": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "App"
+  ],
+  "properties": {
+    "App": {
+      "title": "App",
+      "description": "A dictionary that contains information about the app.",
+      "type": "object",
+      "required": [
+        "Identifier"
+      ],
+      "property_order": 10,
+      "properties": {
+        "Identifier": {
+          "title": "App bundle ID",
+          "description": "The app the device is locked to. It must be installed.",
+          "type": "string",
+          "property_order": 1,
+          "options": {
+            "inputAttributes": {
+              "placeholder": "com.example.kiosk"
+            }
+          }
+        },
+        "Options": {
+          "title": "Device options",
+          "description": "Fixed settings the user can't change.",
+          "type": "object",
+          "property_order": 2,
+          "properties": {
+            "DisableAutoLock": {
+              "title": "Disable Auto-Lock",
+              "description": "On keeps the screen awake.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 6
+            },
+            "DisableDeviceRotation": {
+              "title": "Disable rotation",
+              "description": "If true, the system disables device rotation sensing.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 2
+            },
+            "DisableRingerSwitch": {
+              "title": "Disable ringer switch",
+              "description": "If true, the system disables the ringer switch. When disabled, the ringer behavior depends on what position the switch was in when it was first disabled.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 4
+            },
+            "DisableSleepWakeButton": {
+              "title": "Disable sleep/wake button",
+              "description": "If true, the system disables the sleep/wake button.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 5
+            },
+            "DisableTouch": {
+              "title": "Disable touch screen",
+              "description": "If true, the system disables the touch screen. In tvOS, it disables the touch surface on the Apple TV Remote.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 1
+            },
+            "DisableVolumeButtons": {
+              "title": "Disable volume buttons",
+              "description": "If true, the system disables the volume buttons.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 3
+            },
+            "EnableAssistiveTouch": {
+              "title": "Turn on AssistiveTouch",
+              "description": "If true, the system enables AssistiveTouch.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 10
+            },
+            "EnableInvertColors": {
+              "title": "Turn on Invert Colors",
+              "description": "If true, the system enables Invert Colors.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 9
+            },
+            "EnableMonoAudio": {
+              "title": "Turn on Mono Audio",
+              "description": "If true, the system enables Mono Audio.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 12
+            },
+            "EnableSpeakSelection": {
+              "title": "Turn on Speak Selection",
+              "description": "If true, the system enables Speak Selection.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 11
+            },
+            "EnableVoiceControl": {
+              "title": "Turn on Voice Control",
+              "description": "iOS 13+.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 13
+            },
+            "EnableVoiceOver": {
+              "title": "Turn on VoiceOver",
+              "description": "If true, the system enables VoiceOver.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 7
+            },
+            "EnableZoom": {
+              "title": "Turn on Zoom",
+              "description": "If true, the system enables Zoom.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 8
+            }
+          }
+        },
+        "UserEnabledOptions": {
+          "title": "User can toggle",
+          "description": "Accessibility features the user may turn on and off.",
+          "type": "object",
+          "property_order": 3,
+          "properties": {
+            "AssistiveTouch": {
+              "title": "AssistiveTouch",
+              "description": "If true, the system allows the user to toggle AssistiveTouch.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 4
+            },
+            "InvertColors": {
+              "title": "Invert Colors",
+              "description": "If true, the system allows the user to toggle Invert Colors.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 3
+            },
+            "VoiceControl": {
+              "title": "Voice Control",
+              "description": "iOS 13+.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 5
+            },
+            "VoiceOver": {
+              "title": "VoiceOver",
+              "description": "If true, the system allows the user to toggle VoiceOver.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 1
+            },
+            "Zoom": {
+              "title": "Zoom",
+              "description": "If true, the system allows the user to toggle Zoom.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 2
+            }
+          }
+        }
+      }
+    }
+  }
+}

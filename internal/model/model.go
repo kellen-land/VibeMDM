@@ -313,6 +313,8 @@ type ConfigProfile struct {
 	// SchemaSource is "custom:<id>" or "builtin:<domain>" when built from a JSON schema.
 	SchemaSource string         `json:"schema_source"`
 	SchemaValues map[string]any `json:"schema_values,omitempty"`
+	// Payloads are the payload editor values (nil: uploaded .mobileconfig or Custom Settings).
+	Payloads []PayloadValues `json:"payloads"`
 }
 
 // CustomSchema is an uploaded Jamf-style external application JSON schema.
@@ -1343,11 +1345,17 @@ func (s *MobileScope) Normalize() {
 	s.Exclusions.normalize()
 }
 
-// MobilePayloadValues is one payload of a mobile profile built with the payload editors.
-type MobilePayloadValues struct {
+// PayloadValues is one payload of a profile built with the payload editors: the editor id
+// (usually the PayloadType), the payload's UUID (so other payloads can reference it) and
+// the form values.
+type PayloadValues struct {
 	Type   string         `json:"type"`
+	UUID   string         `json:"uuid,omitempty"`
 	Values map[string]any `json:"values"`
 }
+
+// MobilePayloadValues is a payload of a mobile profile.
+type MobilePayloadValues = PayloadValues
 
 // MobileConfigProfile is a Mobile Device Configuration Profile.
 type MobileConfigProfile struct {

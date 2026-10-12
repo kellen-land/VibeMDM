@@ -1,0 +1,856 @@
+{
+  "title": "Restrictions: Media",
+  "description": "Allows, makes read-only or blocks disks, disc images, CDs and DVDs.",
+  "__id": "com.apple.systemuiserver",
+  "__payloadtype": "com.apple.systemuiserver",
+  "__platform": "macos",
+  "__category": "Restrictions",
+  "__order": 40,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__deprecated": "11.0",
+  "__jamf": "Restrictions → Media",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "logout-eject": {
+      "title": "Eject at logout",
+      "description": "The media type dictionary that defines volumes to eject when the user logs out.",
+      "type": "object",
+      "property_order": 1000,
+      "properties": {
+        "all-media": {
+          "title": "All media",
+          "description": "Unused; set to an empty string.",
+          "type": "string",
+          "property_order": 1000
+        },
+        "bd": {
+          "title": "Bd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1003,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "blankbd": {
+          "title": "Blankbd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1006,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "blankcd": {
+          "title": "Blankcd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1004,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "blankdvd": {
+          "title": "Blankdvd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1005,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "cd": {
+          "title": "Cd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1001,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "disk-image": {
+          "title": "Disk image",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1008,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "dvd": {
+          "title": "Dvd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1002,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "dvdram": {
+          "title": "Dvdram",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1007,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "harddisk-external": {
+          "title": "Harddisk external",
+          "description": "A string or an array of media action strings. The hard disk-external category includes internally installed SD cards and USB flash drives.\n\nThis key is the default for media types that don't fall into other categories.",
+          "type": "array",
+          "property_order": 1010,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "harddisk-internal": {
+          "title": "Harddisk internal",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1009,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "networkdisk": {
+          "title": "Networkdisk",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1011,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "mount-controls": {
+      "title": "Media mounting",
+      "description": "The media type dictionary that controls volume mounting.",
+      "type": "object",
+      "property_order": 1001,
+      "properties": {
+        "all-media": {
+          "title": "All media",
+          "description": "Unused; set to an empty string.",
+          "type": "string",
+          "property_order": 1000
+        },
+        "bd": {
+          "title": "Bd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1003,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "blankbd": {
+          "title": "Blankbd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1006,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "blankcd": {
+          "title": "Blankcd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1004,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "blankdvd": {
+          "title": "Blankdvd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1005,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "cd": {
+          "title": "Cd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1001,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "disk-image": {
+          "title": "Disk image",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1008,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "dvd": {
+          "title": "Dvd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1002,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "dvdram": {
+          "title": "Dvdram",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1007,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "harddisk-external": {
+          "title": "Harddisk external",
+          "description": "A string or an array of media action strings. The hard disk-external category includes internally installed SD cards and USB flash drives.\n\nThis key is the default for media types that don't fall into other categories.",
+          "type": "array",
+          "property_order": 1010,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "harddisk-internal": {
+          "title": "Harddisk internal",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1009,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "networkdisk": {
+          "title": "Networkdisk",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1011,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "unmount-controls": {
+      "title": "Media unmounting",
+      "description": "The media type dictionary that controls volume unmounting.",
+      "type": "object",
+      "property_order": 1002,
+      "properties": {
+        "all-media": {
+          "title": "All media",
+          "description": "Unused; set to an empty string.",
+          "type": "string",
+          "property_order": 1000
+        },
+        "bd": {
+          "title": "Bd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1003,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "blankbd": {
+          "title": "Blankbd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1006,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "blankcd": {
+          "title": "Blankcd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1004,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "blankdvd": {
+          "title": "Blankdvd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1005,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "cd": {
+          "title": "Cd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1001,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "disk-image": {
+          "title": "Disk image",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1008,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "dvd": {
+          "title": "Dvd",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1002,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "dvdram": {
+          "title": "Dvdram",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1007,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "harddisk-external": {
+          "title": "Harddisk external",
+          "description": "A string or an array of media action strings. The hard disk-external category includes internally installed SD cards and USB flash drives.\n\nThis key is the default for media types that don't fall into other categories.",
+          "type": "array",
+          "property_order": 1010,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "harddisk-internal": {
+          "title": "Harddisk internal",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1009,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        },
+        "networkdisk": {
+          "title": "Networkdisk",
+          "description": "A media action string or an array of media action strings.",
+          "type": "array",
+          "property_order": 1011,
+          "items": {
+            "title": "Item",
+            "type": "string",
+            "enum": [
+              "authenticate",
+              "read-only",
+              "deny",
+              "eject"
+            ],
+            "options": {
+              "enum_titles": [
+                "Authenticate",
+                "Read only",
+                "Deny",
+                "Eject"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

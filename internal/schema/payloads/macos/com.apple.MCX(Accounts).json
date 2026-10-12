@@ -1,0 +1,34 @@
+{
+  "title": "Restrictions: Accounts",
+  "description": "Controls guest access and the accounts that can log in.",
+  "__id": "com.apple.MCX(Accounts)",
+  "__payloadtype": "com.apple.MCX",
+  "__platform": "macos",
+  "__category": "Restrictions",
+  "__order": 60,
+  "__multiple": true,
+  "__channels": [
+    "device"
+  ],
+  "__jamf": "Login Window / Mobility",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "DisableGuestAccount": {
+      "title": "Disable guest account",
+      "description": "If true, the system disables the guest account. This property has no effect if EnableGuestAccount is true.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    },
+    "EnableGuestAccount": {
+      "title": "Enable guest account",
+      "description": "If true, the system enables the guest account.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000
+    }
+  }
+}

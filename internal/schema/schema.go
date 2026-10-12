@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 // Node is one schema node.
@@ -47,8 +48,20 @@ type Node struct {
 	OneOf         []*Node  `json:"oneOf,omitempty"`
 	Links         []Link   `json:"links,omitempty"`
 	Options       *Options `json:"options,omitempty"`
+	// AdditionalProperties (an object schema) types the values of keys an object does not
+	// list, as in Apple's dictionaries keyed by team ID or bundle ID. Booleans are ignored.
+	RawAdditional json.RawMessage `json:"additionalProperties,omitempty"`
 
-	re *regexp.Regexp
+	// VibeMDM extensions (payload editors generated from Apple's device-management repository).
+	Supervised bool     `json:"x-supervised,omitempty"` // only on supervised devices
+	OS         string   `json:"x-os,omitempty"`         // e.g. "iOS 17.0+" when newer than the payload
+	Deprecated string   `json:"x-deprecated,omitempty"` // e.g. "macOS 13.0"
+	Secret     bool     `json:"x-secret,omitempty"`     // hidden from viewers
+	RefTypes   []string `json:"x-ref-types,omitempty"`  // format "payload-ref": allowed payload types
+	Channel    string   `json:"x-channel,omitempty"`    // macOS: "device" or "user" when only one applies
+
+	re         *regexp.Regexp
+	additional *Node
 }
 
 // Link is a documentation link shown next to a field.
@@ -103,6 +116,16 @@ func prepare(n *Node, path string, depth int) error {
 		}
 		n.re = re
 	}
+	if len(n.RawAdditional) > 0 && n.RawAdditional[0] == '{' {
+		var a Node
+		if err := json.Unmarshal(n.RawAdditional, &a); err != nil {
+			return fmt.Errorf("%s: invalid additionalProperties: %w", label(path), err)
+		}
+		if err := prepare(&a, join(path, "*"), depth+1); err != nil {
+			return err
+		}
+		n.additional = &a
+	}
 	for k, c := range n.Properties {
 		if c == nil {
 			return fmt.Errorf("%s: property %q is empty", label(path), k)
@@ -139,6 +162,9 @@ func label(path string) string {
 	}
 	return path
 }
+
+// Additional returns the schema for keys the object does not list (nil when none).
+func (n *Node) Additional() *Node { return n.additional }
 
 // Types returns the node's declared types.
 func (n *Node) Types() []string {
@@ -225,6 +251,9 @@ func validateObject(n *Node, values map[string]any, path string, errs *[]FieldEr
 	out := map[string]any{}
 	for k, v := range values {
 		child, ok := n.Properties[k]
+		if !ok && n.additional != nil && strings.TrimSpace(k) != "" {
+			child, ok = n.additional, true
+		}
 		if !ok {
 			*errs = append(*errs, FieldError{join(path, k), "is not defined by the schema"})
 			continue
@@ -364,6 +393,14 @@ func coerce(n *Node, t string, v any, path string, errs *[]FieldError) (any, str
 		if n.re != nil && !n.re.MatchString(s) {
 			return nil, "does not match the required format"
 		}
+		if n.Format == "date-time" {
+			for _, layout := range []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02T15:04", "2006-01-02"} {
+				if t, err := time.Parse(layout, strings.TrimSpace(s)); err == nil {
+					return t.UTC(), ""
+				}
+			}
+			return nil, "must be a date and time"
+		}
 		if n.Format == "data" {
 			b, err := base64.StdEncoding.DecodeString(strings.TrimSpace(s))
 			if err != nil {
@@ -423,7 +460,7 @@ func coerce(n *Node, t string, v any, path string, errs *[]FieldError) (any, str
 		if !ok {
 			return nil, "must be a group of settings"
 		}
-		if len(n.Properties) == 0 {
+		if len(n.Properties) == 0 && n.additional == nil {
 			return m, "" // free-form dictionary
 		}
 		out, _ := validateObject(n, m, path, errs)

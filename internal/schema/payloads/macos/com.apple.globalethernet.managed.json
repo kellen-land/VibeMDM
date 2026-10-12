@@ -1,0 +1,391 @@
+{
+  "title": "Ethernet (802.1X)",
+  "description": "802.1X authentication for wired Ethernet.",
+  "__id": "com.apple.globalethernet.managed",
+  "__payloadtype": "com.apple.globalethernet.managed",
+  "__platform": "macos",
+  "__category": "Network",
+  "__order": 20,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Network (Ethernet)",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "__interface"
+  ],
+  "properties": {
+    "EAPClientConfiguration": {
+      "title": "EAP client configuration",
+      "description": "The enterprise network configuration.",
+      "type": "object",
+      "required": [
+        "AcceptEAPTypes"
+      ],
+      "property_order": 1007,
+      "properties": {
+        "AcceptEAPTypes": {
+          "title": "Accept EAP types",
+          "description": "The EAP types that the system accepts. Allowed values:\n\n- 13: EAP-TLS\n- 17: LEAP\n- 18: EAP-SIM\n- 21: EAP-TTLS\n- 23: EAP-AKA\n- 25: PEAPv0/v1\n- 43: EAP-FAST\n\nFor EAP-TLS authentication without a network payload, install the necessary identity certificates and have your users select EAP-TLS mode in the 802.1X credentials dialog that appears when they connect to the network. For other EAP types, a network payload is necessary and must specify the correct settings for the network.",
+          "type": "array",
+          "property_order": 1000,
+          "items": {
+            "title": "EAP type",
+            "type": "integer",
+            "enum": [
+              13,
+              17,
+              18,
+              21,
+              23,
+              25,
+              43
+            ],
+            "options": {
+              "enum_titles": [
+                "EAP-TLS",
+                "LEAP",
+                "EAP-SIM",
+                "EAP-TTLS",
+                "EAP-AKA",
+                "PEAPv0/v1",
+                "EAP-FAST"
+              ]
+            }
+          }
+        },
+        "EAPFASTProvisionPAC": {
+          "title": "Provision PAC",
+          "description": "If 'true', allows PAC provisioning.\n\nThis value is only applicable if 'EAPFASTUsePAC' is 'true'. This value must be 'true' for EAP-FAST PAC usage to succeed because there's no other way to provision a PAC.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1013
+        },
+        "EAPFASTProvisionPACAnonymously": {
+          "title": "Provision PAC anonymously",
+          "description": "If 'true', provisions the device anonymously. Note that there are known machine-in-the-middle attacks for anonymous provisioning.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1014
+        },
+        "EAPFASTUsePAC": {
+          "title": "Use PAC",
+          "description": "If 'true', the device uses an existing PAC if it's present. Otherwise, the server must present its identity using a certificate.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1012
+        },
+        "EAPSIMNumberOfRANDs": {
+          "title": "Allow two RANDs",
+          "description": "The minimum number of RAND values to accept from the server.\nFor use with EAP-SIM only.",
+          "type": "integer",
+          "enum": [
+            2,
+            3
+          ],
+          "default": 3,
+          "property_order": 1015
+        },
+        "OneTimeUserPassword": {
+          "title": "Per-connection password",
+          "description": "If 'true', the user receives a prompt for a password each time they connect to the network.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1018
+        },
+        "OuterIdentity": {
+          "title": "Outer identity",
+          "description": "A name that hides the user's true name. The user's actual name appears only inside the encrypted tunnel. For example, you might set this to anonymous or anon, or anon@mycompany.net. It can increase security because an attacker can't see the authenticating user's name in the clear.\nThis key is only relevant to TTLS, PEAP, and EAP-FAST.\nThis field is required if 'TLSMinimumVersion' is '1.3'.",
+          "type": "string",
+          "property_order": 1011
+        },
+        "PayloadCertificateAnchorUUID": {
+          "title": "Certificate anchor UUID",
+          "description": "An array of the UUID of each certificate payload in the same profile to trust for authentication. Use this key to prevent the device from asking the user whether to trust the listed certificates. The device disables dynamic trust (the certificate dialogue) if you specify this property without also enabling 'TLSAllowTrustExceptions'.",
+          "type": "array",
+          "property_order": 1003,
+          "items": {
+            "title": "Individual certificate anchor UUID",
+            "type": "string",
+            "format": "payload-ref",
+            "x-ref-types": [
+              "com.apple.security.pkcs1",
+              "com.apple.security.root",
+              "com.apple.security.pem",
+              "com.apple.security.pkcs12",
+              "com.apple.security.scep",
+              "com.apple.security.acme",
+              "com.apple.ADCertificate.managed"
+            ]
+          }
+        },
+        "SystemModeCredentialsSource": {
+          "title": "System mode credentials source",
+          "description": "Set this string to 'ActiveDirectory' to use the AD computer name and password credentials.\nIf using this property, you can't use 'SystemModeUseOpenDirectoryCredentials'.",
+          "type": "string",
+          "property_order": 1016
+        },
+        "SystemModeUseOpenDirectoryCredentials": {
+          "title": "System mode use open directory credentials",
+          "description": "If 'true', the system mode connection tries to use the Open Directory credentials.\nIf using this property, you can't use 'SystemModeCredentialsSource'.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1017
+        },
+        "TLSAllowTrustExceptions": {
+          "title": "Allow trust exceptions",
+          "description": "If 'true', allows a dynamic trust decision by the user. The dynamic trust is the certificate dialogue that appears when the system doesn't trust a certificate.\nIf 'false', the authentication fails if the system doesn't already trust the certificate.\nAs of iOS 8, Apple no longer supports this key.",
+          "type": "boolean",
+          "default": true,
+          "property_order": 1006
+        },
+        "TLSCertificateIsRequired": {
+          "title": "TLS certificate is required",
+          "description": "If 'true', allows for two-factor authentication for EAP-TTLS, PEAP, or EAP-FAST. If 'false', allows for zero-factor authentication for EAP-TLS.\nIf you don't specify a value, the default is 'true' for EAP-TLS, and 'false' for other EAP types.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1007
+        },
+        "TLSMaximumVersion": {
+          "title": "TLS maximum version",
+          "description": "The maximum TLS version for EAP authentication.",
+          "type": "string",
+          "enum": [
+            "1.0",
+            "1.1",
+            "1.2",
+            "1.3"
+          ],
+          "default": "1.2",
+          "property_order": 1010,
+          "options": {
+            "enum_titles": [
+              "1 0",
+              "1 1",
+              "1 2",
+              "1 3"
+            ]
+          }
+        },
+        "TLSMinimumVersion": {
+          "title": "TLS minimum version",
+          "description": "The minimum TLS version for EAP authentication.",
+          "type": "string",
+          "enum": [
+            "1.0",
+            "1.1",
+            "1.2",
+            "1.3"
+          ],
+          "default": "1.0",
+          "property_order": 1009,
+          "options": {
+            "enum_titles": [
+              "1 0",
+              "1 1",
+              "1 2",
+              "1 3"
+            ]
+          }
+        },
+        "TLSTrustedCertificates": {
+          "title": "TLS trusted certificates",
+          "description": "An array of trusted certificates. Each entry in the array must contain certificate data that represents an anchor certificate used for verifying the server certificate.",
+          "type": "array",
+          "property_order": 1004,
+          "items": {
+            "title": "TLS trusted certificate",
+            "type": "string"
+          }
+        },
+        "TLSTrustedServerNames": {
+          "title": "TLS trusted server names",
+          "description": "The list of accepted server certificate common names. If a server presents a certificate that isn't in this list, the system doesn't trust it.\nIf you specify this property, the system disables dynamic trust (the certificate dialog) unless you also specify 'TLSAllowTrustExceptions' with the value 'true'.\nIf necessary, use a single \"\\*\" character to specify a wildcard for an individual component of the name, such as 'wpa.\\*.example.com'.",
+          "type": "array",
+          "property_order": 1005,
+          "items": {
+            "title": "Individual trusted TLS server name",
+            "type": "string"
+          }
+        },
+        "TTLSInnerAuthentication": {
+          "title": "TTLS inner authentication",
+          "description": "The inner authentication that the TTLS module uses.",
+          "type": "string",
+          "enum": [
+            "PAP",
+            "EAP",
+            "CHAP",
+            "MSCHAP",
+            "MSCHAPv2"
+          ],
+          "default": "MSCHAPv2",
+          "property_order": 1008,
+          "options": {
+            "enum_titles": [
+              "PAP",
+              "EAP",
+              "CHAP",
+              "MSCHAP",
+              "MSCHA pv2"
+            ]
+          }
+        },
+        "UserName": {
+          "title": "Username",
+          "description": "The user name for the account. If you don't specify a value, the system prompts the user during login.",
+          "type": "string",
+          "property_order": 1001
+        },
+        "UserPassword": {
+          "title": "Password",
+          "description": "The user's password. If you don't specify a value, the system prompts the user during login.",
+          "type": "string",
+          "property_order": 1002,
+          "x-secret": true
+        }
+      }
+    },
+    "EnableIPv6": {
+      "title": "Enable i pv6",
+      "description": "If true, enables IPv6 on this interface.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1019
+    },
+    "PayloadCertificateUUID": {
+      "title": "Certificate UUID",
+      "description": "The UUID of the certificate payload within the same profile to use for the client credential.",
+      "type": "string",
+      "format": "payload-ref",
+      "property_order": 1006,
+      "x-ref-types": [
+        "com.apple.security.pkcs1",
+        "com.apple.security.root",
+        "com.apple.security.pem",
+        "com.apple.security.pkcs12",
+        "com.apple.security.scep",
+        "com.apple.security.acme",
+        "com.apple.ADCertificate.managed"
+      ]
+    },
+    "ProxyPACFallbackAllowed": {
+      "title": "Proxy PAC fallback allowed",
+      "description": "If true, allows connecting directly to the destination if the PAC file is unreachable.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1026
+    },
+    "ProxyPACURL": {
+      "title": "Proxy PAC URL",
+      "description": "The URL of the PAC file that defines the proxy configuration.",
+      "type": "string",
+      "property_order": 1025
+    },
+    "ProxyPassword": {
+      "title": "Proxy password",
+      "description": "The password used to authenticate to the proxy server.",
+      "type": "string",
+      "property_order": 1024,
+      "x-secret": true
+    },
+    "ProxyServer": {
+      "title": "Proxy server",
+      "description": "The proxy server's network address.",
+      "type": "string",
+      "property_order": 1021
+    },
+    "ProxyServerPort": {
+      "title": "Proxy server port",
+      "description": "The proxy server's port number.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535,
+      "property_order": 1022
+    },
+    "ProxyType": {
+      "title": "Proxy type",
+      "description": "The proxy type, if any, to use. If you choose the manual proxy type, you need the proxy server address, including its port and optionally a user name and password into the proxy server. If you choose the auto proxy type, you can enter a proxy autoconfiguration (PAC) URL.",
+      "type": "string",
+      "enum": [
+        "None",
+        "Manual",
+        "Auto"
+      ],
+      "default": "None",
+      "property_order": 1003,
+      "options": {
+        "enum_titles": [
+          "None",
+          "Manual",
+          "Auto"
+        ]
+      }
+    },
+    "ProxyUsername": {
+      "title": "Proxy username",
+      "description": "The user name used to authenticate to the proxy server.",
+      "type": "string",
+      "property_order": 1023
+    },
+    "SetupModes": {
+      "title": "Setup modes",
+      "description": "An array of strings that contain the type of connection mode to attach.",
+      "type": "array",
+      "property_order": 1018,
+      "items": {
+        "title": "Setup mode",
+        "type": "string",
+        "enum": [
+          "System",
+          "Loginwindow"
+        ],
+        "options": {
+          "enum_titles": [
+            "System",
+            "Loginwindow"
+          ]
+        }
+      }
+    },
+    "TLSCertificateRequired": {
+      "title": "Certificate required",
+      "description": "If true, allows for two-factor authentication for EAP-TTLS, PEAP, or EAP-FAST. If false, allows for zero-factor authentication for EAP-TLS.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1020
+    },
+    "__interface": {
+      "title": "Interface",
+      "description": "Which Ethernet interface the 802.1X settings apply to.",
+      "type": "string",
+      "enum": [
+        "any",
+        "first-active",
+        "second-active",
+        "third-active",
+        "first",
+        "second",
+        "third"
+      ],
+      "default": "any",
+      "property_order": 0,
+      "options": {
+        "enum_titles": [
+          "Any Ethernet",
+          "First active Ethernet",
+          "Second active Ethernet",
+          "Third active Ethernet",
+          "First Ethernet",
+          "Second Ethernet",
+          "Third Ethernet"
+        ]
+      }
+    }
+  }
+}

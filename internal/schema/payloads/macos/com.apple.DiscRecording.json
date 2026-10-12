@@ -1,0 +1,42 @@
+{
+  "title": "Restrictions: Disc burning",
+  "description": "Allows or blocks burning CDs and DVDs in the Finder.",
+  "__id": "com.apple.DiscRecording",
+  "__payloadtype": "com.apple.DiscRecording",
+  "__platform": "macos",
+  "__category": "Restrictions",
+  "__order": 41,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Restrictions → Media",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "BurnSupport"
+  ],
+  "properties": {
+    "BurnSupport": {
+      "title": "Burn support",
+      "description": "Configure disc-burn. Allowed values:\n* off: The system disables disc burning.\n* on: The system allows normal default operation. Setting this key to on doesn't enable disc burn support if other mechanisms or preferences disabled it. Needs to be enabled with the Finder profile.\n* authenticate: The system requires authentication.",
+      "type": "string",
+      "enum": [
+        "off",
+        "authenticate",
+        "on"
+      ],
+      "property_order": 1000,
+      "options": {
+        "enum_titles": [
+          "The system disables disc burning",
+          "The system requires authentication",
+          "On"
+        ]
+      }
+    }
+  }
+}

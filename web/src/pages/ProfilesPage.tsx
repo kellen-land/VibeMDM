@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FileCode2, Plus, ShieldCheck, SlidersHorizontal, Trash2 } from 'lucide-react'
+import { FileCode2, Plus, ShieldCheck, SlidersHorizontal, Trash2, Upload } from 'lucide-react'
 import { qk, useInvalidate, useProfiles } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -69,6 +69,13 @@ export function ProfilesPage() {
             <Link to="/profiles/custom-settings">
               <Button icon={<SlidersHorizontal />}>Application &amp; Custom Settings</Button>
             </Link>
+            {isAdmin && (
+              <Link to="/profiles/new?upload=1">
+                <Button variant="ghost" icon={<Upload />}>
+                  Upload
+                </Button>
+              </Link>
+            )}
             {isAdmin && (
               <Link to="/profiles/new">
                 <Button variant="primary" icon={<Plus />}>

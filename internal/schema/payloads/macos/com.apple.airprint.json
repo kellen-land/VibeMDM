@@ -1,0 +1,61 @@
+{
+  "title": "AirPrint",
+  "description": "Adds AirPrint printers so users can print without finding them on the network.",
+  "__id": "com.apple.airprint",
+  "__payloadtype": "com.apple.airprint",
+  "__platform": "macos",
+  "__category": "General",
+  "__order": 20,
+  "__multiple": true,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "AirPrint"
+  ],
+  "properties": {
+    "AirPrint": {
+      "title": "Printers",
+      "description": "An array of AirPrint printers that are presented to the user.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "Printer",
+        "type": "object",
+        "required": [
+          "IPAddress",
+          "ResourcePath"
+        ],
+        "properties": {
+          "IPAddress": {
+            "title": "Address",
+            "description": "The IP address or hostname of the AirPrint destination.",
+            "type": "string",
+            "property_order": 1000,
+            "options": {
+              "inputAttributes": {
+                "placeholder": "printer.example.com"
+              }
+            }
+          },
+          "ResourcePath": {
+            "title": "Resource path",
+            "description": "The resource path associated with the printer. This path corresponds to the rp parameter of the _ipps.tcp Bonjour record. For example:\n\n- printers/Canon_MG5300_series\n- printers/Xerox_Phaser_7600\n- ipp/print\n- Epson_IPP_Printer",
+            "type": "string",
+            "property_order": 1001,
+            "options": {
+              "inputAttributes": {
+                "placeholder": "ipp/print"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

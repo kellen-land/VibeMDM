@@ -79,18 +79,17 @@ record catches up. Not yet available: wallpaper, Return to Service, OS updates a
 in Jamf Pro. **New profile** opens the editor: *General* (name, category, the description users see in Settings),
 then **Add payload** to pick from the built-in editors:
 
-| Category | Payloads |
-| --- | --- |
-| General | Lock Screen message (S), AirPrint |
-| Security | Passcode, Restrictions (a curated set of common keys), Content Filter (built-in web filter, S), Single App Mode (S) |
-| Network | Wi-Fi (personal networks; no 802.1X yet), VPN (IKEv2 or a VPN app) |
-| Apps and Home Screen | Home Screen Layout (S; folder contents not editable yet), Web Clip, Notifications |
-| Certificates | Certificate (CA, `.cer`), Identity certificate (PKCS #12) |
+The editors cover the payloads Jamf Pro offers for mobile devices (44 in all): General (Lock Screen Message, AirPrint,
+AirPlay, Font, Notifications, Domains), Security (Passcode, Restrictions with every Apple key, Content Filter, Single App
+Mode, Certificate Transparency and Revocation), Network (Wi-Fi including WPA2/WPA3 Enterprise, Ethernet, VPN, Per-App
+VPN, Global HTTP Proxy, DNS Settings, DNS Proxy, Relay, Cellular, APN, Cellular Private Network, Network Usage Rules),
+Certificates (Certificate, PEM, root, identity, SCEP, ACME), Accounts (Mail, Exchange ActiveSync, Google, LDAP, Calendar,
+Contacts, Subscribed Calendars), Single Sign-On (SSO Extensions, Kerberos, legacy SSO), Home Screen Layout, Web Clips,
+Skip Setup Items and Education. See [§8.7](manual/08-configuration-profiles.md#87-payload-editors-jamf-pro-payloads)
+for how the editors are built.
 
-Each editor is a JSON schema in `internal/schema/mobile/` whose keys were checked against Apple's
-[device-management](https://github.com/apple/device-management) repository. Settings you leave *Not set* are omitted, so
-the device keeps Apple's default. Wi-Fi, VPN, Web Clip and certificates can appear more than once in a profile; the
-others once. **Show profile XML** previews the generated `.mobileconfig`. **Upload** instead keeps a `.mobileconfig`
+Settings you leave *Not set* are omitted, so the device keeps Apple's default. Payloads that Apple allows more than
+once (Wi-Fi, VPN, certificates, accounts, Web Clips, …) can be added several times. **Show profile XML** previews the generated `.mobileconfig`. **Upload** instead keeps a `.mobileconfig`
 made elsewhere (Apple Configurator, iMazing Profile Editor) as XML.
 
 Scope uses *Targets* (all mobile devices, devices, mobile device groups, buildings, departments) and *Exclusions*.

@@ -1,0 +1,61 @@
+{
+  "title": "Approved Kernel Extensions",
+  "description": "Lets kernel extensions load without the user approving them, by team ID or bundle ID.",
+  "__id": "com.apple.syspolicy.kernel-extension-policy",
+  "__payloadtype": "com.apple.syspolicy.kernel-extension-policy",
+  "__platform": "macos",
+  "__category": "Security",
+  "__order": 70,
+  "__multiple": true,
+  "__channels": [
+    "device"
+  ],
+  "__requires": [
+    "User-approved MDM"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "AllowNonAdminUserApprovals": {
+      "title": "Allow non admin user approvals",
+      "description": "If true, nonadministrative users can approve additional kernel extensions in the Security & Privacy preferences.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000
+    },
+    "AllowUserOverrides": {
+      "title": "Allow user overrides",
+      "description": "If true, users can approve additional kernel extensions that configuration profiles don't explicitly allow.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    },
+    "AllowedKernelExtensions": {
+      "title": "Allowed kernel extensions",
+      "description": "The dictionary that represents a set of kernel extensions that the system always allows to load on the computer. The dictionary maps team identifiers (keys) to arrays of bundle identifiers.",
+      "type": "object",
+      "property_order": 1003,
+      "additionalProperties": {
+        "title": "ANY",
+        "description": "The kernel extension data.",
+        "type": "array",
+        "items": {
+          "title": "Allowed kernel extensions items",
+          "type": "string"
+        }
+      }
+    },
+    "AllowedTeamIdentifiers": {
+      "title": "Allowed team identifiers",
+      "description": "The array of team identifiers that define which validly signed kernel extensions can load.",
+      "type": "array",
+      "property_order": 1002,
+      "items": {
+        "title": "Identifier",
+        "type": "string"
+      }
+    }
+  }
+}

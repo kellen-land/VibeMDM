@@ -1,0 +1,65 @@
+{
+  "title": "Associated Domains",
+  "description": "Associates apps with websites for universal links, password AutoFill and single sign-on.",
+  "__id": "com.apple.associated-domains",
+  "__payloadtype": "com.apple.associated-domains",
+  "__platform": "macos",
+  "__category": "General",
+  "__order": 70,
+  "__multiple": true,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__requires": [
+    "User-approved MDM"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "Configuration"
+  ],
+  "properties": {
+    "Configuration": {
+      "title": "Configuration",
+      "description": "A dictionary that maps apps to their associated domains.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "Item",
+        "type": "object",
+        "required": [
+          "ApplicationIdentifier",
+          "AssociatedDomains"
+        ],
+        "properties": {
+          "ApplicationIdentifier": {
+            "title": "Application identifier",
+            "description": "The app identifier to associate the domains with.",
+            "type": "string",
+            "property_order": 1000
+          },
+          "AssociatedDomains": {
+            "title": "Associated domains",
+            "description": "The domains to associate with the app. Each string is in the form of service:domain. Use fully qualified hostnames, such as www.example.com. See Supporting associated domains for more information.",
+            "type": "array",
+            "property_order": 1001,
+            "items": {
+              "title": "Associated domain",
+              "type": "string"
+            }
+          },
+          "EnableDirectDownloads": {
+            "title": "Enable direct downloads",
+            "description": "If true, the system enables direct download of data for this domain instead of through a CDN. Set the entitlement value for this domain to service:domain?mode=managed; otherwise, the system ignores this value.",
+            "type": "boolean",
+            "default": false,
+            "property_order": 1002
+          }
+        }
+      }
+    }
+  }
+}

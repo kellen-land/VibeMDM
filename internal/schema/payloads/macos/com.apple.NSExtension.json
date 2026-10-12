@@ -1,0 +1,51 @@
+{
+  "title": "Restrictions: App extensions",
+  "description": "Blocks specific app extensions.",
+  "__id": "com.apple.NSExtension",
+  "__payloadtype": "com.apple.NSExtension",
+  "__platform": "macos",
+  "__category": "Restrictions",
+  "__order": 140,
+  "__multiple": true,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Restrictions → Functionality",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "AllowedExtensions": {
+      "title": "Allowed extensions",
+      "description": "An array of bundle identifiers for allowed extensions.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "Allowed extension",
+        "type": "string"
+      }
+    },
+    "DeniedExtensionPoints": {
+      "title": "Denied extension points",
+      "description": "An array of extension points for extensions that the system doesn't allow to run.",
+      "type": "array",
+      "property_order": 1002,
+      "items": {
+        "title": "Denied extension point",
+        "type": "string"
+      }
+    },
+    "DeniedExtensions": {
+      "title": "Denied extensions",
+      "description": "An array of bundle identifiers for extensions that the system doesn't allow to run.",
+      "type": "array",
+      "property_order": 1001,
+      "items": {
+        "title": "Denied extension",
+        "type": "string"
+      }
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "title": "Restrictions: App Store",
+  "description": "Limits the App Store to software updates and stops non-admins installing apps from it.",
+  "__id": "com.apple.appstore",
+  "__payloadtype": "com.apple.appstore",
+  "__platform": "macos",
+  "__category": "Restrictions",
+  "__order": 90,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Restrictions → Applications",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "DisableSoftwareUpdateNotifications": {
+      "title": "Disable software update notifications",
+      "description": "If true, the system disables software update notifications.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003
+    },
+    "restrict-store-disable-app-adoption": {
+      "title": "Restrict store disable app adoption",
+      "description": "If true, the system disables app adoption by users.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1002
+    },
+    "restrict-store-require-admin-to-install": {
+      "title": "Restrict store require admin to install",
+      "description": "If true, the system restricts app installations to admin users only. Deprecated in macOS 10.14. Use the com.apple.SoftwareUpdate payload key restrict-software-update-require-admin-to-install instead.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000,
+      "x-deprecated": "macOS 10.14"
+    },
+    "restrict-store-softwareupdate-only": {
+      "title": "Restrict store softwareupdate only",
+      "description": "If true, the system prevents App Store from launching. Restricts installations to software updates only in macOS 10.10 through 10.13.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    }
+  }
+}

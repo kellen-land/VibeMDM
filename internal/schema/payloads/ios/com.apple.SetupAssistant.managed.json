@@ -1,0 +1,28 @@
+{
+  "title": "Skip Setup Items",
+  "description": "Skips Setup Assistant screens shown after updates or when a user logs in for the first time.",
+  "__id": "com.apple.SetupAssistant.managed",
+  "__payloadtype": "com.apple.SetupAssistant.managed",
+  "__platform": "ios",
+  "__category": "Users and Login",
+  "__order": 50,
+  "__multiple": false,
+  "__supervised": true,
+  "__jamf": "Skip Setup Items",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "SkipSetupItems": {
+      "title": "Skip setup items",
+      "description": "An array of strings that describe the setup items to skip. SkipKeys provides a list of valid strings and their meanings.",
+      "type": "array",
+      "property_order": 1009,
+      "items": {
+        "title": "Skip setup items",
+        "type": "string"
+      }
+    }
+  }
+}

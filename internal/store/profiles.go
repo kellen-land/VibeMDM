@@ -10,16 +10,18 @@ import (
 	"github.com/vibemdm/vibemdm/internal/model"
 )
 
-const profileCols = `id, name, description, category, identifier, uuid, level, payload, scope, created_at, updated_at, schema_source, schema_values`
+const profileCols = `id, name, description, category, identifier, uuid, level, payload, scope, created_at, updated_at, schema_source, schema_values, payloads`
 
 func scanProfile(row interface{ Scan(...any) error }) (*model.ConfigProfile, error) {
 	var p model.ConfigProfile
 	var scope db.JSON[model.Scope]
 	var vals db.JSON[map[string]any]
+	var payloads db.JSON[[]model.PayloadValues]
 	if err := row.Scan(&p.ID, &p.Name, &p.Description, &p.Category, &p.Identifier, &p.UUID, &p.Level, &p.Payload, &scope, &p.CreatedAt, &p.UpdatedAt,
-		&p.SchemaSource, &vals); err != nil {
+		&p.SchemaSource, &vals, &payloads); err != nil {
 		return nil, wrapNotFound(err)
 	}
+	p.Payloads = payloads.V
 	p.Scope = scope.V
 	if p.SchemaSource != "" {
 		p.SchemaValues = vals.V
@@ -58,9 +60,9 @@ func (s *Store) CreateProfile(ctx context.Context, p model.ConfigProfile) (*mode
 	if p.Level != "user" {
 		p.Level = "device"
 	}
-	return scanProfile(s.DB.QueryRowContext(ctx, `INSERT INTO config_profiles (name, description, category, identifier, uuid, level, payload, scope)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb) RETURNING `+profileCols,
-		p.Name, p.Description, p.Category, p.Identifier, p.UUID, p.Level, p.Payload, jsonArg(p.Scope)))
+	return scanProfile(s.DB.QueryRowContext(ctx, `INSERT INTO config_profiles (name, description, category, identifier, uuid, level, payload, scope, payloads)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb) RETURNING `+profileCols,
+		p.Name, p.Description, p.Category, p.Identifier, p.UUID, p.Level, p.Payload, jsonArg(p.Scope), payloadsArg(p.Payloads)))
 }
 
 // UpdateProfile updates a profile.
@@ -69,9 +71,10 @@ func (s *Store) UpdateProfile(ctx context.Context, p model.ConfigProfile) (*mode
 	if p.Level != "user" {
 		p.Level = "device"
 	}
-	return scanProfile(s.DB.QueryRowContext(ctx, `UPDATE config_profiles SET name=$2, description=$3, category=$4, identifier=$5, uuid=$6, level=$7, payload=$8, scope=$9::jsonb, updated_at=now()
+	return scanProfile(s.DB.QueryRowContext(ctx, `UPDATE config_profiles SET name=$2, description=$3, category=$4, identifier=$5, uuid=$6, level=$7, payload=$8, scope=$9::jsonb,
+		payloads=$10::jsonb, updated_at=now()
 		WHERE id=$1 RETURNING `+profileCols,
-		p.ID, p.Name, p.Description, p.Category, p.Identifier, p.UUID, p.Level, p.Payload, jsonArg(p.Scope)))
+		p.ID, p.Name, p.Description, p.Category, p.Identifier, p.UUID, p.Level, p.Payload, jsonArg(p.Scope), payloadsArg(p.Payloads)))
 }
 
 // DeleteProfile removes a profile.

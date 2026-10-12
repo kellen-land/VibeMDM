@@ -1,0 +1,151 @@
+{
+  "title": "Notifications",
+  "description": "Sets how each app's notifications appear and stops users changing them.",
+  "__id": "com.apple.notificationsettings",
+  "__payloadtype": "com.apple.notificationsettings",
+  "__platform": "ios",
+  "__category": "General",
+  "__order": 60,
+  "__multiple": false,
+  "__supervised": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "NotificationSettings"
+  ],
+  "properties": {
+    "NotificationSettings": {
+      "title": "Apps",
+      "description": "Notification settings for each app.",
+      "type": "array",
+      "property_order": 10,
+      "items": {
+        "title": "App",
+        "type": "object",
+        "required": [
+          "BundleIdentifier"
+        ],
+        "properties": {
+          "AlertType": {
+            "title": "Banner style",
+            "description": "How alerts appear while the device is in use.",
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2
+            ],
+            "default": 1,
+            "property_order": 5,
+            "options": {
+              "enum_titles": [
+                "None",
+                "Temporary banner",
+                "Persistent banner"
+              ]
+            }
+          },
+          "BadgesEnabled": {
+            "title": "Badges",
+            "description": "Show the badge count on the app icon.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 6
+          },
+          "BundleIdentifier": {
+            "title": "App bundle ID",
+            "description": "The app these settings apply to.",
+            "type": "string",
+            "property_order": 1,
+            "options": {
+              "inputAttributes": {
+                "placeholder": "com.example.app"
+              }
+            }
+          },
+          "CriticalAlertEnabled": {
+            "title": "Critical alerts",
+            "description": "Let the app's critical alerts ignore Do Not Disturb and the ringer switch. iOS 12+.",
+            "type": "boolean",
+            "default": false,
+            "property_order": 8
+          },
+          "GroupingType": {
+            "title": "Grouping",
+            "description": "How notifications from this app are grouped. iOS 12+.",
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2
+            ],
+            "default": 0,
+            "property_order": 11,
+            "options": {
+              "enum_titles": [
+                "Automatic",
+                "By app",
+                "Off"
+              ]
+            }
+          },
+          "NotificationsEnabled": {
+            "title": "Allow notifications",
+            "description": "Off turns all notifications off for this app.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 2
+          },
+          "PreviewType": {
+            "title": "Show previews",
+            "description": "Overrides Settings > Notifications > Show Previews for this app. iOS 14+.",
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2
+            ],
+            "property_order": 10,
+            "options": {
+              "enum_titles": [
+                "Always",
+                "When unlocked",
+                "Never"
+              ]
+            }
+          },
+          "ShowInCarPlay": {
+            "title": "Show in CarPlay",
+            "description": "iOS 12+.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 9
+          },
+          "ShowInLockScreen": {
+            "title": "Show on Lock Screen",
+            "description": "If true, enables notifications on the Lock Screen for this app.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 3
+          },
+          "ShowInNotificationCenter": {
+            "title": "Show in Notification Center",
+            "description": "If true, enables notifications in the Notification Center for this app.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 4
+          },
+          "SoundsEnabled": {
+            "title": "Sounds",
+            "description": "Play sounds for notifications.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 7
+          }
+        }
+      }
+    }
+  }
+}

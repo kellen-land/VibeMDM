@@ -1,0 +1,66 @@
+{
+  "title": "Certificate Transparency",
+  "description": "Turns off certificate transparency enforcement for domains or certificates of your own.",
+  "__id": "com.apple.security.certificatetransparency",
+  "__payloadtype": "com.apple.security.certificatetransparency",
+  "__platform": "macos",
+  "__category": "Security",
+  "__order": 120,
+  "__multiple": true,
+  "__channels": [
+    "device"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "DisabledForCerts": {
+      "title": "Disabled certs",
+      "description": "An array of certificates for which certificate transparency is disabled. One of the following conditions needs to be met to disable certificate transparency enforcement when this policy is set:\n\n- The hash is of the server certificate's subjectPublicKeyInfo.\n- The hash is of a subjectPublicKeyInfo that appears in a CA certificate in the certificate chain; the X.509v3 nameConstraints extension constrains the CA certificate. One or more directoryName nameConstraints are present in the permittedSubtrees, and the directoryName contains an organizationName attribute.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "Disabled cert",
+        "type": "object",
+        "required": [
+          "Algorithm",
+          "Hash"
+        ],
+        "properties": {
+          "Algorithm": {
+            "title": "Algorithm",
+            "description": "The algorithm must be sha256.",
+            "type": "string",
+            "enum": [
+              "sha256"
+            ],
+            "property_order": 1000,
+            "options": {
+              "enum_titles": [
+                "Sha256"
+              ]
+            }
+          },
+          "Hash": {
+            "title": "Hash",
+            "description": "The hash of the DER-encoding of the certificate's subjectPublicKeyInfo.\n\nThe hash field requires the data (subjectPublicKeyInfo hash) in a specific format: a Base64 encoded (binary) SHA-256 hash of the certificate's public key.",
+            "type": "string",
+            "format": "data",
+            "property_order": 1001
+          }
+        }
+      }
+    },
+    "DisabledForDomains": {
+      "title": "Disabled domains",
+      "description": "An array of strings that represent the domains to exclude from certificate transparency enforcement. The system supports using a leading period (.) to signify subdomains. However, the system doesn't support wildcards. If you include a leading period, the domain can't be a top-level domain, such as .com and .co.uk.",
+      "type": "array",
+      "property_order": 1001,
+      "items": {
+        "title": "Domain",
+        "type": "string"
+      }
+    }
+  }
+}

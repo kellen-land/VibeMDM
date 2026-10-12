@@ -1,0 +1,286 @@
+{
+  "title": "Directory",
+  "description": "Binds the Mac to Active Directory and sets mobile account, admin group and home folder options.",
+  "__id": "com.apple.DirectoryService.managed",
+  "__payloadtype": "com.apple.DirectoryService.managed",
+  "__platform": "macos",
+  "__category": "System",
+  "__order": 100,
+  "__multiple": true,
+  "__channels": [
+    "device"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "HostName"
+  ],
+  "properties": {
+    "ADAllowMultiDomainAuth": {
+      "title": "AD allow multi domain auth",
+      "description": "If true, the system allows authentication from any domain in the namespace.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1016
+    },
+    "ADAllowMultiDomainAuthFlag": {
+      "title": "AD allow multi domain auth flag",
+      "description": "If true, the system enables the ADAllowMultiDomainAuth key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1015
+    },
+    "ADCreateMobileAccountAtLogin": {
+      "title": "AD create mobile account at login",
+      "description": "If true, the system creates a mobile account at login.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1008
+    },
+    "ADCreateMobileAccountAtLoginFlag": {
+      "title": "AD create mobile account at login flag",
+      "description": "If true, the system enables the ADCreateMobileAccountAtLogin key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1007
+    },
+    "ADDefaultUserShell": {
+      "title": "AD default user shell",
+      "description": "The default user shell.",
+      "type": "string",
+      "property_order": 1018
+    },
+    "ADDefaultUserShellFlag": {
+      "title": "AD default user shell flag",
+      "description": "If true, the system enables the ADDefaultUserShell key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1017
+    },
+    "ADDomainAdminGroupList": {
+      "title": "AD domain admin group list",
+      "description": "The list of Active Directory groups with admin access.",
+      "type": "array",
+      "property_order": 1028,
+      "items": {
+        "title": "Item",
+        "type": "string"
+      }
+    },
+    "ADDomainAdminGroupListFlag": {
+      "title": "AD domain admin group list flag",
+      "description": "If true, the system enables the ADDomainAdminGroupList key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1027
+    },
+    "ADForceHomeLocal": {
+      "title": "AD force home local",
+      "description": "If true, the system forces a local home directory.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1012
+    },
+    "ADForceHomeLocalFlag": {
+      "title": "AD force home local flag",
+      "description": "If true, the system enables the ADForceHomeLocal key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1011
+    },
+    "ADMapGGIDAttribute": {
+      "title": "AD map GGID attribute",
+      "description": "The map group GID to attribute.",
+      "type": "string",
+      "property_order": 1024
+    },
+    "ADMapGGIDAttributeFlag": {
+      "title": "AD map GGID attribute flag",
+      "description": "If true, the system enables the ADMapGGIDAttributeFlag key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1023
+    },
+    "ADMapGIDAttribute": {
+      "title": "AD map GID attribute",
+      "description": "The map GID to attribute.",
+      "type": "string",
+      "property_order": 1022
+    },
+    "ADMapGIDAttributeFlag": {
+      "title": "AD map GID attribute flag",
+      "description": "If true, the system enables the ADMapGIDAttribute key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1021
+    },
+    "ADMapUIDAttribute": {
+      "title": "AD map UID attribute",
+      "description": "The map UID to attribute.",
+      "type": "string",
+      "property_order": 1020
+    },
+    "ADMapUIDAttributeFlag": {
+      "title": "AD map UID attribute flag",
+      "description": "If true, the system enables the ADMapUIDAttribute key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1019
+    },
+    "ADMountStyle": {
+      "title": "AD mount style",
+      "description": "The network home protocol to use: afp or smb.",
+      "type": "string",
+      "property_order": 1006
+    },
+    "ADNamespace": {
+      "title": "AD namespace",
+      "description": "The primary user account naming convention; either forest or domain.",
+      "type": "string",
+      "property_order": 1030
+    },
+    "ADNamespaceFlag": {
+      "title": "AD namespace flag",
+      "description": "If true, the system enables the ADNamespace key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1029
+    },
+    "ADOrganizationalUnit": {
+      "title": "AD organizational unit",
+      "description": "The organizational unit to add the joining computer object to.",
+      "type": "string",
+      "property_order": 1005
+    },
+    "ADPacketEncrypt": {
+      "title": "AD packet encrypt",
+      "description": "The packet encryption policy.",
+      "type": "string",
+      "property_order": 1034
+    },
+    "ADPacketEncryptFlag": {
+      "title": "AD packet encrypt flag",
+      "description": "If true, the system enables the ADPacketEncrypt key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1033
+    },
+    "ADPacketSign": {
+      "title": "AD packet sign",
+      "description": "The packet signing policy.",
+      "type": "string",
+      "property_order": 1032
+    },
+    "ADPacketSignFlag": {
+      "title": "AD packet sign flag",
+      "description": "If true, the system enables the ADPacketSign key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1031
+    },
+    "ADPreferredDCServer": {
+      "title": "AD preferred DC server",
+      "description": "The preferred domain server.",
+      "type": "string",
+      "property_order": 1026
+    },
+    "ADPreferredDCServerFlag": {
+      "title": "AD preferred DC server flag",
+      "description": "If true, the system enables the ADPreferredDCServer key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1025
+    },
+    "ADRestrictDDNS": {
+      "title": "AD restrict DDNS",
+      "description": "An array of strings that represent the interfaces allowed for dynamic DNS updates, such as en0 and en1.",
+      "type": "array",
+      "property_order": 1036,
+      "items": {
+        "title": "Item",
+        "type": "string"
+      }
+    },
+    "ADRestrictDDNSFlag": {
+      "title": "AD restrict DDNS flag",
+      "description": "If true, the system enables the ADRestrictDDNS key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1035
+    },
+    "ADTrustChangePassIntervalDays": {
+      "title": "AD trust change pass interval days",
+      "description": "The number of days before requiring a change of the computer trust account password. Set to 0 to disable the feature.",
+      "type": "integer",
+      "property_order": 1038
+    },
+    "ADTrustChangePassIntervalDaysFlag": {
+      "title": "AD trust change pass interval days flag",
+      "description": "If true, the system enables the ADTrustChangePassIntervalDays key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1037
+    },
+    "ADUseWindowsUNCPath": {
+      "title": "AD use windows UNC path",
+      "description": "If true, the system uses the UNC path from Active Directory to derive the network home location.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1014
+    },
+    "ADUseWindowsUNCPathFlag": {
+      "title": "AD use windows UNC path flag",
+      "description": "If true, the system enables the ADUseWindowsUNCPath key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1013
+    },
+    "ADWarnUserBeforeCreatingMA": {
+      "title": "AD warn user before creating MA",
+      "description": "If true, the system enables the warning before creating the mobile account.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1010
+    },
+    "ADWarnUserBeforeCreatingMAFlag": {
+      "title": "AD warn user before creating MA flag",
+      "description": "If true, the system enables the ADWarnUserBeforeCreatingMA key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1009
+    },
+    "ClientID": {
+      "title": "Client ID",
+      "description": "The client's identifier.",
+      "type": "string",
+      "property_order": 1003
+    },
+    "Description": {
+      "title": "Description",
+      "description": "The directory service description.",
+      "type": "string",
+      "property_order": 1004
+    },
+    "HostName": {
+      "title": "Host name",
+      "description": "The Active Directory domain to join.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "Password": {
+      "title": "Password",
+      "description": "The password of the account for the domain.",
+      "type": "string",
+      "property_order": 1002,
+      "x-secret": true
+    },
+    "UserName": {
+      "title": "User name",
+      "description": "The user name of the account for the domain.",
+      "type": "string",
+      "property_order": 1001
+    }
+  }
+}

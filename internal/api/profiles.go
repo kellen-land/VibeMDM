@@ -10,6 +10,7 @@ import (
 	"howett.net/plist"
 
 	"github.com/vibemdm/vibemdm/internal/model"
+	"github.com/vibemdm/vibemdm/internal/schema"
 )
 
 type profileWithStatus struct {
@@ -105,19 +106,53 @@ type invalidErr string
 func (e invalidErr) Error() string { return string(e) }
 func errInvalid(s string) error    { return invalidErr(s) }
 
+// buildEditorProfile renders a profile from its payload editors (p.Payloads). It writes the
+// error response itself and returns false on failure.
+func (h *Handler) buildEditorProfile(w http.ResponseWriter, r *http.Request, p *model.ConfigProfile) bool {
+	p.Name = strings.TrimSpace(p.Name)
+	if p.Name == "" {
+		writeErr(w, 400, "profile name required")
+		return false
+	}
+	if p.Level != "user" {
+		p.Level = "device"
+	}
+	xml, perrs, err := h.buildPayloadXML(r.Context(), schema.PlatformMacOS, p.Identifier, p.Name, p.Description, p.Level, p.Payloads)
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return false
+	}
+	if len(perrs) > 0 {
+		writeJSON(w, 400, map[string]any{"error": "some values are invalid", "payload_errors": perrs})
+		return false
+	}
+	p.Payload = xml
+	p.UUID = stableProfileUUID(xml)
+	p.SchemaSource, p.SchemaValues = "", nil
+	return true
+}
+
 func (h *Handler) createProfile(w http.ResponseWriter, r *http.Request) {
 	var p model.ConfigProfile
 	if err := decode(r, &p); err != nil {
 		writeErr(w, 400, err.Error())
 		return
 	}
-	if strings.TrimSpace(p.Payload) == "" {
-		writeErr(w, 400, "payload (mobileconfig XML) required")
+	switch {
+	case len(p.Payloads) > 0:
+		p.Identifier = "com.vibemdm.profile." + strings.Split(uuid.NewString(), "-")[0]
+		if !h.buildEditorProfile(w, r, &p) {
+			return
+		}
+	case strings.TrimSpace(p.Payload) == "":
+		writeErr(w, 400, "add at least one payload or upload a .mobileconfig")
 		return
-	}
-	if err := normalizeProfilePayload(&p); err != nil {
-		writeErr(w, 400, err.Error())
-		return
+	default:
+		p.Payloads = nil
+		if err := normalizeProfilePayload(&p); err != nil {
+			writeErr(w, 400, err.Error())
+			return
+		}
 	}
 	out, err := h.st.CreateProfile(r.Context(), p)
 	if err != nil {
@@ -141,12 +176,25 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "profile")
 		return
 	}
-	if strings.TrimSpace(p.Payload) == "" {
-		p.Payload = existing.Payload
-	}
-	if err := normalizeProfilePayload(&p); err != nil {
-		writeErr(w, 400, err.Error())
-		return
+	switch {
+	case len(p.Payloads) > 0 || (strings.TrimSpace(p.Payload) == "" && existing.Payloads != nil):
+		// Built with the payload editors (rebuilt on a name or level change too).
+		if len(p.Payloads) == 0 {
+			p.Payloads = existing.Payloads
+		}
+		p.Identifier = existing.Identifier
+		if !h.buildEditorProfile(w, r, &p) {
+			return
+		}
+	default:
+		if strings.TrimSpace(p.Payload) == "" {
+			p.Payload = existing.Payload
+		}
+		p.Payloads = nil
+		if err := normalizeProfilePayload(&p); err != nil {
+			writeErr(w, 400, err.Error())
+			return
+		}
 	}
 	out, err := h.st.UpdateProfile(r.Context(), p)
 	if err != nil {

@@ -1,8 +1,9 @@
 # 8. Configuration profiles
 
 Configuration profiles are Apple's standard way to configure a device. VibeMDM delivers them over MDM with
-`InstallProfile` and `RemoveProfile`, tracks their status per Mac, and can build managed-preference profiles from
-JSON schemas ("Application & Custom Settings").
+`InstallProfile` and `RemoveProfile`, tracks their status per Mac, builds profiles with payload editors for every
+payload Jamf Pro offers ([§8.7](#87-payload-editors-jamf-pro-payloads)), keeps uploaded `.mobileconfig` files, and builds
+managed-preference profiles from JSON schemas ("Application & Custom Settings").
 
 ## 8.1 Profile anatomy
 
@@ -273,5 +274,101 @@ profiles status -type enrollment        # MDM enrollment state
 
 In **System Settings → General → Device Management** the user sees each profile and its payloads.
 MDM-installed profiles show no *Remove* button.
+
+## 8.7 Payload editors (Jamf Pro payloads)
+
+**Configuration Profiles → New profile** builds a profile the way Jamf Pro does: a *General* section (name, category,
+description and **Level**: computer or user), then **Add payload** for each kind of setting. Mobile Device
+Configuration Profiles use the same editor ([Mobile devices](../mobile-devices.md)). **Upload** keeps a
+`.mobileconfig` made elsewhere instead.
+
+### What is covered
+
+The payload list follows Jamf Pro's Computer and Mobile Device Configuration Profiles: 83 editors for macOS and 44 for
+iOS/iPadOS. Where one Jamf payload writes several Apple payload types, VibeMDM shows one editor per type, named after
+Jamf's tab; the editor header shows the Jamf payload it corresponds to.
+
+| Jamf Pro payload | VibeMDM editors (Apple payload type) |
+| --- | --- |
+| Security & Privacy | General (`com.apple.preference.security`), FileVault (`com.apple.MCX.FileVault2`, FileVault options, recovery key escrow), Firewall (`com.apple.security.firewall`), Gatekeeper (`com.apple.systempolicy.control`, `.managed`) |
+| Restrictions | Restrictions (`com.apple.applicationaccess`), Applications (`.new`), System Settings (`com.apple.systempreferences`), Media (`com.apple.systemuiserver`, disc burning), Menu bar items, Accounts, Users & Groups, Game Center, App Store, App extensions, Desktop |
+| Network | Wi-Fi (`com.apple.wifi.managed`) and Ethernet: one editor with an **Interface** menu (any, first/second/third active, first/second/third) that picks Apple's per-interface payload type |
+| Login Window | Login Window (`com.apple.loginwindow`), Login Window options (`loginwindow`), Screen Saver |
+| Parental Controls | Content filter, Time limits |
+
+Also on macOS: Passcode, VPN and Per-App VPN (with app mapping), Proxies, DNS Settings, DNS Proxy, Relay, Content
+Caching, Certificate, SCEP, ACME, AD Certificate, certificate and identity preferences, Directory, Dock, Energy
+Saver, Time Machine, Time Server, Finder, Accessibility, Printing, AirPrint, AirPlay, Font, Notifications,
+Associated Domains, Domains, Identification, Privacy Preferences Policy Control, Approved Kernel Extensions, System
+Extensions, Managed Login Items, Login Items, Mobility, Smart Card, Content Filter, Certificate Transparency,
+Single Sign-On Extensions (including Kerberos and Platform SSO), Mail, Exchange Web Services, LDAP, Calendar, Contacts,
+Skip Setup Items, System Migration, File Provider, Xsan and Education.
+
+Left out on purpose: Jamf's macOS **Software Update** payload (Jamf removed it in 11.31 because Apple dropped it in
+macOS 27; use [Software Updates](10-software-updates.md)), and payloads Apple has retired (Lights Out Management,
+FileVault recovery key redirection for macOS 10.12 and earlier, macOS Server accounts, login scripts, legacy
+Dictionary/Dictation/ShareKit restrictions). Application & Custom Settings stays its own page ([§8.3](#83-application--custom-settings-json-schemas)).
+
+### How the editors are made
+
+`cmd/profile-schemas` generates every editor from Apple's [device-management](https://github.com/apple/device-management)
+repository, so each one has every key Apple documents for the platform, with its type, allowed values, range, default
+and description. Keys Apple removed on a platform are left out. To pick up a newer Apple release:
+
+```bash
+git clone --depth 1 https://github.com/apple/device-management /tmp/device-management
+go run ./cmd/profile-schemas -src /tmp/device-management
+```
+
+The catalog (which payloads, their Jamf names and categories) is in `cmd/profile-schemas/catalog.go`; hand-written
+titles and descriptions are in `cmd/profile-schemas/curated/`. The output is `internal/schema/payloads/<platform>/`.
+
+### Using the editor
+
+- Every setting starts **Not set** and is left out of the profile, so the device keeps Apple's default. (Jamf writes
+  every Restrictions key, so an unchecked box there means *false*; in VibeMDM it means *not managed*.)
+- Small notes next to a setting: **Supervised** (only works on supervised devices), the first OS version that supports
+  it when that is newer than iOS 16 / macOS 13, **Deprecated**, and **User level only** / **Computer level only**.
+- Long forms open on **Show only configured** once something is set; big groups (Enterprise/EAP settings, IKEv2
+  parameters, …) stay folded until you open them.
+- **Certificates:** fields that refer to a certificate (a Wi-Fi or Ethernet network's identity, a VPN's certificate, an
+  Exchange account's S/MIME certificate, the FileVault escrow certificate) are menus listing the Certificate, SCEP and ACME
+  payloads in the same profile, as in Jamf. The reference must point to a certificate payload in the profile.
+- **Level:** payloads that Apple allows only at computer level (Privacy Preferences Policy Control, kernel and system
+  extensions, …) can't be added to a user-level profile; the server refuses the combination too.
+- **Secrets** (passwords, shared secrets, SCEP challenges, `.p12` files and their passwords) are password fields and are
+  hidden from viewers, both in the form values and in the XML.
+
+### Payload variables
+
+Text settings may contain Jamf Pro's payload variables. They are filled in for each device when the profile is sent:
+
+| Variable | Mac | iPhone / iPad |
+| --- | --- | --- |
+| `$COMPUTERNAME`, `$DEVICENAME` | Computer name | Device name |
+| `$SERIALNUMBER`, `$UDID` | ✓ | ✓ |
+| `$MACADDRESS` | Primary MAC address | Wi-Fi MAC address |
+| `$ASSETTAG` | – | Asset tag |
+| `$USERNAME` | Assigned user, else the last user | Assigned user |
+| `$FULLNAME`, `$REALNAME` | Assigned user's name, else the last user's | Assigned user's name |
+| `$EMAIL`, `$PHONE` | From User and Location | Assigned email; the device's phone number |
+| `$POSITION`, `$SITENAME` | From User and Location | – |
+| `$DEPARTMENTNAME`, `$BUILDINGNAME`, `$ROOM` | ✓ | ✓ |
+
+Unknown values become empty, as in Jamf Pro. Values are XML-escaped. A profile already installed keeps the values it
+was sent with: after renaming a device or changing its user, use **Redeploy** on the profile's Deployments tab.
+
+> **Untested on real hardware:** the generated payloads follow Apple's schema and build valid profiles (unit tests and
+> the throwaway-server checks cover certificate references, Ethernet interfaces, kernel extension maps, user-level
+> scope and redaction), but they have not yet been installed on a real Mac, iPhone or iPad. Test new payload types
+> on one device first.
+
+### API
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/v1/profile-payloads?platform=macos\|ios` | The editors (id, Apple payload type, title, category, level, notes and JSON schema), gzipped |
+| `POST /api/v1/profiles` / `PUT /api/v1/profiles/{id}` | `{"name", "category", "description", "level": "device"\|"user", "scope", "payloads": [{"type", "uuid", "values"}]}` builds the profile; `"payload": "<xml>"` uploads one instead |
+| `POST /api/v1/profiles/preview` | Build the XML without saving (`payload_errors` per payload) |
 
 Next: [Chapter 9 — Mac Apps and Installomator](09-apps-installomator.md).

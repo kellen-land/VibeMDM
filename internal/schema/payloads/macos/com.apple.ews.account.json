@@ -1,0 +1,140 @@
+{
+  "title": "Exchange Web Services",
+  "description": "Adds a Microsoft Exchange account to Mail, Contacts and Calendar.",
+  "__id": "com.apple.ews.account",
+  "__payloadtype": "com.apple.ews.account",
+  "__platform": "macos",
+  "__category": "Accounts",
+  "__order": 21,
+  "__multiple": true,
+  "__channels": [
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "AuthenticationCertificateUUID": {
+      "title": "Authentication certificate UUID",
+      "description": "The UUID of the certificate payload within the same profile to use for the identity credential. Supported on macOS 10.11 or later. On macOS 10.12 or later use the PayloadCertificateUUID.",
+      "type": "string",
+      "format": "payload-ref",
+      "property_order": 1008,
+      "x-ref-types": [
+        "com.apple.security.pkcs1",
+        "com.apple.security.root",
+        "com.apple.security.pem",
+        "com.apple.security.pkcs12",
+        "com.apple.security.scep",
+        "com.apple.security.acme",
+        "com.apple.ADCertificate.managed"
+      ]
+    },
+    "EmailAddress": {
+      "title": "Email address",
+      "description": "The full email address for the account. If the email address string isn't present in the payload, the device prompts for it during profile installation.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "ExternalHost": {
+      "title": "External host",
+      "description": "The external server address.",
+      "type": "string",
+      "property_order": 1012
+    },
+    "ExternalPath": {
+      "title": "External path",
+      "description": "The external server path.",
+      "type": "string",
+      "property_order": 1014
+    },
+    "ExternalPort": {
+      "title": "External port",
+      "description": "The external server port number.",
+      "type": "integer",
+      "property_order": 1015
+    },
+    "ExternalSSL": {
+      "title": "External SSL",
+      "description": "If true, the system enables SSL for connections to the external server.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1013
+    },
+    "Host": {
+      "title": "Host",
+      "description": "The Exchange server host name or IP address. Ignored if using OAuth.",
+      "type": "string",
+      "property_order": 1001
+    },
+    "OAuth": {
+      "title": "Use OAuth",
+      "description": "If true, the system enables OAuth for authentication. Don't specify a password if OAuth is true.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003
+    },
+    "OAuthSignInURL": {
+      "title": "URL for OAuth sign-in",
+      "description": "The URL to load into a web view for authentication through OAuth when autodiscovery isn't used. This setting requires a Host value.",
+      "type": "string",
+      "property_order": 1004
+    },
+    "Password": {
+      "title": "Password",
+      "description": "The password of the account. Use only with encrypted profiles.",
+      "type": "string",
+      "property_order": 1006,
+      "x-secret": true
+    },
+    "Path": {
+      "title": "Path",
+      "description": "The server path.",
+      "type": "string",
+      "property_order": 1010
+    },
+    "PayloadCertificateUUID": {
+      "title": "Payload certificate UUID",
+      "description": "The UUID of the certificate payload within the same profile to use for the identity credential. Supported on macOS 10.12 or later.",
+      "type": "string",
+      "format": "payload-ref",
+      "property_order": 1007,
+      "x-ref-types": [
+        "com.apple.security.pkcs1",
+        "com.apple.security.root",
+        "com.apple.security.pem",
+        "com.apple.security.pkcs12",
+        "com.apple.security.scep",
+        "com.apple.security.acme",
+        "com.apple.ADCertificate.managed"
+      ]
+    },
+    "Port": {
+      "title": "Port",
+      "description": "The server port number.",
+      "type": "integer",
+      "property_order": 1011
+    },
+    "SSL": {
+      "title": "SSL",
+      "description": "If true, the system enables SSL.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1002
+    },
+    "UserName": {
+      "title": "User name",
+      "description": "The user name for this Exchange account. Required for noninteractive installation, such as through MDM. If missing, the system prompts the user for it during interactive profile installation.",
+      "type": "string",
+      "property_order": 1005
+    },
+    "allowMailDrop": {
+      "title": "Allow mail drop",
+      "description": "If true, the system enables Mail Drop.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1009
+    }
+  }
+}

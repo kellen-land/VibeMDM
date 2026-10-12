@@ -1,0 +1,28 @@
+{
+  "title": "Security & Privacy: Gatekeeper override",
+  "description": "Stops users overriding Gatekeeper from the Finder's context menu.",
+  "__id": "com.apple.systempolicy.managed",
+  "__payloadtype": "com.apple.systempolicy.managed",
+  "__platform": "macos",
+  "__category": "Security",
+  "__order": 51,
+  "__multiple": true,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Security & Privacy → General",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "DisableOverride": {
+      "title": "Disable override",
+      "description": "If true, disables the Finder's contextual menu item.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000
+    }
+  }
+}
