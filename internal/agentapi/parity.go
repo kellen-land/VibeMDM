@@ -221,7 +221,7 @@ func (h *Handler) selfServiceList(w http.ResponseWriter, r *http.Request) {
 	apps, err := h.st.ListMacApps(r.Context())
 	if err == nil {
 		for _, a := range apps {
-			if !a.Enabled || !a.SelfService.Enabled {
+			if !a.Enabled || !store.SelfServiceVisible(a) {
 				continue
 			}
 			in, err := h.st.InScopeComputer(r.Context(), comp, a.Scope, cache)
@@ -281,7 +281,7 @@ func (h *Handler) selfServiceRun(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]any{"policy": ap})
 	case "app":
 		a, err := h.st.GetMacApp(r.Context(), req.ID)
-		if err != nil || !a.Enabled || !a.SelfService.Enabled {
+		if err != nil || !a.Enabled || !store.SelfServiceVisible(*a) {
 			writeErr(w, 404, "item not available")
 			return
 		}

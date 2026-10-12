@@ -33,7 +33,7 @@ export function AppsTabs({ active }: { active: 'catalog' | 'custom-labels' }) {
   )
 }
 
-export const updateBehaviorLabels: Record<string, string> = { install_once: 'Install once', keep_updated: 'Keep updated' }
+export const updateBehaviorLabels: Record<string, string> = { install_once: 'Install once', keep_updated: 'Keep up to date' }
 
 export function InstallomatorFooter() {
   return (
@@ -88,7 +88,7 @@ export function AppsPage() {
     <>
       <PageHeader
         title="Mac Apps"
-        description="An Installomator-powered catalog: pick a label, scope it, and the agent installs the latest vendor build. Optionally publish it in Self Service."
+        description="Every app VibeMDM installs with Installomator, defined once: install it automatically, offer it in Self Service only, or use it in policies."
         actions={
           isAdmin && (
             <Link to="/apps/new">
@@ -150,7 +150,19 @@ export function AppsPage() {
               ),
             },
             { key: 'update', header: 'Updates', render: (a) => <Badge tone={a.update_behavior === 'keep_updated' ? 'accent' : 'neutral'}>{updateBehaviorLabels[a.update_behavior] ?? a.update_behavior}</Badge> },
-            { key: 'selfservice', header: 'Self Service', render: (a) => (a.self_service?.enabled ? <Badge tone="info">Published</Badge> : <span className="text-xs text-ink-faint">—</span>) },
+            {
+              key: 'deployment',
+              header: 'Deployment',
+              render: (a) =>
+                a.deployment === 'self_service' ? (
+                  <Badge tone="info">Self Service only</Badge>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <Badge>Automatic</Badge>
+                    {a.self_service?.enabled && <span className="text-xs text-ink-muted">+ Self Service</span>}
+                  </span>
+                ),
+            },
             { key: 'scope', header: 'Scope', render: (a) => <ScopeSummary scope={a.scope} /> },
             {
               key: 'status',

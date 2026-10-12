@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowDown, ArrowUp, Eraser, Play, Plus, Save, Terminal, Trash2 } from 'lucide-react'
-import { qk, useAppLabels, useInvalidate, usePackages, usePolicy, usePolicyLogs, useScripts } from '../api/queries'
+import { qk, useAppLabels, useApps, useInvalidate, usePackages, usePolicy, usePolicyLogs, useScripts } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { emptyInstallomatorOptions, emptyScope, normalizeScope, type Policy, type PolicyApp, type PolicyFrequency, type PolicyPackage, type PolicyScript, type RunResult, type ScriptPriority } from '../api/types'
@@ -26,6 +26,7 @@ import { ComputerPicker } from '../components/pickers/ComputerPicker'
 import { PolicyLogTable } from '../components/activity/PolicyLogTable'
 import { frequencyLabels } from './PoliciesPage'
 import { formatBytes } from '../lib/format'
+import { cn } from '../lib/cn'
 import { LabelCombobox, allLabels } from '../components/pickers/LabelCombobox'
 import { InstallomatorCommandPreview, InstallomatorOptionsEditor } from '../components/installomator/Installomator'
 import { InstallomatorFooter } from './AppsPage'
@@ -126,7 +127,7 @@ export function PolicyEditorPage() {
     { key: 'scope', label: 'Scope' },
     { key: 'scripts', label: 'Scripts', count: p.scripts?.length },
     { key: 'packages', label: 'Packages', count: p.packages?.length },
-    { key: 'apps', label: 'Apps (Installomator)', count: p.apps?.length },
+    { key: 'apps', label: 'Mac Apps', count: p.apps?.length },
     { key: 'accounts', label: 'Local Accounts', count: p.accounts?.length },
     { key: 'files', label: 'Files & Processes' },
     { key: 'maintenance', label: 'Maintenance' },
@@ -427,13 +428,21 @@ function PackagesSection({ value, onChange, disabled }: { value: PolicyPackage[]
 
 function AppsSection({ value, onChange, disabled }: { value: PolicyApp[]; onChange: (v: PolicyApp[]) => void; disabled?: boolean }) {
   const labels = useAppLabels()
+  const apps = useApps()
   const known = useMemo(() => new Set(allLabels(labels.data)), [labels.data])
+  const byId = useMemo(() => new Map((apps.data?.items ?? []).map((a) => [a.id, a])), [apps.data])
   const [adding, setAdding] = useState('')
+  const [addingLabel, setAddingLabel] = useState('')
   const [previews, setPreviews] = useState<Set<number>>(() => new Set())
-  const add = () => {
-    if (!adding) return
-    onChange([...value, { label: adding, options: emptyInstallomatorOptions() }])
+  const addApp = () => {
+    if (!adding || value.some((v) => v.app_id === adding)) return
+    onChange([...value, { app_id: adding, label: byId.get(adding)?.label ?? '', options: emptyInstallomatorOptions() }])
     setAdding('')
+  }
+  const addLabel = () => {
+    if (!addingLabel) return
+    onChange([...value, { label: addingLabel, options: emptyInstallomatorOptions() }])
+    setAddingLabel('')
   }
   const update = (i: number, patch: Partial<PolicyApp>) => onChange(value.map((a, j) => (j === i ? { ...a, ...patch } : a)))
   const move = (i: number, d: -1 | 1) => {
@@ -457,22 +466,39 @@ function AppsSection({ value, onChange, disabled }: { value: PolicyApp[]; onChan
     })
   return (
     <Card>
-      <CardHeader title="Apps (Installomator)" description="Installomator labels run in this order, after packages and before Files & Processes. Each download's signature is checked against the label's Team ID." />
+      <CardHeader title="Mac Apps" description="Apps from the Mac Apps catalog, installed with Installomator in this order, after packages and before Files & Processes. Each app's Installomator options come from its catalog entry." />
       <CardBody className="flex flex-col gap-4">
         {value.length === 0 && <p className="text-sm text-ink-muted">No apps added.</p>}
         {value.map((pa, i) => {
-          const custom = pa.label.startsWith('custom:')
-          const unknown = !!labels.data && !known.has(pa.label)
+          const app = pa.app_id ? byId.get(pa.app_id) : undefined
+          const custom = !pa.app_id && pa.label.startsWith('custom:')
+          const unknown = !pa.app_id && !!labels.data && !known.has(pa.label)
           return (
-            <div key={`${i}-${pa.label}`} className="rounded-xl border border-line">
-              <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
+            <div key={`${i}-${pa.app_id ?? pa.label}`} className="rounded-xl border border-line">
+              <div className={cn('flex flex-wrap items-center gap-3 px-4 py-3', !pa.app_id && 'border-b border-line')}>
                 <span className="w-6 text-center text-xs tabular-nums text-ink-faint">{i + 1}</span>
-                <span className="min-w-0 flex-1 truncate font-mono text-sm text-ink">{pa.label}</span>
+                {pa.app_id ? (
+                  <span className="min-w-0 flex-1 truncate text-sm text-ink">
+                    {app ? (
+                      <Link to={`/apps/${app.id}`} className="font-medium hover:underline">
+                        {app.name}
+                      </Link>
+                    ) : (
+                      <span className="text-critical">Mac App no longer exists</span>
+                    )}
+                    {app && <span className="ml-2 font-mono text-xs text-ink-muted">{app.label}</span>}
+                  </span>
+                ) : (
+                  <span className="min-w-0 flex-1 truncate font-mono text-sm text-ink">{pa.label}</span>
+                )}
+                {!pa.app_id && <Badge title="An Installomator label used directly, with its own options">Label</Badge>}
                 {custom && <Badge tone="accent">Custom</Badge>}
                 {unknown && <Badge tone="critical">Unknown label</Badge>}
-                <Button size="xs" variant="ghost" icon={<Terminal />} onClick={() => togglePreview(i)}>
-                  {previews.has(i) ? 'Hide command' : 'Preview command'}
-                </Button>
+                {!pa.app_id && (
+                  <Button size="xs" variant="ghost" icon={<Terminal />} onClick={() => togglePreview(i)}>
+                    {previews.has(i) ? 'Hide command' : 'Preview command'}
+                  </Button>
+                )}
                 {!disabled && (
                   <>
                     <IconButton label="Move up" variant="ghost" onClick={() => move(i, -1)} disabled={i === 0}>
@@ -487,22 +513,46 @@ function AppsSection({ value, onChange, disabled }: { value: PolicyApp[]; onChan
                   </>
                 )}
               </div>
-              <div className="flex flex-col gap-4 px-4 py-3">
-                <InstallomatorOptionsEditor compact value={pa.options} onChange={(options) => update(i, { options })} disabled={disabled} />
-                {previews.has(i) && <InstallomatorCommandPreview body={{ label: pa.label, options: pa.options }} />}
-              </div>
+              {!pa.app_id && (
+                <div className="flex flex-col gap-4 px-4 py-3">
+                  <InstallomatorOptionsEditor compact value={pa.options} onChange={(options) => update(i, { options })} disabled={disabled} />
+                  {previews.has(i) && <InstallomatorCommandPreview body={{ label: pa.label, options: pa.options }} />}
+                </div>
+              )}
             </div>
           )
         })}
         {!disabled && (
-          <div className="flex items-end gap-2">
-            <Field label="Add app" className="max-w-md flex-1">
-              <LabelCombobox value={adding} onChange={setAdding} placeholder="Search Installomator and custom labels…" />
-            </Field>
-            <Button icon={<Plus />} onClick={add} disabled={!adding || (!!labels.data && !known.has(adding))}>
-              Add
-            </Button>
-          </div>
+          <>
+            <div className="flex items-end gap-2">
+              <Field label="Add a Mac App" className="max-w-md flex-1" hint={(apps.data?.items.length ?? 0) === 0 ? 'Define apps under Mac Apps first.' : undefined}>
+                <Select value={adding} onChange={(e) => setAdding(e.target.value)}>
+                  <option value="">{apps.isPending ? 'Loading…' : 'Select an app…'}</option>
+                  {(apps.data?.items ?? [])
+                    .filter((a) => !value.some((v) => v.app_id === a.id))
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} ({a.label})
+                      </option>
+                    ))}
+                </Select>
+              </Field>
+              <Button icon={<Plus />} onClick={addApp} disabled={!adding}>
+                Add
+              </Button>
+            </div>
+            <details className="rounded-lg border border-line">
+              <summary className="cursor-pointer select-none px-4 py-2.5 text-xs font-medium text-ink-muted hover:text-ink">Use an Installomator label directly</summary>
+              <div className="flex items-end gap-2 border-t border-line p-4">
+                <Field label="Installomator label" className="max-w-md flex-1" hint="For a one-off install that does not need a catalog entry.">
+                  <LabelCombobox value={addingLabel} onChange={setAddingLabel} placeholder="Search Installomator and custom labels…" />
+                </Field>
+                <Button icon={<Plus />} onClick={addLabel} disabled={!addingLabel || (!!labels.data && !known.has(addingLabel))}>
+                  Add
+                </Button>
+              </div>
+            </details>
+          </>
         )}
         <InstallomatorFooter />
       </CardBody>

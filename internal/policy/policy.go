@@ -138,6 +138,20 @@ func (e *Engine) Prepare(ctx context.Context, p *model.Policy, trigger string) (
 	sort.SliceStable(pkgs, func(i, j int) bool { return pkgs[i].Priority < pkgs[j].Priority })
 	ap.Apps = []model.AgentAppStep{}
 	for _, pa := range p.Apps {
+		if pa.AppID != "" { // a Mac App from the catalog: its label and options
+			app, err := e.st.GetMacApp(ctx, pa.AppID)
+			if err != nil {
+				e.log.Warn("policy refers to a Mac App that no longer exists", "policy", p.Name, "app_id", pa.AppID)
+				continue
+			}
+			args, _, err := e.st.InstallomatorArgs(ctx, app.Label, app.Options)
+			if err != nil {
+				e.log.Warn("policy Installomator step skipped", "policy", p.Name, "app", app.Name, "err", err)
+				continue
+			}
+			ap.Apps = append(ap.Apps, model.AgentAppStep{Name: app.Name, Label: app.Label, Args: args})
+			continue
+		}
 		args, name, err := e.st.InstallomatorArgs(ctx, pa.Label, pa.Options)
 		if err != nil {
 			e.log.Warn("policy Installomator step skipped", "policy", p.Name, "label", pa.Label, "err", err)
