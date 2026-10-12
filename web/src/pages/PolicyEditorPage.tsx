@@ -32,6 +32,9 @@ import { InstallomatorFooter } from './AppsPage'
 import { LocalAccountsSection, accountProblem } from './policies/LocalAccountsSection'
 import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
 import { ObjectBar } from '../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../components/templates/DetailsLayout'
+import { RelativeTime } from '../components/ui/RelativeTime'
+import { ScopeSummary } from '../components/pickers/ScopeEditor'
 
 type Tab = 'general' | 'scope' | 'scripts' | 'packages' | 'apps' | 'accounts' | 'files' | 'maintenance' | 'restart' | 'interaction' | 'selfservice' | 'logs'
 
@@ -167,6 +170,23 @@ export function PolicyEditorPage() {
       <Tabs className="mb-5" value={tab} onChange={setTab} items={tabs} />
 
       {tab === 'general' && (
+        <DetailsLayout
+          aside={
+            !isNew && (
+              <SummaryCard
+                rows={[
+                  { label: 'Status', value: <Badge tone={p.enabled ? 'good' : 'neutral'} dot>{p.enabled ? 'Enabled' : 'Disabled'}</Badge> },
+                  { label: 'Scope', value: <ScopeSummary scope={p.scope} /> },
+                  { label: 'Frequency', value: frequencyLabels[p.frequency] ?? p.frequency },
+                  { label: 'Completed', value: String(st.completed ?? 0) },
+                  { label: 'Failed', value: String(st.failed ?? 0) },
+                  { label: 'Pending', value: String((st.pending ?? 0) + (st.running ?? 0)) },
+                  { label: 'Last changed', value: policy.data?.updated_at ? <RelativeTime value={policy.data.updated_at} /> : '' },
+                ]}
+              />
+            )
+          }
+        >
         <Card>
           <CardHeader title="General" />
           <CardBody className="flex flex-col gap-8">
@@ -196,6 +216,7 @@ export function PolicyEditorPage() {
             </FormSection>
           </CardBody>
         </Card>
+        </DetailsLayout>
       )}
 
       {tab === 'scope' && (

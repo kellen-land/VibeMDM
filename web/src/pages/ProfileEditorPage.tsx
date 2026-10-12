@@ -20,7 +20,7 @@ import { RelativeTime } from '../components/ui/RelativeTime'
 import { Checkbox } from '../components/ui/Checkbox'
 import { useToast } from '../components/ui/Toast'
 import { CodeEditor } from '../components/CodeEditor'
-import { ScopeEditor } from '../components/pickers/ScopeEditor'
+import { ScopeEditor, ScopeSummary } from '../components/pickers/ScopeEditor'
 import { DeploymentCounts } from './ProfilesPage'
 import { managedProfiles, schemaIdFromSource } from '../components/schema/schema'
 import { Link } from 'react-router-dom'
@@ -28,6 +28,7 @@ import { PayloadProfileEditorPage } from './profiles/PayloadProfileEditorPage'
 import type { SchemaProfileClone } from './profiles/SchemaProfileEditorPage'
 import { useEditMode } from '../components/editor/useEditMode'
 import { ObjectBar } from '../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../components/templates/DetailsLayout'
 
 type Tab = 'general' | 'scope' | 'deployments'
 
@@ -165,17 +166,8 @@ function UploadedProfileEditorPage() {
   return (
     <>
       <PageHeader
-        crumbs={[{ label: 'Configuration Profiles', to: '/profiles' }, { label: isNew ? 'New profile' : p?.name ?? '' }]}
+        crumbs={[{ label: 'Configuration profiles', to: '/profiles' }, { label: isNew ? 'New profile' : p?.name ?? '' }]}
         title={isNew ? 'Upload a profile' : p?.name}
-        meta={
-          p ? (
-            <>
-              <Badge>{p.level === 'user' ? 'User level' : 'Device level'}</Badge>
-              <span className="font-mono text-xs text-ink-muted">{p.identifier}</span>
-              <DeploymentCounts status={p.status} />
-            </>
-          ) : undefined
-        }
         actions={
           fromSchema &&
           p && (
@@ -188,92 +180,107 @@ function UploadedProfileEditorPage() {
       <Tabs className="mb-5" value={tab} onChange={setTab} items={[{ key: 'general', label: 'General' }, { key: 'scope', label: 'Scope' }, ...(isNew ? [] : [{ key: 'deployments' as Tab, label: 'Deployments' }])]} />
 
       {tab === 'general' && (
-        <div className="flex flex-col gap-6">
-          {fromSchema && p && (
-            <Alert tone="info" title={managed ? `Managed by ${managed.label}` : `Built from schema: ${schemaName}`}>
-              {managed
-                ? 'This profile is generated from its own settings page. Change it there; editing the XML here would detach it from that page.'
-                : 'Use “Open form” to change its settings. You can still edit the XML below, but saving XML changes detaches the profile from the form.'}
-            </Alert>
-          )}
-          <Card>
-            <CardHeader title="General" />
-            <CardBody>
-              <FormGrid cols={2}>
-                <Field label="Name" hint="Defaults to the profile's PayloadDisplayName.">
-                  <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} placeholder={meta.displayName || 'Profile name'} />
-                </Field>
-                <Field label="Category">
-                  <Input value={category} onChange={(e) => setCategory(e.target.value)} disabled={ro} />
-                </Field>
-                <Field label="Description" className="md:col-span-2">
-                  <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} disabled={ro} placeholder={meta.description} />
-                </Field>
-              </FormGrid>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardHeader
-              title="Payload"
-              description="Upload a .mobileconfig or paste its XML. The server validates it, fills the identifier and UUID, and forces device scope unless PayloadScope is User."
-              actions={
-                <>
-                  {payload && (
-                    <Button size="sm" icon={<Download />} onClick={() => saveText(payload, `${(name || meta.identifier || 'profile').replace(/[^\w.-]+/g, '_')}.mobileconfig`, 'application/x-apple-aspen-config')}>
-                      Download
-                    </Button>
-                  )}
-                  {!ro && (
-                    <>
-                      <input ref={fileRef} type="file" accept=".mobileconfig,.xml,.plist" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
-                      <Button size="sm" icon={<Upload />} onClick={() => fileRef.current?.click()}>
-                        Upload .mobileconfig
+        <DetailsLayout
+          aside={
+            p && (
+              <SummaryCard
+                rows={[
+                  { label: 'Level', value: <Badge>{p.level === 'user' ? 'User level' : 'Device level'}</Badge> },
+                  { label: 'Scope', value: <ScopeSummary scope={p.scope} /> },
+                  { label: 'Deployment', value: <DeploymentCounts status={p.status} /> },
+                  { label: 'Last changed', value: p.updated_at ? <RelativeTime value={p.updated_at} /> : '' },
+                ]}
+              />
+            )
+          }
+        >
+          <div className="flex flex-col gap-6">
+            {fromSchema && p && (
+              <Alert tone="info" title={managed ? `Managed by ${managed.label}` : `Built from schema: ${schemaName}`}>
+                {managed
+                  ? 'This profile is generated from its own settings page. Change it there; editing the XML here would detach it from that page.'
+                  : 'Use “Open form” to change its settings. You can still edit the XML below, but saving XML changes detaches the profile from the form.'}
+              </Alert>
+            )}
+            <Card>
+              <CardHeader title="General" />
+              <CardBody>
+                <FormGrid cols={2}>
+                  <Field label="Name" hint="Defaults to the profile's PayloadDisplayName.">
+                    <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} placeholder={meta.displayName || 'Profile name'} />
+                  </Field>
+                  <Field label="Category">
+                    <Input value={category} onChange={(e) => setCategory(e.target.value)} disabled={ro} />
+                  </Field>
+                  <Field label="Description" className="md:col-span-2">
+                    <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} disabled={ro} placeholder={meta.description} />
+                  </Field>
+                </FormGrid>
+              </CardBody>
+            </Card>
+            <Card>
+              <CardHeader
+                title="Payload"
+                description="Upload a .mobileconfig or paste its XML. The server validates it, fills the identifier and UUID, and forces device scope unless PayloadScope is User."
+                actions={
+                  <>
+                    {payload && (
+                      <Button size="sm" icon={<Download />} onClick={() => saveText(payload, `${(name || meta.identifier || 'profile').replace(/[^\w.-]+/g, '_')}.mobileconfig`, 'application/x-apple-aspen-config')}>
+                        Download
                       </Button>
-                      {payload && (
-                        <Button size="sm" variant="ghost" icon={<X />} onClick={() => setPayload('')}>
-                          Clear
+                    )}
+                    {!ro && (
+                      <>
+                        <input ref={fileRef} type="file" accept=".mobileconfig,.xml,.plist" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+                        <Button size="sm" icon={<Upload />} onClick={() => fileRef.current?.click()}>
+                          Upload .mobileconfig
                         </Button>
-                      )}
-                    </>
-                  )}
-                </>
-              }
-            />
-            <CardBody className="flex flex-col gap-4">
-              {payload.trim() !== '' && !payloadLooksValid && (
-                <Alert tone="warning" title="This does not look like a Configuration profile">
-                  The top-level PayloadType must be <code>Configuration</code> and a PayloadIdentifier is required. The server will reject invalid payloads.
-                </Alert>
-              )}
-              {!isNew && payload.trim() === '' && <Alert tone="info">Leave the payload empty to keep the existing one on save.</Alert>}
-              {detaches && (
-                <Alert tone="warning" title="Saving will detach the form">
-                  You changed the XML of a profile built from {managed ? managed.label : `the ${schemaName} schema`}. After saving, it can no longer be edited with the form.
-                </Alert>
-              )}
-              <FormGrid cols={3}>
-                <Field label="Identifier">
-                  <Input readOnly mono value={meta.identifier ?? p?.identifier ?? ''} placeholder="Parsed from payload" />
-                </Field>
-                <Field label="UUID">
-                  <Input readOnly mono value={meta.uuid ?? p?.uuid ?? ''} placeholder="Generated on save" />
-                </Field>
-                <Field label="Level">
-                  <Input readOnly value={meta.scope ? (meta.scope.toLowerCase() === 'user' ? 'User' : 'Device') : p?.level ? (p.level === 'user' ? 'User' : 'Device') : ''} placeholder="Device" />
-                </Field>
-              </FormGrid>
-              <div
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  if (!ro) onFile(e.dataTransfer.files?.[0])
-                }}
-              >
-                <CodeEditor language="xml" value={payload} onChange={setPayload} height="440px" readOnly={ro} placeholder="Paste mobileconfig XML here or drop a file" />
-              </div>
-            </CardBody>
-          </Card>
-        </div>
+                        {payload && (
+                          <Button size="sm" variant="ghost" icon={<X />} onClick={() => setPayload('')}>
+                            Clear
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </>
+                }
+              />
+              <CardBody className="flex flex-col gap-4">
+                {payload.trim() !== '' && !payloadLooksValid && (
+                  <Alert tone="warning" title="This does not look like a Configuration profile">
+                    The top-level PayloadType must be <code>Configuration</code> and a PayloadIdentifier is required. The server will reject invalid payloads.
+                  </Alert>
+                )}
+                {!isNew && payload.trim() === '' && <Alert tone="info">Leave the payload empty to keep the existing one on save.</Alert>}
+                {detaches && (
+                  <Alert tone="warning" title="Saving will detach the form">
+                    You changed the XML of a profile built from {managed ? managed.label : `the ${schemaName} schema`}. After saving, it can no longer be edited with the form.
+                  </Alert>
+                )}
+                <FormGrid cols={3}>
+                  <Field label="Identifier">
+                    <Input readOnly mono value={meta.identifier ?? p?.identifier ?? ''} placeholder="Parsed from payload" />
+                  </Field>
+                  <Field label="UUID">
+                    <Input readOnly mono value={meta.uuid ?? p?.uuid ?? ''} placeholder="Generated on save" />
+                  </Field>
+                  <Field label="Level">
+                    <Input readOnly value={meta.scope ? (meta.scope.toLowerCase() === 'user' ? 'User' : 'Device') : p?.level ? (p.level === 'user' ? 'User' : 'Device') : ''} placeholder="Device" />
+                  </Field>
+                </FormGrid>
+                <div
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    if (!ro) onFile(e.dataTransfer.files?.[0])
+                  }}
+                >
+                  <CodeEditor language="xml" value={payload} onChange={setPayload} height="440px" readOnly={ro} placeholder="Paste mobileconfig XML here or drop a file" />
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+        </DetailsLayout>
       )}
 
       {tab === 'scope' && (
@@ -371,7 +378,7 @@ export function DeploymentsTab({ profileId }: { profileId: string }) {
           isAdmin && (
             <>
               {selected.size > 0 && (
-                <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setConfirmRemove(true)}>
+                <Button /* ui-allow: delete-header-button (removes the profile from selected computers) */ variant="danger-outline" icon={<Trash2 />} onClick={() => setConfirmRemove(true)}>
                   Remove from {selected.size}
                 </Button>
               )}

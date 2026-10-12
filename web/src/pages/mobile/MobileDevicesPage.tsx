@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Smartphone, Tablet } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Plus, Smartphone, Tablet } from 'lucide-react'
 import { useMobileDevices, useMobileGroups } from '../../api/queries'
 import { errorMessage } from '../../api/client'
 import type { MobileDevice } from '../../api/types'
@@ -13,6 +13,9 @@ import { Pagination } from '../../components/ui/Pagination'
 import { Badge } from '../../components/ui/Badge'
 import { RelativeTime } from '../../components/ui/RelativeTime'
 import { useDebounced } from '../../lib/hooks'
+import { Button } from '../../components/ui/Button'
+import { useAuth } from '../../auth/AuthContext'
+import { cn } from '../../lib/cn'
 
 export function DeviceIcon({ d, className = 'size-4 shrink-0 text-ink-faint' }: { d: Pick<MobileDevice, 'device_type'>; className?: string }) {
   return d.device_type === 'iPad' ? <Tablet className={className} /> : <Smartphone className={className} />
@@ -51,21 +54,28 @@ export function MobileDevicesPage() {
   const list = useMobileDevices(params)
   const groups = useMobileGroups()
   const sortState: SortState = { key: sort, dir: order }
+  const filtered = !!q || !!groupId
+  const { isAdmin } = useAuth()
 
   return (
     <>
-      <PageHeader title="Mobile Devices" description={list.data ? `${list.data.total.toLocaleString()} iPhone and iPad ${list.data.total === 1 ? 'record' : 'records'}` : undefined} />
+      <PageHeader title="Mobile devices" description={list.data ? `${list.data.total.toLocaleString()} iPhone and iPad ${list.data.total === 1 ? 'record' : 'records'}` : undefined} />
       <Card>
-        <div className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3">
-          <SearchInput value={q} onChange={(v) => set({ q: v, offset: 0 })} placeholder="Search name, serial, model, user, phone…" className="w-full sm:w-80" />
-          <Select value={groupId} onChange={(e) => set({ group_id: e.target.value, offset: 0 })} className="w-full sm:w-64" aria-label="Filter by group">
-            <option value="">All groups</option>
+        <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
+          <SearchInput value={q} onChange={(v) => set({ q: v, offset: 0 })} placeholder="Search mobile devices…" title="Name, serial, model, user or phone number" className="w-full sm:w-72" />
+          <Select value={groupId} onChange={(e) => set({ group_id: e.target.value, offset: 0 })} className={cn('w-auto', groupId && 'border-accent-500/60')} aria-label="Filter by group">
+            <option value="">Any group</option>
             {(groups.data?.items ?? []).map((g) => (
               <option key={g.id} value={g.id}>
                 {g.name} ({g.member_count})
               </option>
             ))}
           </Select>
+          {filtered && (
+            <Button size="sm" variant="ghost" onClick={() => set({ q: undefined, group_id: undefined, offset: 0 })}>
+              Clear filters
+            </Button>
+          )}
         </div>
         <Table<MobileDevice>
           rows={list.data?.items}
@@ -75,8 +85,18 @@ export function MobileDevicesPage() {
           onRowClick={(d) => navigate(`/mobile-devices/${d.id}`)}
           sort={sortState}
           onSort={(s) => set({ sort: s.key, order: s.dir, offset: 0 })}
-          emptyTitle={q || groupId ? 'No mobile devices match your filters' : 'No iPhones or iPads enrolled yet'}
-          emptyDescription={q || groupId ? 'Try a different search or group.' : 'Enroll one from the Mobile Device Enrollment page.'}
+          emptyTitle={filtered ? 'Nothing matches' : 'No mobile devices yet'}
+          emptyDescription={filtered ? 'Try another search or clear the filters.' : 'iPhones and iPads appear here once they enroll with MDM.'}
+          emptyAction={
+            !filtered &&
+            isAdmin && (
+              <Link to="/mobile-enrollment">
+                <Button variant="primary" size="sm" icon={<Plus />}>
+                  Enroll a device
+                </Button>
+              </Link>
+            )
+          }
           columns={[
             {
               key: 'name',

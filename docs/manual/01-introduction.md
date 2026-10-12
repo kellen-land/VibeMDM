@@ -231,7 +231,15 @@ update plans, …) is created, edited and deleted the same way, as in Jamf Pro:
 - **Edit** unlocks the whole object, every tab included. The bar then shows **Cancel** and **Save**. There is one
   **Save** for the whole object; it keeps you on the object and returns to view mode. **Cancel** puts back the saved
   values (it asks first when you changed something).
+- **Lists** all work the same way: one **New** button, search, a few filters, sortable columns, and a click on a row
+  opens the object. Select rows (the checkboxes) for bulk actions such as **Delete**, **Enable** and **Disable**; there
+  are no Delete buttons on individual rows.
 - **New** on a list page opens an empty object in edit mode; **Save** creates it, **Cancel** returns to the list.
+- **Saved:** a successful save turns the Save button green with a check ("Saved"), sweeps a line across the bar and
+  briefly outlines the page's cards in green as the object locks back to read-only; a notification confirms it at
+  the top right. A failed save leaves you in edit mode with the reason. With *Reduce motion* turned on in the
+  operating system, the check and notification appear without animation.
+- The first tab of an object has a **Summary** column: status, scope, deployment counts and when it last changed.
 - **Delete** asks for a second click (**Delete** again) in the same bar.
 - **Clone** opens a new, unsaved copy named "Copy of …"; nothing exists until you save it.
 - Leaving a page (or closing the tab) with unsaved changes asks whether to discard them.

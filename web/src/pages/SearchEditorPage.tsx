@@ -14,12 +14,12 @@ import { Checkbox } from '../components/ui/Checkbox'
 import { Tabs } from '../components/ui/Tabs'
 import { Table } from '../components/ui/Table'
 import { Alert } from '../components/ui/Alert'
-import { Badge } from '../components/ui/Badge'
 import { LoadingBlock } from '../components/ui/Spinner'
 import { RelativeTime } from '../components/ui/RelativeTime'
 import { useToast } from '../components/ui/Toast'
 import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
 import { ObjectBar } from '../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../components/templates/DetailsLayout'
 import { CriteriaBuilder, describeCriteria } from '../components/pickers/CriteriaBuilder'
 import { defaultDisplayFields, renderComputerField } from '../lib/computerFields'
 
@@ -118,21 +118,24 @@ export function SearchEditorPage() {
       <PageHeader
         crumbs={[{ label: 'Searches', to: '/searches' }, { label: isNew ? 'New search' : search.data?.name ?? '' }]}
         title={isNew ? 'New advanced search' : search.data?.name}
-        meta={
-          !isNew && search.data ? (
-            <>
-              <Badge>{criteria.length} rule{criteria.length === 1 ? '' : 's'}</Badge>
-              <span className="text-xs text-ink-muted">
-                Updated <RelativeTime value={search.data.updated_at} />
-              </span>
-            </>
-          ) : undefined
-        }
       />
       {!isNew && <Tabs className="mb-5" value={tab} onChange={setTab} items={[{ key: 'settings', label: 'Criteria & columns' }, { key: 'results', label: 'Results', icon: <Play />, shortcut: 'view' }]} />}
 
       {(tab === 'settings' || isNew) && (
-        <div className="flex flex-col gap-6">
+        <DetailsLayout
+          aside={
+            !isNew &&
+            search.data && (
+              <SummaryCard
+                rows={[
+                  { label: 'Criteria', value: `${criteria.length} rule${criteria.length === 1 ? '' : 's'}` },
+                  { label: 'Columns', value: String(displayFields.length) },
+                  { label: 'Last changed', value: <RelativeTime value={search.data.updated_at} /> },
+                ]}
+              />
+            )
+          }
+        >
           <Card>
             <CardHeader title="General" />
             <CardBody>
@@ -193,7 +196,7 @@ export function SearchEditorPage() {
               )}
             </CardBody>
           </Card>
-        </div>
+        </DetailsLayout>
       )}
 
       {tab === 'results' && !isNew && id && <ResultsTab searchId={id} dirty={ed.dirty} fallbackFields={displayFields} />}

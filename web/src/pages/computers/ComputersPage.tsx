@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Download, Laptop } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Download, Laptop, Plus } from 'lucide-react'
 import { useComputers, useGroups } from '../../api/queries'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Card } from '../../components/ui/Card'
@@ -15,6 +15,8 @@ import { buildQuery, downloadFile, errorMessage } from '../../api/client'
 import { Button } from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
 import type { Computer } from '../../api/types'
+import { useAuth } from '../../auth/AuthContext'
+import { cn } from '../../lib/cn'
 import { latest } from '../DashboardPage'
 
 export function ComputerStatusBadges({ c, compact }: { c: Pick<Computer, 'mdm_enrolled' | 'agent_enrolled'>; compact?: boolean }) {
@@ -57,6 +59,7 @@ export function ComputersPage() {
   const list = useComputers(params)
   const groups = useGroups()
   const toast = useToast()
+  const { isAdmin } = useAuth()
   const [exporting, setExporting] = useState(false)
   const exportCsv = async () => {
     setExporting(true)
@@ -70,6 +73,7 @@ export function ComputersPage() {
   }
 
   const sortState: SortState = { key: sort, dir: order }
+  const filtered = !!q || !!groupId
 
   return (
     <>
@@ -83,16 +87,21 @@ export function ComputersPage() {
         }
       />
       <Card>
-        <div className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3">
-          <SearchInput value={q} onChange={(v) => set({ q: v, offset: 0 })} placeholder="Search name, serial, user, model, IP…" className="w-full sm:w-80" />
-          <Select value={groupId} onChange={(e) => set({ group_id: e.target.value, offset: 0 })} className="w-full sm:w-64" aria-label="Filter by group">
-            <option value="">All groups</option>
+        <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
+          <SearchInput value={q} onChange={(v) => set({ q: v, offset: 0 })} placeholder="Search computers…" title="Name, serial, user, model or IP address" className="w-full sm:w-72" />
+          <Select value={groupId} onChange={(e) => set({ group_id: e.target.value, offset: 0 })} className={cn('w-auto', groupId && 'border-accent-500/60')} aria-label="Filter by group">
+            <option value="">Any group</option>
             {(groups.data?.items ?? []).map((g) => (
               <option key={g.id} value={g.id}>
                 {g.name} ({g.member_count})
               </option>
             ))}
           </Select>
+          {filtered && (
+            <Button size="sm" variant="ghost" onClick={() => set({ q: undefined, group_id: undefined, offset: 0 })}>
+              Clear filters
+            </Button>
+          )}
         </div>
         <Table<Computer>
           rows={list.data?.items}
@@ -102,8 +111,18 @@ export function ComputersPage() {
           onRowClick={(c) => navigate(`/computers/${c.id}`)}
           sort={sortState}
           onSort={(s) => set({ sort: s.key, order: s.dir, offset: 0 })}
-          emptyTitle={q || groupId ? 'No computers match your filters' : 'No computers enrolled yet'}
-          emptyDescription={q || groupId ? 'Try a different search or group.' : 'Enroll a Mac from the Enrollment page to get started.'}
+          emptyTitle={filtered ? 'Nothing matches' : 'No computers yet'}
+          emptyDescription={filtered ? 'Try another search or clear the filters.' : 'Macs appear here once they enroll with MDM or install the agent.'}
+          emptyAction={
+            !filtered &&
+            isAdmin && (
+              <Link to="/enrollment">
+                <Button variant="primary" size="sm" icon={<Plus />}>
+                  Enroll a Mac
+                </Button>
+              </Link>
+            )
+          }
           columns={[
             {
               key: 'name',

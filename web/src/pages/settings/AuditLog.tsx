@@ -44,7 +44,7 @@ export function AuditLog() {
       {rows && rows.length === 0 && <EmptyState title="No audit entries yet" compact />}
       {rows && rows.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table /* ui-allow: raw-table (expandable rows) */ className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-muted">
                 <th className="w-8 pl-4 py-2.5" />

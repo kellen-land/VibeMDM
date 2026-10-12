@@ -15,6 +15,9 @@ import { useToast } from '../components/ui/Toast'
 import { CodeEditor } from '../components/CodeEditor'
 import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
 import { ObjectBar } from '../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../components/templates/DetailsLayout'
+import { Badge } from '../components/ui/Badge'
+import { RelativeTime } from '../components/ui/RelativeTime'
 
 const defaultScript = `#!/bin/bash
 # Print the value between <result></result> tags.
@@ -92,53 +95,70 @@ export function ExtensionAttributeEditorPage() {
   if (!isNew && ea.isPending) return <LoadingBlock />
   if (!isNew && ea.error) return <Alert tone="critical">{errorMessage(ea.error)}</Alert>
   const ro = ed.readOnly
+  const saved = ea.data
 
   return (
     <>
       <PageHeader
-        crumbs={[{ label: 'Extension Attributes', to: '/extension-attributes' }, { label: isNew ? 'New attribute' : ea.data?.name ?? '' }]}
+        crumbs={[{ label: 'Extension attributes', to: '/extension-attributes' }, { label: isNew ? 'New attribute' : ea.data?.name ?? '' }]}
         title={isNew ? 'New extension attribute' : ea.data?.name}
       />
-      <div className="flex flex-col gap-6">
-        <Card>
-          <CardHeader title="General" />
-          <CardBody className="flex flex-col gap-5">
-            <FormGrid cols={2}>
-              <Field label="Name" required>
-                <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} />
-              </Field>
-              <Field label="Description">
-                <Input value={description} onChange={(e) => setDescription(e.target.value)} disabled={ro} />
-              </Field>
-              <Field label="Data type" hint="Controls which operators are offered in smart group criteria.">
-                <Select value={dataType} onChange={(e) => setDataType(e.target.value as EADataType)} disabled={ro} options={[{ value: 'string', label: 'String' }, { value: 'integer', label: 'Integer' }, { value: 'date', label: 'Date (YYYY-MM-DD hh:mm:ss)' }]} />
-              </Field>
-              <Field label="Input type" hint="Script: collected by the agent during inventory. Text field: entered manually on each computer record.">
-                <Select value={inputType} onChange={(e) => setInputType(e.target.value as EAInputType)} disabled={ro} options={[{ value: 'script', label: 'Script' }, { value: 'text', label: 'Text field' }]} />
-              </Field>
-            </FormGrid>
-            <Toggle checked={enabled} onChange={setEnabled} disabled={ro} label="Enabled" description="Disabled attributes are not collected and are hidden from criteria." />
-          </CardBody>
-        </Card>
-        {inputType === 'script' && (
+      <DetailsLayout
+        aside={
+          !isNew &&
+          saved && (
+            <SummaryCard
+              rows={[
+                { label: 'Status', value: <Badge tone={saved.enabled ? 'good' : 'neutral'} dot>{saved.enabled ? 'Enabled' : 'Disabled'}</Badge> },
+                { label: 'Data type', value: saved.data_type },
+                { label: 'Input', value: saved.input_type === 'script' ? 'Script' : 'Text field' },
+                { label: 'Last changed', value: saved.updated_at ? <RelativeTime value={saved.updated_at} /> : '' },
+              ]}
+            />
+          )
+        }
+      >
+        <div className="flex flex-col gap-6">
           <Card>
-            <CardHeader title="Script" description="Runs as root during each inventory update. Output the value wrapped in <result></result> tags; anything outside the tags is ignored." />
-            <CardBody className="flex flex-col gap-3">
-              <Alert tone="info">
-                Example: <code className="font-mono">echo "&lt;result&gt;$(sw_vers -productVersion)&lt;/result&gt;"</code>. For integer attributes print only digits; for dates use <code className="font-mono">YYYY-MM-DD hh:mm:ss</code>.
-              </Alert>
-              <CodeEditor language="shell" value={script} onChange={setScript} height="400px" readOnly={ro} />
+            <CardHeader title="General" />
+            <CardBody className="flex flex-col gap-5">
+              <FormGrid cols={2}>
+                <Field label="Name" required>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} />
+                </Field>
+                <Field label="Description">
+                  <Input value={description} onChange={(e) => setDescription(e.target.value)} disabled={ro} />
+                </Field>
+                <Field label="Data type" hint="Controls which operators are offered in smart group criteria.">
+                  <Select value={dataType} onChange={(e) => setDataType(e.target.value as EADataType)} disabled={ro} options={[{ value: 'string', label: 'String' }, { value: 'integer', label: 'Integer' }, { value: 'date', label: 'Date (YYYY-MM-DD hh:mm:ss)' }]} />
+                </Field>
+                <Field label="Input type" hint="Script: collected by the agent during inventory. Text field: entered manually on each computer record.">
+                  <Select value={inputType} onChange={(e) => setInputType(e.target.value as EAInputType)} disabled={ro} options={[{ value: 'script', label: 'Script' }, { value: 'text', label: 'Text field' }]} />
+                </Field>
+              </FormGrid>
+              <Toggle checked={enabled} onChange={setEnabled} disabled={ro} label="Enabled" description="Disabled attributes are not collected and are hidden from criteria." />
             </CardBody>
           </Card>
-        )}
-        {inputType === 'text' && (
-          <Card>
-            <CardBody>
-              <Textarea readOnly rows={2} value="Values for text attributes are entered on each computer's Extension Attributes tab." className="bg-surface-sunken" />
-            </CardBody>
-          </Card>
-        )}
-      </div>
+          {inputType === 'script' && (
+            <Card>
+              <CardHeader title="Script" description="Runs as root during each inventory update. Output the value wrapped in <result></result> tags; anything outside the tags is ignored." />
+              <CardBody className="flex flex-col gap-3">
+                <Alert tone="info">
+                  Example: <code className="font-mono">echo "&lt;result&gt;$(sw_vers -productVersion)&lt;/result&gt;"</code>. For integer attributes print only digits; for dates use <code className="font-mono">YYYY-MM-DD hh:mm:ss</code>.
+                </Alert>
+                <CodeEditor language="shell" value={script} onChange={setScript} height="400px" readOnly={ro} />
+              </CardBody>
+            </Card>
+          )}
+          {inputType === 'text' && (
+            <Card>
+              <CardBody>
+                <Textarea readOnly rows={2} value="Values for text attributes are entered on each computer's Extension Attributes tab." className="bg-surface-sunken" />
+              </CardBody>
+            </Card>
+          )}
+        </div>
+      </DetailsLayout>
       <ObjectBar
         ed={ed}
         isNew={isNew}

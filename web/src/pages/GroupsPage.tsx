@@ -1,126 +1,79 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Trash2, Users } from 'lucide-react'
+import { Trash2, Users } from 'lucide-react'
 import { qk, useGroups, useInvalidate } from '../api/queries'
-import { api, errorMessage } from '../api/client'
-import { useAuth } from '../auth/AuthContext'
+import { api } from '../api/client'
 import type { ComputerGroup } from '../api/types'
-import { PageHeader } from '../components/ui/PageHeader'
-import { Card } from '../components/ui/Card'
-import { Table } from '../components/ui/Table'
-import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
-import { SearchInput } from '../components/ui/SearchInput'
 import { RelativeTime } from '../components/ui/RelativeTime'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
-import { useToast } from '../components/ui/Toast'
+import { IndexPage, type IndexColumn, type IndexFilter } from '../components/templates/IndexPage'
+
+/** Columns shared by the computer and mobile device group lists. */
+export const groupColumns: IndexColumn<ComputerGroup>[] = [
+  {
+    key: 'name',
+    header: 'Name',
+    sortValue: (g) => g.name,
+    render: (g) => (
+      <span className="flex items-center gap-2.5">
+        <Users className="size-4 text-ink-faint" />
+        <span>
+          <span className="block font-medium text-ink">{g.name}</span>
+          {g.description && <span className="block text-xs text-ink-muted truncate max-w-md">{g.description}</span>}
+        </span>
+      </span>
+    ),
+  },
+  { key: 'type', header: 'Type', sortValue: (g) => (g.is_smart ? 0 : 1), render: (g) => <Badge tone={g.is_smart ? 'accent' : 'neutral'}>{g.is_smart ? 'Smart' : 'Static'}</Badge> },
+  {
+    key: 'criteria',
+    header: 'Criteria',
+    sortValue: (g) => (g.is_smart ? g.criteria?.length ?? 0 : -1),
+    render: (g) => <span className="text-ink-muted tabular-nums">{g.is_smart ? `${g.criteria?.length ?? 0} rule${(g.criteria?.length ?? 0) === 1 ? '' : 's'}` : '—'}</span>,
+  },
+  { key: 'members', header: 'Members', align: 'right', sortValue: (g) => g.member_count, render: (g) => <span className="tabular-nums font-medium">{g.member_count.toLocaleString()}</span> },
+  { key: 'updated', header: 'Updated', sortValue: (g) => g.updated_at, render: (g) => <RelativeTime value={g.updated_at} className="text-ink-muted" /> },
+]
+
+export const groupTypeFilter: IndexFilter<ComputerGroup> = {
+  key: 'type',
+  label: 'Any type',
+  options: [
+    { value: 'smart', label: 'Smart' },
+    { value: 'static', label: 'Static' },
+  ],
+  match: (g, v) => g.is_smart === (v === 'smart'),
+}
 
 export function GroupsPage() {
-  const { isAdmin } = useAuth()
   const groups = useGroups()
-  const navigate = useNavigate()
-  const toast = useToast()
   const invalidate = useInvalidate()
-  const [q, setQ] = useState('')
-  const [del, setDel] = useState<ComputerGroup | null>(null)
-  const items = (groups.data?.items ?? []).filter((g) => !q || g.name.toLowerCase().includes(q.toLowerCase()) || g.description.toLowerCase().includes(q.toLowerCase()))
-
-  const doDelete = async () => {
-    if (!del) return
-    try {
-      await api.del(`/api/v1/groups/${del.id}`)
-      toast.success('Group deleted')
-      await invalidate(qk.groups, qk.dashboard)
-      setDel(null)
-    } catch (e) {
-      toast.error('Delete failed', errorMessage(e))
-    }
-  }
 
   return (
-    <>
-      <PageHeader
-        title="Computer Groups"
-        description="Smart groups update automatically from inventory criteria; static groups are curated by hand."
-        actions={
-          isAdmin && (
-            <Link to="/groups/new" data-shortcut="new">
-              <Button variant="primary" icon={<Plus />}>
-                New group
-              </Button>
-            </Link>
-          )
-        }
-      />
-      <Card>
-        <div className="flex items-center gap-3 border-b border-line px-5 py-3">
-          <SearchInput value={q} onChange={setQ} placeholder="Filter groups…" className="w-full sm:w-72" />
-        </div>
-        <Table<ComputerGroup>
-          rows={items}
-          loading={groups.isPending}
-          error={groups.error ? errorMessage(groups.error) : null}
-          rowKey={(g) => g.id}
-          onRowClick={(g) => navigate(`/groups/${g.id}`)}
-          emptyTitle={q ? 'No groups match' : 'No groups yet'}
-          emptyDescription={q ? undefined : 'Create a smart group to target computers by criteria, or a static group to pick them by hand.'}
-          emptyAction={
-            isAdmin && !q ? (
-              <Link to="/groups/new" data-shortcut="new">
-                <Button variant="primary" size="sm" icon={<Plus />}>
-                  New group
-                </Button>
-              </Link>
-            ) : undefined
-          }
-          columns={[
-            {
-              key: 'name',
-              header: 'Name',
-              render: (g) => (
-                <span className="flex items-center gap-2.5">
-                  <Users className="size-4 text-ink-faint" />
-                  <span>
-                    <span className="block font-medium text-ink">{g.name}</span>
-                    {g.description && <span className="block text-xs text-ink-muted truncate max-w-md">{g.description}</span>}
-                  </span>
-                </span>
-              ),
-            },
-            { key: 'type', header: 'Type', render: (g) => <Badge tone={g.is_smart ? 'accent' : 'neutral'}>{g.is_smart ? 'Smart' : 'Static'}</Badge> },
-            { key: 'criteria', header: 'Criteria', render: (g) => <span className="text-ink-muted tabular-nums">{g.is_smart ? `${g.criteria?.length ?? 0} rule${(g.criteria?.length ?? 0) === 1 ? '' : 's'}` : '—'}</span> },
-            { key: 'members', header: 'Members', align: 'right', render: (g) => <span className="tabular-nums font-medium">{g.member_count.toLocaleString()}</span> },
-            { key: 'updated', header: 'Updated', render: (g) => <RelativeTime value={g.updated_at} className="text-ink-muted" /> },
-            {
-              key: 'actions',
-              header: '',
-              align: 'right',
-              render: (g) =>
-                isAdmin ? (
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    icon={<Trash2 />}
-                    aria-label="Delete group"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setDel(g)
-                    }}
-                  />
-                ) : null,
-            },
-          ]}
-        />
-      </Card>
-      <ConfirmDialog
-        open={!!del}
-        onClose={() => setDel(null)}
-        onConfirm={doDelete}
-        destructive
-        title={`Delete "${del?.name}"?`}
-        description="Policies and profiles scoped to this group will no longer target its members."
-        confirmLabel="Delete group"
-      />
-    </>
+    <IndexPage<ComputerGroup>
+      title="Computer groups"
+      description="Smart groups update automatically from inventory criteria; static groups are curated by hand."
+      newTo="/groups/new"
+      newLabel="New group"
+      rows={groups.data?.items}
+      loading={groups.isPending}
+      error={groups.error}
+      rowKey={(g) => g.id}
+      rowHref={(g) => `/groups/${g.id}`}
+      search={{ placeholder: 'Search groups…', text: (g) => `${g.name} ${g.description}` }}
+      filters={[groupTypeFilter]}
+      defaultSort={{ key: 'name', dir: 'asc' }}
+      onChanged={() => invalidate(qk.groups, qk.dashboard)}
+      bulkActions={[
+        {
+          label: 'Delete',
+          icon: <Trash2 />,
+          destructive: true,
+          confirm: { title: (n) => `Delete ${n} ${n === 1 ? 'group' : 'groups'}?`, description: 'Policies and profiles scoped to these groups will no longer target their members.' },
+          run: (g) => api.del(`/api/v1/groups/${g.id}`),
+          done: (n) => `${n} ${n === 1 ? 'group' : 'groups'} deleted`,
+        },
+      ]}
+      empty={{ title: 'No groups yet', description: 'Create a smart group to target computers by criteria, or a static group to pick them by hand.' }}
+      columns={groupColumns}
+    />
   )
 }

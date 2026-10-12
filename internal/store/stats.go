@@ -15,6 +15,7 @@ type Count struct {
 // DashboardStats summarizes the fleet.
 type DashboardStats struct {
 	Computers           int               `json:"computers"`
+	MobileDevices       int               `json:"mobile_devices"`
 	MDMEnrolled         int               `json:"mdm_enrolled"`
 	AgentEnrolled       int               `json:"agent_enrolled"`
 	AgentsOnline        int               `json:"agents_online"`
@@ -74,6 +75,7 @@ func (s *Store) Dashboard(ctx context.Context) (*DashboardStats, error) {
 		return nil, err
 	}
 	d.PendingCommands, _ = s.PendingCommandCount(ctx)
+	s.DB.QueryRowContext(ctx, `SELECT count(*) FROM mobile_devices`).Scan(&d.MobileDevices)
 	if d.OSVersions, err = s.counts(ctx, `SELECT COALESCE(NULLIF(os_version,''),'Unknown'), count(*) FROM computers GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT 12`); err != nil {
 		return nil, err
 	}

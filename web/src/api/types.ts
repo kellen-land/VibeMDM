@@ -615,6 +615,7 @@ export interface Count {
 
 export interface DashboardStats {
   computers: number
+  mobile_devices: number
   mdm_enrolled: number
   agent_enrolled: number
   agents_online: number

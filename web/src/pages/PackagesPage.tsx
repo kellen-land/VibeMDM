@@ -1,46 +1,29 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { Download, Package as PackageIcon, Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import { Download, Package as PackageIcon, Pencil, Trash2, Upload } from 'lucide-react'
 import { qk, useInvalidate, usePackages } from '../api/queries'
 import { api, errorMessage, uploadWithProgress } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import type { Package } from '../api/types'
-import { PageHeader } from '../components/ui/PageHeader'
-import { Card } from '../components/ui/Card'
-import { Table } from '../components/ui/Table'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
-import { SearchInput } from '../components/ui/SearchInput'
 import { RelativeTime } from '../components/ui/RelativeTime'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Modal } from '../components/ui/Modal'
 import { Field, FormGrid } from '../components/ui/Field'
 import { Input, Textarea } from '../components/ui/Input'
 import { ProgressBar } from '../components/ui/Progress'
 import { useToast } from '../components/ui/Toast'
+import { IndexPage } from '../components/templates/IndexPage'
 import { formatBytes, shortHash } from '../lib/format'
 
 export function PackagesPage() {
   const { isAdmin } = useAuth()
   const packages = usePackages()
-  const toast = useToast()
   const invalidate = useInvalidate()
-  const [q, setQ] = useState('')
   const [uploadOpen, setUploadOpen] = useState(false)
   const [edit, setEdit] = useState<Package | null>(null)
-  const [del, setDel] = useState<Package | null>(null)
-  const items = (packages.data?.items ?? []).filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase()) || p.filename.toLowerCase().includes(q.toLowerCase()) || p.category.toLowerCase().includes(q.toLowerCase()))
-
-  const doDelete = async () => {
-    if (!del) return
-    try {
-      await api.del(`/api/v1/packages/${del.id}`)
-      toast.success('Package deleted')
-      await invalidate(qk.packages)
-      setDel(null)
-    } catch (e) {
-      toast.error('Delete failed', errorMessage(e))
-    }
-  }
+  const rows = packages.data?.items
+  const categories = [...new Set((rows ?? []).map((p) => p.category).filter(Boolean))].sort()
+  const nPackages = (n: number) => `${n} ${n === 1 ? 'package' : 'packages'}`
 
   const download = (p: Package) => {
     const a = document.createElement('a')
@@ -53,74 +36,67 @@ export function PackagesPage() {
 
   return (
     <>
-      <PageHeader
+      <IndexPage<Package>
         title="Packages"
         description="Installers (.pkg, .mpkg, .dmg, .zip) served to computers by policies."
-        actions={
-          isAdmin && (
-            <Button variant="primary" icon={<Upload />} onClick={() => setUploadOpen(true)}>
-              Upload package
-            </Button>
-          )
-        }
+        newLabel="Upload package"
+        onNew={() => setUploadOpen(true)}
+        onRowClick={isAdmin ? (p) => setEdit(p) : undefined}
+        rows={rows}
+        loading={packages.isPending}
+        error={packages.error}
+        rowKey={(p) => p.id}
+        search={{ placeholder: 'Search packages…', text: (p) => `${p.name} ${p.filename} ${p.category}` }}
+        filters={categories.length ? [{ key: 'category', label: 'Any category', options: categories.map((c) => ({ value: c, label: c })), match: (p, v) => p.category === v }] : undefined}
+        defaultSort={{ key: 'name', dir: 'asc' }}
+        onChanged={() => invalidate(qk.packages, qk.dashboard)}
+        bulkActions={[
+          {
+            label: 'Delete',
+            icon: <Trash2 />,
+            destructive: true,
+            confirm: { title: (n) => `Delete ${nPackages(n)}?`, description: 'The files are removed from the server. Policies that install them will fail until they are re-uploaded.' },
+            run: (p) => api.del(`/api/v1/packages/${p.id}`),
+            done: (n) => `${nPackages(n)} deleted`,
+          },
+        ]}
+        empty={{ title: 'No packages yet', description: 'Upload an installer (.pkg, .mpkg, .dmg or .zip) to deploy it with a policy.' }}
+        columns={[
+          {
+            key: 'name',
+            header: 'Name',
+            sortValue: (p) => p.name,
+            render: (p) => (
+              <span className="flex items-center gap-2.5">
+                <PackageIcon className="size-4 text-ink-faint" />
+                <span className="min-w-0">
+                  <span className="block font-medium text-ink">{p.name}</span>
+                  {p.info && <span className="block text-xs text-ink-muted truncate max-w-md">{p.info}</span>}
+                </span>
+              </span>
+            ),
+          },
+          { key: 'filename', header: 'Filename', sortValue: (p) => p.filename, render: (p) => <span className="font-mono text-xs">{p.filename}</span> },
+          { key: 'category', header: 'Category', sortValue: (p) => p.category, render: (p) => (p.category ? <Badge>{p.category}</Badge> : <span className="text-ink-faint">—</span>) },
+          { key: 'size', header: 'Size', align: 'right', sortValue: (p) => p.size_bytes, render: (p) => <span className="tabular-nums">{formatBytes(p.size_bytes)}</span> },
+          { key: 'sha', header: 'SHA-256', render: (p) => <span className="font-mono text-xs text-ink-muted" title={p.sha256}>{shortHash(p.sha256)}</span> },
+          { key: 'priority', header: 'Priority', align: 'right', sortValue: (p) => p.priority, render: (p) => <span className="tabular-nums text-ink-muted">{p.priority}</span> },
+          { key: 'updated', header: 'Updated', sortValue: (p) => p.updated_at, render: (p) => <RelativeTime value={p.updated_at} className="text-ink-muted" /> },
+          {
+            key: 'actions',
+            header: '',
+            align: 'right',
+            render: (p) => (
+              <span className="inline-flex gap-1" onClick={(e) => e.stopPropagation()}>
+                <Button size="xs" variant="ghost" icon={<Download />} aria-label="Download" onClick={() => download(p)} />
+                {isAdmin && <Button size="xs" variant="ghost" icon={<Pencil />} aria-label="Edit" onClick={() => setEdit(p)} />}
+              </span>
+            ),
+          },
+        ]}
       />
-      <Card>
-        <div className="flex items-center gap-3 border-b border-line px-5 py-3">
-          <SearchInput value={q} onChange={setQ} placeholder="Filter packages…" className="w-full sm:w-72" />
-        </div>
-        <Table<Package>
-          rows={items}
-          loading={packages.isPending}
-          error={packages.error ? errorMessage(packages.error) : null}
-          rowKey={(p) => p.id}
-          onRowClick={isAdmin ? (p) => setEdit(p) : undefined}
-          emptyTitle={q ? 'No packages match' : 'No packages uploaded yet'}
-          emptyDescription={q ? undefined : 'Upload an installer to deploy it with a policy.'}
-          emptyAction={
-            isAdmin && !q ? (
-              <Button variant="primary" size="sm" icon={<Plus />} onClick={() => setUploadOpen(true)}>
-                Upload package
-              </Button>
-            ) : undefined
-          }
-          columns={[
-            {
-              key: 'name',
-              header: 'Name',
-              render: (p) => (
-                <span className="flex items-center gap-2.5">
-                  <PackageIcon className="size-4 text-ink-faint" />
-                  <span className="min-w-0">
-                    <span className="block font-medium text-ink">{p.name}</span>
-                    {p.info && <span className="block text-xs text-ink-muted truncate max-w-md">{p.info}</span>}
-                  </span>
-                </span>
-              ),
-            },
-            { key: 'filename', header: 'Filename', render: (p) => <span className="font-mono text-xs">{p.filename}</span> },
-            { key: 'category', header: 'Category', render: (p) => (p.category ? <Badge>{p.category}</Badge> : <span className="text-ink-faint">—</span>) },
-            { key: 'size', header: 'Size', align: 'right', render: (p) => <span className="tabular-nums">{formatBytes(p.size_bytes)}</span> },
-            { key: 'sha', header: 'SHA-256', render: (p) => <span className="font-mono text-xs text-ink-muted" title={p.sha256}>{shortHash(p.sha256)}</span> },
-            { key: 'priority', header: 'Priority', align: 'right', render: (p) => <span className="tabular-nums text-ink-muted">{p.priority}</span> },
-            { key: 'updated', header: 'Updated', render: (p) => <RelativeTime value={p.updated_at} className="text-ink-muted" /> },
-            {
-              key: 'actions',
-              header: '',
-              align: 'right',
-              render: (p) => (
-                <span className="inline-flex gap-1" onClick={(e) => e.stopPropagation()}>
-                  <Button size="xs" variant="ghost" icon={<Download />} aria-label="Download" onClick={() => download(p)} />
-                  {isAdmin && <Button size="xs" variant="ghost" icon={<Pencil />} aria-label="Edit" onClick={() => setEdit(p)} />}
-                  {isAdmin && <Button size="xs" variant="ghost" icon={<Trash2 />} aria-label="Delete" onClick={() => setDel(p)} />}
-                </span>
-              ),
-            },
-          ]}
-        />
-      </Card>
       <UploadDialog open={uploadOpen} onClose={() => setUploadOpen(false)} />
       {edit && <EditDialog pkg={edit} onClose={() => setEdit(null)} />}
-      <ConfirmDialog open={!!del} onClose={() => setDel(null)} onConfirm={doDelete} destructive title={`Delete "${del?.name}"?`} description="The file is removed from the server. Policies that install it will fail until it is re-uploaded." confirmLabel="Delete package" />
     </>
   )
 }

@@ -15,11 +15,13 @@ import { Badge } from '../components/ui/Badge'
 import { LoadingBlock } from '../components/ui/Spinner'
 import { Pagination } from '../components/ui/Pagination'
 import { useToast } from '../components/ui/Toast'
-import { ScopeEditor } from '../components/pickers/ScopeEditor'
+import { ScopeEditor, ScopeSummary } from '../components/pickers/ScopeEditor'
 import { RestrictedEventTable } from '../components/activity/RestrictedEventTable'
 import { matchTypeLabels } from './RestrictedSoftwarePage'
 import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
 import { ObjectBar } from '../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../components/templates/DetailsLayout'
+import { RelativeTime } from '../components/ui/RelativeTime'
 
 type Tab = 'general' | 'scope' | 'events'
 
@@ -98,6 +100,7 @@ export function RestrictedSoftwareEditorPage() {
   if (!isNew && item.isPending) return <LoadingBlock />
   if (!isNew && item.error) return <Alert tone="critical">{errorMessage(item.error)}</Alert>
   const ro = ed.readOnly
+  const saved = item.data
   const tabs: { key: Tab; label: string; shortcut?: string }[] = [
     { key: 'general', label: 'General' },
     { key: 'scope', label: 'Scope' },
@@ -107,48 +110,64 @@ export function RestrictedSoftwareEditorPage() {
   return (
     <>
       <PageHeader
-        crumbs={[{ label: 'Restricted Software', to: '/restricted-software' }, { label: isNew ? 'New rule' : item.data?.name ?? '' }]}
+        crumbs={[{ label: 'Restricted software', to: '/restricted-software' }, { label: isNew ? 'New rule' : item.data?.name ?? '' }]}
         title={isNew ? 'New restricted software rule' : item.data?.name}
-        meta={
-          !isNew ? (
-            <>
-              <Badge tone={r.enabled ? 'good' : 'neutral'} dot>
-                {r.enabled ? 'Enabled' : 'Disabled'}
-              </Badge>
-              <span className="text-xs text-ink-muted font-mono">{r.process_name}</span>
-            </>
-          ) : undefined
-        }
       />
       <Tabs className="mb-5" value={tab} onChange={setTab} items={tabs} />
 
       {tab === 'general' && (
-        <Card>
-          <CardHeader title="General" />
-          <CardBody className="flex flex-col gap-8">
-            <FormGrid cols={2}>
-              <Field label="Display name" required>
-                <Input value={r.name} onChange={(e) => set({ name: e.target.value })} disabled={ro} placeholder="e.g. Block BitTorrent" />
-              </Field>
-              <Field label="Process name" required hint={r.match_type === 'regex' ? 'Go regular expression matched against the process name.' : r.match_type === 'contains' ? 'Case-insensitive substring of the process name.' : 'Exact process name as shown by ps, e.g. "Transmission".'}>
-                <Input value={r.process_name} onChange={(e) => set({ process_name: e.target.value })} disabled={ro} mono placeholder={r.match_type === 'regex' ? '^(Transmission|qbittorrent)$' : 'Transmission'} />
-              </Field>
-              <Field label="Match type">
-                <Select value={r.match_type} onChange={(e) => set({ match_type: e.target.value as RestrictedMatchType })} disabled={ro} options={Object.entries(matchTypeLabels).map(([value, label]) => ({ value, label }))} />
-              </Field>
-            </FormGrid>
-            <Toggle checked={r.enabled} onChange={(v) => set({ enabled: v })} disabled={ro} label="Enabled" description="Disabled rules are not sent to agents." />
-            <FormSection title="Enforcement" description="What the agent does when a matching process is found.">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Checkbox checked={r.kill_process} onChange={(e) => set({ kill_process: e.target.checked })} disabled={ro} label="Kill process" description="Terminate the process immediately. Otherwise the event is only reported." />
-                <Checkbox checked={r.notify_user} onChange={(e) => set({ notify_user: e.target.checked })} disabled={ro} label="Notify user" description="Show a notification with the message below." />
-              </div>
-              <Field label="Message shown to the user" className="max-w-2xl">
-                <Textarea rows={3} value={r.display_message} onChange={(e) => set({ display_message: e.target.value })} disabled={ro || !r.notify_user} placeholder="This application is not permitted on company computers. Contact IT if you need it for your work." />
-              </Field>
-            </FormSection>
-          </CardBody>
-        </Card>
+        <DetailsLayout
+          aside={
+            !isNew &&
+            saved && (
+              <SummaryCard
+                rows={[
+                  { label: 'Status', value: <Badge tone={saved.enabled ? 'good' : 'neutral'} dot>{saved.enabled ? 'Enabled' : 'Disabled'}</Badge> },
+                  { label: 'Process', value: <span className="font-mono text-xs break-all">{saved.process_name}</span> },
+                  { label: 'Match', value: matchTypeLabels[saved.match_type] ?? saved.match_type },
+                  {
+                    label: 'Action',
+                    value: (
+                      <span className="inline-flex flex-wrap justify-end gap-1">
+                        {saved.kill_process ? <Badge tone="critical">Kill</Badge> : <Badge tone="warning">Report only</Badge>}
+                        {saved.notify_user && <Badge tone="info">Notify</Badge>}
+                      </span>
+                    ),
+                  },
+                  { label: 'Scope', value: <ScopeSummary scope={saved.scope} /> },
+                  { label: 'Last changed', value: saved.updated_at ? <RelativeTime value={saved.updated_at} /> : '' },
+                ]}
+              />
+            )
+          }
+        >
+          <Card>
+            <CardHeader title="General" />
+            <CardBody className="flex flex-col gap-8">
+              <FormGrid cols={2}>
+                <Field label="Display name" required>
+                  <Input value={r.name} onChange={(e) => set({ name: e.target.value })} disabled={ro} placeholder="e.g. Block BitTorrent" />
+                </Field>
+                <Field label="Process name" required hint={r.match_type === 'regex' ? 'Go regular expression matched against the process name.' : r.match_type === 'contains' ? 'Case-insensitive substring of the process name.' : 'Exact process name as shown by ps, e.g. "Transmission".'}>
+                  <Input value={r.process_name} onChange={(e) => set({ process_name: e.target.value })} disabled={ro} mono placeholder={r.match_type === 'regex' ? '^(Transmission|qbittorrent)$' : 'Transmission'} />
+                </Field>
+                <Field label="Match type">
+                  <Select value={r.match_type} onChange={(e) => set({ match_type: e.target.value as RestrictedMatchType })} disabled={ro} options={Object.entries(matchTypeLabels).map(([value, label]) => ({ value, label }))} />
+                </Field>
+              </FormGrid>
+              <Toggle checked={r.enabled} onChange={(v) => set({ enabled: v })} disabled={ro} label="Enabled" description="Disabled rules are not sent to agents." />
+              <FormSection title="Enforcement" description="What the agent does when a matching process is found.">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Checkbox checked={r.kill_process} onChange={(e) => set({ kill_process: e.target.checked })} disabled={ro} label="Kill process" description="Terminate the process immediately. Otherwise the event is only reported." />
+                  <Checkbox checked={r.notify_user} onChange={(e) => set({ notify_user: e.target.checked })} disabled={ro} label="Notify user" description="Show a notification with the message below." />
+                </div>
+                <Field label="Message shown to the user" className="max-w-2xl">
+                  <Textarea rows={3} value={r.display_message} onChange={(e) => set({ display_message: e.target.value })} disabled={ro || !r.notify_user} placeholder="This application is not permitted on company computers. Contact IT if you need it for your work." />
+                </Field>
+              </FormSection>
+            </CardBody>
+          </Card>
+        </DetailsLayout>
       )}
 
       {tab === 'scope' && (
