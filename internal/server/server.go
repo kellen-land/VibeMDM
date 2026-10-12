@@ -204,6 +204,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 
 	// Agent API
 	notifier := agentapi.NewNotifier()
+	agentInstaller.Wake = notifier.Notify
 	shellHub := shell.NewHub()
 	engine := policy.New(st, logger.With("component", "policy"))
 	agentHandler := agentapi.New(st, engine, notifier, shellHub, hooks, cfg.DataDir, cfg.AgentDir, cfg.Version, s.enrollmentProfile, logger.With("component", "agent"))

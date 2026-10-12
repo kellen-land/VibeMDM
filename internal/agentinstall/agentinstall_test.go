@@ -10,8 +10,10 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/pem"
+	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"howett.net/plist"
 )
@@ -55,12 +57,19 @@ func TestCAIssuesCodeSigningCertificates(t *testing.T) {
 	}
 	pool := x509.NewCertPool()
 	pool.AddCert(ca)
-	if _, err := leaf.Verify(x509.VerifyOptions{Roots: pool, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning}}); err != nil {
-		t.Fatalf("leaf does not chain for code signing: %v", err)
+	if _, err := leaf.Verify(x509.VerifyOptions{Roots: pool, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny}}); err != nil {
+		t.Fatalf("leaf does not chain to the CA: %v", err)
+	}
+	// productsign wants Apple's installer-signing usage and no other.
+	if len(leaf.ExtKeyUsage) != 0 || len(leaf.UnknownExtKeyUsage) != 1 || !leaf.UnknownExtKeyUsage[0].Equal(OIDInstallerSigning) {
+		t.Fatalf("leaf usages: %v %v", leaf.ExtKeyUsage, leaf.UnknownExtKeyUsage)
 	}
 	// The root must not vouch for a TLS server.
 	if _, err := leaf.Verify(x509.VerifyOptions{Roots: pool, DNSName: "mdm.example.com"}); err == nil {
-		t.Fatal("code-signing leaf verified for TLS")
+		t.Fatal("installer-signing leaf verified for TLS")
+	}
+	if !CAIsCurrent(caPEM) {
+		t.Fatal("a new CA must be current")
 	}
 	if _, err := SignCSR(csrPEM(t, 1024), caPEM, keyPEM); err == nil {
 		t.Fatal("weak key accepted")
@@ -140,5 +149,15 @@ func TestChunkMD5s(t *testing.T) {
 	sums, err := chunkMD5s(bytes.NewReader(bytes.Repeat([]byte("a"), 25)), 10)
 	if err != nil || len(sums) != 3 {
 		t.Fatalf("%v %v", sums, err)
+	}
+}
+
+func TestOldCodeSigningCAIsNotCurrent(t *testing.T) {
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	tmpl := &x509.Certificate{SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "old"}, NotBefore: time.Now(), NotAfter: time.Now().Add(time.Hour),
+		IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning}}
+	der, _ := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if CAIsCurrent(string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))) {
+		t.Fatal("a code-signing CA from earlier versions must be replaced")
 	}
 }

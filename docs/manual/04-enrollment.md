@@ -167,19 +167,36 @@ Like Jamf Pro after user-initiated enrollment, VibeMDM can install the agent its
 enrollment, so nobody runs a Terminal command. Turn it on under **Enrollment → Install the agent automatically**.
 
 **One-time setup: build the signed package.** macOS installs packages sent with `InstallEnterpriseApplication` only
-if they are signed by a certificate it trusts. On any Mac (the build Mac does not need to be enrolled):
+if they are signed by a certificate it trusts. Under **Enrollment → Install the agent automatically**, choose an
+enrolled Mac with the agent and click **Build on this Mac**. VibeMDM then:
+
+1. sends that Mac a temporary profile (`com.vibemdm.agent-package.ca-trust`) that trusts the **package-signing CA**:
+   `productsign` only uses a certificate whose CA the Mac trusts, and since macOS 11 only a profile can add that
+   trust without a person approving it;
+2. runs the build script on the Mac through the agent, with an admin API token valid for one hour;
+3. removes the profile and deletes the token, whether or not the build worked, and shows the result and, if it
+   failed, the script's output.
+
+The script (`deploy/macos/build-agent-pkg.sh`, the same file the server runs) downloads both agent binaries from your
+server, builds a product archive (`pkgbuild` + `productbuild`) whose postinstall copies the right binary to
+`/usr/local/bin/vibemdm-agent` and runs `vibemdm-agent enroll --from-mdm`, creates a key and a certificate request on
+that Mac, has the package-signing CA sign it (`POST /api/v1/agent-package/sign-csr`; the private key never leaves the
+Mac), signs with `productsign` from a throwaway keychain, and uploads the result (`PUT /api/v1/agent-package?version=…`).
+The server refuses unsigned packages. Build again after upgrading VibeMDM.
+
+You can also run the script yourself in Terminal on a Mac that trusts the CA:
 
 ```bash
 VIBEMDM_URL=https://mdm.example.com VIBEMDM_API_TOKEN=<admin API token> ./deploy/macos/build-agent-pkg.sh
 ```
 
-The script downloads both agent binaries from your server, builds a product archive (`pkgbuild` + `productbuild`)
-whose postinstall copies the right binary to `/usr/local/bin/vibemdm-agent` and runs
-`vibemdm-agent enroll --from-mdm`, creates a key and a certificate request on that Mac, has VibeMDM's
-**package-signing CA** sign it (`POST /api/v1/agent-package/sign-csr`; the private key never leaves the Mac), signs
-with `productsign` from a throwaway keychain, and uploads the result (`PUT /api/v1/agent-package?version=…`). The
-server refuses unsigned packages. Set `SIGN_IDENTITY` to sign with your own Developer ID Installer certificate
-instead. Re-run the script after upgrading VibeMDM.
+Set `SIGN_IDENTITY` to sign with your own Developer ID Installer certificate instead (no CA trust needed).
+
+The CA and the certificates it issues carry only Apple's installer-signing usage (`1.2.840.113635.100.4.13`):
+`productsign` refuses a certificate with the generic code-signing usage, even next to it. The CA also has a DNS name
+constraint that permits only `invalid.`, so a Mac that trusts it can never accept it for a website. A CA created by an
+earlier VibeMDM version (code-signing usage, unusable) is replaced automatically; build the package again after
+upgrading. Verified on macOS 26.6.2: signing with this chain, and the CA-trust profile.
 
 **What happens at enrollment** (and when you click **Install agent** on a computer, or the Health finding
 *Agent not installed* offers *Install the agent through MDM*):

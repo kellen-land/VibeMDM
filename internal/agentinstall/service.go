@@ -51,6 +51,10 @@ type Service struct {
 	cmdr    Enqueuer
 	dataDir string
 	log     *slog.Logger
+	build   buildRun
+
+	// Wake (optional) tells an online agent to pick up new tasks now.
+	Wake func(computerID string)
 }
 
 // New creates the service. Packages are kept in dataDir/agent-package.
@@ -64,7 +68,24 @@ func (s *Service) pkgPath() string { return filepath.Join(s.dataDir, "agent-pack
 func (s *Service) CA(ctx context.Context) (certPEM, keyPEM string, err error) {
 	certPEM, keyPEM, err = s.st.GetPkgSigningCA(ctx)
 	if err == nil {
-		return certPEM, keyPEM, nil
+		if CAIsCurrent(certPEM) {
+			return certPEM, keyPEM, nil
+		}
+		// Made by an earlier version: its certificates carry the code-signing usage, which
+		// productsign refuses, so no working package can exist under it. Replace it.
+		settings, _ := s.st.GetSettings(ctx)
+		c, k, err := NewCA(settings.OrgName)
+		if err != nil {
+			return "", "", err
+		}
+		if err := s.st.ReplacePkgSigningCA(ctx, c, k); err != nil {
+			return "", "", err
+		}
+		s.st.DeleteAgentPackage(ctx)
+		os.Remove(s.pkgPath())
+		s.log.Warn("replaced the package-signing CA: certificates from the old one could not sign installer packages; build the agent package again",
+			"fingerprint", Fingerprint(c))
+		return c, k, nil
 	}
 	if !errors.Is(err, store.ErrNotFound) {
 		return "", "", err // never replace a CA we failed to read

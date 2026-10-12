@@ -1992,10 +1992,22 @@ export interface AgentPackage {
   uploaded_at: string
 }
 
+export interface AgentPackageBuild {
+  status: 'idle' | 'trusting' | 'building' | 'cleaning' | 'completed' | 'failed'
+  computer_id?: string
+  computer_name?: string
+  started_at?: string
+  finished_at?: string
+  message?: string
+  /** The build script's output (last 4 KB). */
+  output?: string
+}
+
 export interface AgentPackageStatus {
   auto_install: boolean
   package: AgentPackage | null
   ca_fingerprint?: string
+  build?: AgentPackageBuild
 }
 
 export interface AgentInstallAttempt {
