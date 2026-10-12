@@ -27,7 +27,7 @@ func (h *Handler) agentPackage(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, out)
 }
 
-// buildAgentPackage builds the agent package on an enrolled Mac (Build on a Mac).
+// buildAgentPackage builds the agent package on an enrolled Mac (POST /api/v1/agent-package/build).
 func (h *Handler) buildAgentPackage(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ComputerID string `json:"computer_id"`

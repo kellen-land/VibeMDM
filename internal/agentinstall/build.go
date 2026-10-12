@@ -20,8 +20,8 @@ import (
 	"github.com/vibemdm/vibemdm/internal/store"
 )
 
-// Build on a Mac: VibeMDM builds and uploads the agent package itself, on an enrolled Mac
-// chosen in the console, with no Terminal step:
+// Building the package: VibeMDM builds and uploads the agent package itself on an enrolled Mac
+// (POST /api/v1/agent-package/build {"computer_id": …}), with no Terminal step:
 //
 //  1. a temporary profile makes the Mac trust the package-signing CA (productsign only uses a
 //     certificate whose CA the Mac trusts, and only a profile can add trust without a person

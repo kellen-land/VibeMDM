@@ -216,7 +216,7 @@ func PackageSigner(r io.ReadSeeker) (string, error) {
 		return "", errors.New("package table of contents is unreadable")
 	}
 	if !bytes.Contains(toc, []byte("<signature")) {
-		return "", errors.New("the package is not signed; macOS installs only signed packages through MDM (see deploy/macos/build-agent-pkg.sh)")
+		return "", errors.New("the package is not signed; macOS installs only signed packages through MDM (build it with POST /api/v1/agent-package/build)")
 	}
 	m := certRe.FindSubmatch(toc)
 	if m == nil {
@@ -234,7 +234,7 @@ func PackageSigner(r io.ReadSeeker) (string, error) {
 }
 
 // ErrNoPackage means no signed agent package has been uploaded yet.
-var ErrNoPackage = errors.New("no signed agent package has been uploaded (Settings → Enrollment → Automatic agent install)")
+var ErrNoPackage = errors.New("no signed agent package has been built yet (see the manual: Automatic agent install)")
 
 // Install sends the bootstrap profile and InstallEnterpriseApplication to a Mac.
 func (s *Service) Install(ctx context.Context, comp *model.Computer, by string) error {
