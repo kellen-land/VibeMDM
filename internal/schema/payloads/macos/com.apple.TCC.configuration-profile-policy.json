@@ -1,0 +1,2679 @@
+{
+  "title": "Privacy Preferences Policy Control",
+  "description": "Grants or denies apps access to protected data and features (Full Disk Access, Accessibility, camera, screen recording, …) without asking the user. Needs user-approved MDM.",
+  "__id": "com.apple.TCC.configuration-profile-policy",
+  "__payloadtype": "com.apple.TCC.configuration-profile-policy",
+  "__platform": "macos",
+  "__category": "Security",
+  "__order": 60,
+  "__multiple": true,
+  "__channels": [
+    "device"
+  ],
+  "__requires": [
+    "User-approved MDM"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "Services"
+  ],
+  "properties": {
+    "Services": {
+      "title": "Services",
+      "description": "A dictionary whose keys are limited to the privacy policy control services.  In the case of conflicting specifications, the most restrictive setting (deny) is used.",
+      "type": "object",
+      "property_order": 1000,
+      "properties": {
+        "Accessibility": {
+          "title": "Accessibility",
+          "description": "Specifies the policies for the app via the Accessibility subsystem. In macOS 27.0, the device shows a non-blocking notification for each application when this setting is applied, and it allows the user to make changes to the setting in the System Settings app.\n\nDeprecated: use the Privacy key in the declarative management com.apple.configuration.app.settings configuration.",
+          "type": "array",
+          "property_order": 1006,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          },
+          "x-deprecated": "macOS 27.0"
+        },
+        "AddressBook": {
+          "title": "Contacts",
+          "description": "Specifies the policies for contact information managed by the Contacts.app.",
+          "type": "array",
+          "property_order": 1000,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "AppleEvents": {
+          "title": "Apple Events (automation)",
+          "description": "Specifies the policies for the app sending restricted AppleEvents to another process.",
+          "type": "array",
+          "property_order": 1010,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "BluetoothAlways": {
+          "title": "Bluetooth",
+          "description": "Specifies the policies for the app to access Bluetooth devices.\n\nDeprecated: use the Privacy key in the declarative management com.apple.configuration.app.settings configuration.",
+          "type": "array",
+          "property_order": 1023,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          },
+          "x-deprecated": "macOS 27.0"
+        },
+        "Calendar": {
+          "title": "Calendars",
+          "description": "Specifies the policies for calendar information managed by the Calendar.app.",
+          "type": "array",
+          "property_order": 1001,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "Camera": {
+          "title": "Camera",
+          "description": "A system camera. A profile can't grant access to the camera; it can only deny it.",
+          "type": "array",
+          "property_order": 1004,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          },
+          "x-deprecated": "macOS 27.0"
+        },
+        "FileProviderPresence": {
+          "title": "File provider presence",
+          "description": "Allows a File Provider application to know when the user is using files managed by the File Provider.",
+          "type": "array",
+          "property_order": 1012,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "ListenEvent": {
+          "title": "Input Monitoring",
+          "description": "Allows the application to use CoreGraphics and HID APIs to listen to (receive) CGEvents and HID events from all processes. A profile can't grant access to these events; it can only deny it.",
+          "type": "array",
+          "property_order": 1013,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "MediaLibrary": {
+          "title": "Media & Apple Music",
+          "description": "Allows the application to access Apple Music, music and video activity, and the media library.",
+          "type": "array",
+          "property_order": 1011,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "Microphone": {
+          "title": "Microphone",
+          "description": "A system microphone. A profile can't grant access to the microphone; it can only deny it.",
+          "type": "array",
+          "property_order": 1005,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          },
+          "x-deprecated": "macOS 27.0"
+        },
+        "Photos": {
+          "title": "Photos",
+          "description": "The pictures managed by the Photos app in ~/Pictures/.photoslibrary.",
+          "type": "array",
+          "property_order": 1003,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "PostEvent": {
+          "title": "Post event (control the computer)",
+          "description": "Specifies the policies for the application to use CoreGraphics APIs to send CGEvents to the system event stream.",
+          "type": "array",
+          "property_order": 1007,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "Reminders": {
+          "title": "Reminders",
+          "description": "Specifies the policies for reminders information managed by the Reminders app.",
+          "type": "array",
+          "property_order": 1002,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "ScreenCapture": {
+          "title": "Screen & System Audio Recording",
+          "description": "Allows the application to capture (read) the contents of the system display. A profile can't grant access to the contents; it can only deny it.",
+          "type": "array",
+          "property_order": 1014,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "SpeechRecognition": {
+          "title": "Speech Recognition",
+          "description": "Allows the application to use the system Speech Recognition facility and to send speech data to Apple.\n\nDeprecated: use the Privacy key in the declarative management com.apple.configuration.app.settings configuration.",
+          "type": "array",
+          "property_order": 1015,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          },
+          "x-deprecated": "macOS 27.0"
+        },
+        "SystemPolicyAllFiles": {
+          "title": "Full Disk Access",
+          "description": "Allows the application access to all protected files, including system administration files.",
+          "type": "array",
+          "property_order": 1008,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "SystemPolicyAppBundles": {
+          "title": "App Management",
+          "description": "Allows the application to update or delete other apps.",
+          "type": "array",
+          "property_order": 1021,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "SystemPolicyAppData": {
+          "title": "App data (other apps' data)",
+          "description": "Specifies the policies for the app to access the data of other apps.",
+          "type": "array",
+          "property_order": 1022,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          },
+          "x-os": "macOS 14.0+"
+        },
+        "SystemPolicyDesktopFolder": {
+          "title": "Desktop folder",
+          "description": "Allows the application to access files in the user's Desktop folder.",
+          "type": "array",
+          "property_order": 1016,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "SystemPolicyDocumentsFolder": {
+          "title": "Documents folder",
+          "description": "Allows the application to access files in the user's Documents folder.",
+          "type": "array",
+          "property_order": 1017,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "SystemPolicyDownloadsFolder": {
+          "title": "Downloads folder",
+          "description": "Allows the application to access files in the user's Downloads folder.",
+          "type": "array",
+          "property_order": 1018,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "SystemPolicyNetworkVolumes": {
+          "title": "Network volumes",
+          "description": "Allows the application to access files on network volumes.",
+          "type": "array",
+          "property_order": 1019,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "SystemPolicyRemovableVolumes": {
+          "title": "Removable volumes",
+          "description": "Allows the application to access files on removable volumes.",
+          "type": "array",
+          "property_order": 1020,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        },
+        "SystemPolicySysAdminFiles": {
+          "title": "Administrator files",
+          "description": "Allows the application access to some files used in system administration.",
+          "type": "array",
+          "property_order": 1009,
+          "items": {
+            "title": "App",
+            "type": "object",
+            "required": [
+              "Identifier",
+              "IdentifierType",
+              "CodeRequirement"
+            ],
+            "properties": {
+              "AEReceiverCodeRequirement": {
+                "title": "AE receiver code requirement",
+                "description": "The code requirement for the receiving binary. This code requirement is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1009
+              },
+              "AEReceiverIdentifier": {
+                "title": "AE receiver identifier",
+                "description": "The identifier of the process receiving an AppleEvent sent by the Identifier process. This identifier is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "property_order": 1007
+              },
+              "AEReceiverIdentifierType": {
+                "title": "AE receiver identifier type",
+                "description": "The type of AEReceiverIdentifier value, either bundleID or path. This setting is required for AppleEvents service; not valid for other services.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1008,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "Allowed": {
+                "title": "Allowed",
+                "description": "If true, access is granted; otherwise, the process doesn't have access. The user isn't prompted and can't change this value.\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "boolean",
+                "property_order": 1004
+              },
+              "Authorization": {
+                "title": "Authorization",
+                "description": "The Authorization key is an optional replacement for the Allowed key, which has one of the following possible values:\n\n- Allow: Equivalent to a true value for the Allowed key\n- Deny: Equivalent to a false value for the Allowed key\n- AllowStandardUserToSetSystemService: Allows a standard (non-admin) user to configure the permissions for the specified app in the Privacy preferences for services that otherwise require admin authorization; only valid for the ListenEvent and ScreenCapture services\n\n> Note:\n> Every payload needs to include either Authorization or Allowed, but not both.",
+                "type": "string",
+                "enum": [
+                  "Allow",
+                  "Deny",
+                  "AllowStandardUserToSetSystemService"
+                ],
+                "property_order": 1005,
+                "options": {
+                  "enum_titles": [
+                    "Allow",
+                    "Deny",
+                    "Allow standard user to set system service"
+                  ]
+                }
+              },
+              "CodeRequirement": {
+                "title": "Code requirement",
+                "description": "Obtain this value by running codesign -display -r -.",
+                "type": "string",
+                "property_order": 1002
+              },
+              "Comment": {
+                "title": "Comment",
+                "description": "Not used.",
+                "type": "string",
+                "property_order": 1006
+              },
+              "Identifier": {
+                "title": "Identifier",
+                "description": "The bundle ID or installation path of the binary.\n\n> Note:\n> This value is case-sensitive.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "IdentifierType": {
+                "title": "Identifier type",
+                "description": "The type of identifier value. Application bundles must be identified by bundle ID. Nonbundled binaries must be identified by installation path. Helper tools embedded within an application bundle automatically inherit the permissions of their enclosing app bundle.",
+                "type": "string",
+                "enum": [
+                  "bundleID",
+                  "path"
+                ],
+                "property_order": 1001,
+                "options": {
+                  "enum_titles": [
+                    "Bundle ID",
+                    "Path"
+                  ]
+                }
+              },
+              "StaticCode": {
+                "title": "Static code",
+                "description": "If true, statically validate the code requirement. Used only if the process invalidates its dynamic code signature.",
+                "type": "boolean",
+                "default": false,
+                "property_order": 1003
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

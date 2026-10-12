@@ -1,0 +1,363 @@
+{
+  "title": "Exchange ActiveSync",
+  "description": "Adds a Microsoft Exchange account for mail, contacts, calendars, reminders and notes.",
+  "__id": "com.apple.eas.account",
+  "__payloadtype": "com.apple.eas.account",
+  "__platform": "ios",
+  "__category": "Accounts",
+  "__order": 20,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "Certificate": {
+      "title": "Authentication credential",
+      "description": "The .p12 identity certificate in NSData blob format, for accounts that allow authentication via certificate.",
+      "type": "string",
+      "format": "data",
+      "property_order": 1006
+    },
+    "CertificateName": {
+      "title": "Authentication credential name",
+      "description": "The name or description of the certificate.",
+      "type": "string",
+      "property_order": 1007
+    },
+    "CertificatePassword": {
+      "title": "Authentication credential password",
+      "description": "The password necessary for the .p12 identity certificate. Used with mandatory encryption of profiles.",
+      "type": "string",
+      "property_order": 1008,
+      "x-secret": true
+    },
+    "CommunicationServiceRules": {
+      "title": "Communication service rules",
+      "description": "The communication service handler rules for this account.",
+      "type": "object",
+      "property_order": 1021,
+      "properties": {
+        "DefaultServiceHandlers": {
+          "title": "Default service handlers",
+          "description": "The default handlers to use for contacts from this account.",
+          "type": "object",
+          "property_order": 1000,
+          "properties": {
+            "AudioCall": {
+              "title": "App for audio calls",
+              "description": "The bundle identifier of the default application to use for audio calls made to contacts from this account.",
+              "type": "string",
+              "property_order": 1000
+            }
+          }
+        }
+      }
+    },
+    "EmailAddress": {
+      "title": "Email address",
+      "description": "The full email address for the account. If not present in the payload, the device prompts for this string during profile installation.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "EnableCalendars": {
+      "title": "Enable calendars",
+      "description": "If false, the system disables the Calendars service for this account. The user can reenable Calendars service in Settings unless EnableCalendarsUserOverridable is false.\n\n> Note:\n> At least of the following fields needs to be true: EnableMail, EnableContacts, EnableCalendars, EnableReminders, and EnableNotes.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1031
+    },
+    "EnableCalendarsUserOverridable": {
+      "title": "Enable calendars user overridable",
+      "description": "If false, the system prevents the user from changing the state of the Calendars service for this account in Settings.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1036
+    },
+    "EnableContacts": {
+      "title": "Enable contacts",
+      "description": "If false, the system disables the Contacts service for this account. The user can reenable Contacts service in Settings unless EnableContactsUserOverridable is false.\n\n> Note:\n> At least of the following fields needs to be true: EnableMail, EnableContacts, EnableCalendars, EnableReminders, and EnableNotes.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1030
+    },
+    "EnableContactsUserOverridable": {
+      "title": "Enable contacts user overridable",
+      "description": "If false, the system prevents the user from changing the state of the Contacts service for this account in Settings.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1035
+    },
+    "EnableMail": {
+      "title": "Enable mail",
+      "description": "If false, the system disables the Mail service for this account. The user can reenable Mail service in Settings unless EnableMailUserOverridable is false.\n\n> Note:\n> At least of the following fields needs to be true: EnableMail, EnableContacts, EnableCalendars, EnableReminders, and EnableNotes.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1029
+    },
+    "EnableMailUserOverridable": {
+      "title": "Enable mail user overridable",
+      "description": "If false, the system prevents the user from changing the state of the Mail service for this account in Settings.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1034
+    },
+    "EnableNotes": {
+      "title": "Enable notes",
+      "description": "If false, the system disables the Notes service for this account. The user can reenable Notes service in Settings unless EnableNotesUserOverridable is false.\n\n> Note:\n> At least of the following fields needs to be true: EnableMail, EnableContacts, EnableCalendars, EnableReminders, and EnableNotes.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1033
+    },
+    "EnableNotesUserOverridable": {
+      "title": "Enable notes user overridable",
+      "description": "If false, prevents the user from changing the state of the Notes service for this account in Settings.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1038
+    },
+    "EnableReminders": {
+      "title": "Enable reminders",
+      "description": "If false, the system disables the Reminders service for this account. The user can reenable Reminders service in Settings unless EnableRemindersUserOverridable is false.\n\n> Note:\n> At least of the following fields needs to be true: EnableMail, EnableContacts, EnableCalendars, EnableReminders, and EnableNotes.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1032
+    },
+    "EnableRemindersUserOverridable": {
+      "title": "Enable reminders user overridable",
+      "description": "If false, the system prevents the user from changing the state of the Reminders service for this account in Settings.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1037
+    },
+    "HeaderMagic": {
+      "title": "Header magic",
+      "description": "The value of the X-Apple-Config-Magic header in each EAS HTTP request.",
+      "type": "string",
+      "property_order": 1020,
+      "x-deprecated": "iOS 7.0"
+    },
+    "Host": {
+      "title": "Exchange ActiveSync host",
+      "description": "The Exchange server host name or IP address.",
+      "type": "string",
+      "property_order": 1001
+    },
+    "MailNumberOfPastDaysToSync": {
+      "title": "Past days of mail to sync",
+      "description": "The number of days in the past to sync mail on the device.\n\nFor no limit, use the value 0.",
+      "type": "integer",
+      "enum": [
+        0,
+        1,
+        3,
+        7,
+        14,
+        31
+      ],
+      "default": 7,
+      "property_order": 1019
+    },
+    "OAuth": {
+      "title": "Use OAuth",
+      "description": "If true, enables OAuth for authentication. If enabled, don't specify a password.\n\nAvailable only in iOS 12.0 and above.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003
+    },
+    "OAuthSignInURL": {
+      "title": "O auth sign in URL",
+      "description": "The URL that this account should use for signing in through OAuth. Ignored unless OAuth is true. If you specify this URL, auto-discovery isn't used for this account, so you need to also specify a host.",
+      "type": "string",
+      "property_order": 1039
+    },
+    "OAuthTokenRequestURL": {
+      "title": "O auth token request URL",
+      "description": "The URL that this account should use for token requests through OAuth. Ignored unless OAuth is true.",
+      "type": "string",
+      "property_order": 1040
+    },
+    "OverridePreviousPassword": {
+      "title": "Override previous password",
+      "description": "If true, the system overrides the previous user/EAS password with the new EAS password in the payload.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1041
+    },
+    "Password": {
+      "title": "Password",
+      "description": "The password of the account. Use only with encrypted profiles.",
+      "type": "string",
+      "property_order": 1005,
+      "x-secret": true
+    },
+    "PayloadCertificateUUID": {
+      "title": "Payload certificate UUID",
+      "description": "The UUID of the certificate payload within the same profile to use for the identity credential. If this field is present, the Certificate field isn't used.",
+      "type": "string",
+      "format": "payload-ref",
+      "property_order": 1011,
+      "x-ref-types": [
+        "com.apple.security.pkcs1",
+        "com.apple.security.root",
+        "com.apple.security.pem",
+        "com.apple.security.pkcs12",
+        "com.apple.security.scep",
+        "com.apple.security.acme",
+        "com.apple.ADCertificate.managed"
+      ]
+    },
+    "PreventAppSheet": {
+      "title": "Prevent app sheet",
+      "description": "If true, prevents this account from sending mail in any app other than the Apple Mail app.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1010
+    },
+    "PreventMove": {
+      "title": "Prevent move",
+      "description": "If true, the system prevents moving messages from out of this email account into another account. This setting also prevents forwarding or replying from an account other than the recipient of the message.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1009
+    },
+    "SMIMEEnableEncryptionPerMessageSwitch": {
+      "title": "S/MIME enable encryption per message switch",
+      "description": "If true, the system displays the per-message encryption switch in the Mail Compose UI.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1028
+    },
+    "SMIMEEnablePerMessageSwitch": {
+      "title": "S/MIME enable per-message switch",
+      "description": "If true, the system displays the per-message encryption switch in the Mail Compose UI.\n\n This key is deprecated. Use SMIMEEnableEncryptionPerMessageSwitch instead.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1017,
+      "x-deprecated": "iOS 12.0"
+    },
+    "SMIMEEnabled": {
+      "title": "S/MIME enabled",
+      "description": "If true, the system enables S/MIME encryption. In iOS 10.0 and later, this key is ignored. Use SMIMESigningEnabled instead.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1012,
+      "x-deprecated": "iOS 10.0"
+    },
+    "SMIMEEncryptByDefault": {
+      "title": "S/MIME encrypt by default",
+      "description": "If true, the system enables S/MIME encryption by default. If SMIMEEnableEncryptionPerMessageSwitch is false, the user can't change this default.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1025
+    },
+    "SMIMEEncryptByDefaultUserOverrideable": {
+      "title": "S/MIME encrypt by default user overrideable",
+      "description": "If true, the system enables encryption by default and the user can't change it.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1026
+    },
+    "SMIMEEncryptionCertificateUUID": {
+      "title": "S/MIME encryption certificate",
+      "description": "The payload UUID of the identity certificate used to decrypt messages sent to this account. The system attaches the public certificate to outgoing mail to allow the user to receive encrypted mail. When the user sends encrypted mail, the system uses the public certificate to encrypt the copy of the mail in the user's Sent mailbox.",
+      "type": "string",
+      "format": "payload-ref",
+      "property_order": 1016,
+      "x-ref-types": [
+        "com.apple.security.pkcs1",
+        "com.apple.security.root",
+        "com.apple.security.pem",
+        "com.apple.security.pkcs12",
+        "com.apple.security.scep",
+        "com.apple.security.acme",
+        "com.apple.ADCertificate.managed"
+      ]
+    },
+    "SMIMEEncryptionCertificateUUIDUserOverrideable": {
+      "title": "S/MIME encryption certificate UUID user overrideable",
+      "description": "If true, the user can select the S/MIME encryption identity, and encryption is on.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1027
+    },
+    "SMIMEEncryptionEnabled": {
+      "title": "S/MIME encryption enabled",
+      "description": "If true, the system enables S/MIME encryption for this account. This key is deprecated. Use SMIMEEncryptByDefault instead.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1015,
+      "x-deprecated": "iOS 12.0"
+    },
+    "SMIMESigningCertificateUUID": {
+      "title": "S/MIME signing certificate",
+      "description": "The UUID of the identity certificate used to sign messages sent from this account.",
+      "type": "string",
+      "format": "payload-ref",
+      "property_order": 1014,
+      "x-ref-types": [
+        "com.apple.security.pkcs1",
+        "com.apple.security.root",
+        "com.apple.security.pem",
+        "com.apple.security.pkcs12",
+        "com.apple.security.scep",
+        "com.apple.security.acme",
+        "com.apple.ADCertificate.managed"
+      ]
+    },
+    "SMIMESigningCertificateUUIDUserOverrideable": {
+      "title": "S/MIME signing certificate UUID user overrideable",
+      "description": "If true, the user can select the signing identity.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1024
+    },
+    "SMIMESigningEnabled": {
+      "title": "S/MIME signing enabled",
+      "description": "If true, the system enables S/MIME signing for this account.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1013
+    },
+    "SMIMESigningUserOverrideable": {
+      "title": "S/MIME signing user overrideable",
+      "description": "If true, the user can turn S/MIME signing on or off in Settings.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1023
+    },
+    "SSL": {
+      "title": "Use SSL",
+      "description": "If true, the system enables SSL for authentication.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1002
+    },
+    "UserName": {
+      "title": "User",
+      "description": "This user name for this Exchange account. Required for noninteractive installations like MDM in iOS.",
+      "type": "string",
+      "property_order": 1004
+    },
+    "VPNUUID": {
+      "title": "VPNUUID",
+      "description": "The VPNUUID of the per-app VPN the account uses for network communication.",
+      "type": "string",
+      "property_order": 1042
+    },
+    "allowMailDrop": {
+      "title": "Allow mail drop",
+      "description": "If true, the system enables this account to use Mail Drop.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1022
+    },
+    "disableMailRecentsSyncing": {
+      "title": "Disable mail recents syncing",
+      "description": "If true, the system excludes this account from Recent Addresses syncing.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1018
+    }
+  }
+}

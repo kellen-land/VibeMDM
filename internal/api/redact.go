@@ -6,6 +6,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/auth"
 	"github.com/vibemdm/vibemdm/internal/inspector"
 	"github.com/vibemdm/vibemdm/internal/model"
+	"github.com/vibemdm/vibemdm/internal/schema"
 )
 
 // Viewers can see what is configured but not secrets embedded in it: profile
@@ -17,9 +18,13 @@ func isAdmin(r *http.Request) bool { return auth.FromContext(r.Context()).IsAdmi
 const hiddenForViewers = "# Visible to administrators only."
 
 func redactProfileFor(r *http.Request, p *model.ConfigProfile) {
-	if !isAdmin(r) && p.Payload != "" {
+	if isAdmin(r) {
+		return
+	}
+	if p.Payload != "" {
 		p.Payload = inspector.Redact(p.Payload)
 	}
+	redactPayloads(schema.PlatformMacOS, p.Payloads)
 }
 
 func redactScriptFor(r *http.Request, s *model.Script) {

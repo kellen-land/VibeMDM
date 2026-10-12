@@ -1,0 +1,78 @@
+{
+  "title": "Web Clips",
+  "description": "Puts a website shortcut on the Home Screen (iOS) or in the Dock (macOS).",
+  "__id": "com.apple.webClip.managed",
+  "__payloadtype": "com.apple.webClip.managed",
+  "__platform": "ios",
+  "__category": "Apps and Home Screen",
+  "__order": 20,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "URL",
+    "Label"
+  ],
+  "properties": {
+    "FullScreen": {
+      "title": "Open full screen",
+      "description": "On opens the page as a full-screen web app without Safari controls.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 14
+    },
+    "Icon": {
+      "title": "Icon",
+      "description": "Square PNG, up to 400 x 400 pixels. A white square is used if empty.",
+      "type": "string",
+      "format": "data",
+      "property_order": 12
+    },
+    "IgnoreManifestScope": {
+      "title": "Stay full screen on other sites",
+      "description": "On keeps full-screen mode when leaving the clip's site. iOS 14+.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 15
+    },
+    "IsRemovable": {
+      "title": "Allow removing",
+      "description": "Off stops the user deleting the web clip.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 13
+    },
+    "Label": {
+      "title": "Label",
+      "description": "Name shown under the icon on the Home Screen.",
+      "type": "string",
+      "property_order": 10
+    },
+    "Precomposed": {
+      "title": "Use icon as is",
+      "description": "On stops the system adding effects to the icon.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 16
+    },
+    "TargetApplicationBundleIdentifier": {
+      "title": "Open in app (bundle ID)",
+      "description": "Bundle ID of the app that opens the URL instead of Safari. iOS 14+.",
+      "type": "string",
+      "property_order": 17
+    },
+    "URL": {
+      "title": "URL",
+      "description": "The web address the clip opens.",
+      "type": "string",
+      "property_order": 11,
+      "options": {
+        "inputAttributes": {
+          "placeholder": "https://intranet.example.com"
+        }
+      }
+    }
+  }
+}

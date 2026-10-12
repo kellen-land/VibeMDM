@@ -1,0 +1,44 @@
+{
+  "title": "DNS Proxy",
+  "description": "Sends DNS traffic to a DNS proxy app's network extension.",
+  "__id": "com.apple.dnsProxy.managed",
+  "__payloadtype": "com.apple.dnsProxy.managed",
+  "__platform": "ios",
+  "__category": "Network",
+  "__order": 80,
+  "__multiple": false,
+  "__deprecated": "27.0",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "AppBundleIdentifier"
+  ],
+  "properties": {
+    "AppBundleIdentifier": {
+      "title": "App bundle identifier",
+      "description": "The bundle identifier of the app containing the DNS proxy network extension.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "DNSProxyUUID": {
+      "title": "DNS proxy UUID",
+      "description": "A globally unique identifier for this DNS proxy configuration. The proxy processes DNS lookups traffic for managed apps with the same DNSProxyUUID in their app attributes. This key is required for user enrollment.",
+      "type": "string",
+      "property_order": 1004
+    },
+    "ProviderBundleIdentifier": {
+      "title": "Provider bundle identifier",
+      "description": "The bundle identifier of the DNS proxy network extension to use. Declaring the bundle identifier is useful for apps that contain more than one DNS proxy extension.",
+      "type": "string",
+      "property_order": 1001
+    },
+    "ProviderConfiguration": {
+      "title": "Provider configuration",
+      "description": "The dictionary of vendor-specific configuration items.",
+      "type": "object",
+      "property_order": 1003
+    }
+  }
+}

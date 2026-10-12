@@ -1,0 +1,81 @@
+{
+  "title": "Managed Login Items",
+  "description": "Keeps launch agents, daemons and login items from managed apps turned on in System Settings, matched by team ID, bundle ID, label or path.",
+  "__id": "com.apple.servicemanagement",
+  "__payloadtype": "com.apple.servicemanagement",
+  "__platform": "macos",
+  "__category": "System",
+  "__order": 50,
+  "__multiple": true,
+  "__channels": [
+    "device"
+  ],
+  "__requires": [
+    "User-approved MDM"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "Rules"
+  ],
+  "properties": {
+    "Rules": {
+      "title": "Rules",
+      "description": "An array of service management rules.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "Rule",
+        "type": "object",
+        "required": [
+          "RuleType",
+          "RuleValue"
+        ],
+        "properties": {
+          "Comment": {
+            "title": "Comment",
+            "description": "An optional description of the rule.",
+            "type": "string",
+            "property_order": 1002
+          },
+          "RuleType": {
+            "title": "Rule type",
+            "description": "The type of comparison to make.",
+            "type": "string",
+            "enum": [
+              "BundleIdentifier",
+              "BundleIdentifierPrefix",
+              "Label",
+              "LabelPrefix",
+              "TeamIdentifier"
+            ],
+            "property_order": 1000,
+            "options": {
+              "enum_titles": [
+                "Bundle identifier",
+                "Bundle identifier prefix",
+                "Label",
+                "Label prefix",
+                "Team identifier"
+              ]
+            }
+          },
+          "RuleValue": {
+            "title": "Rule value",
+            "description": "The value to compare with each login item's value, to determine if this rule is a match.",
+            "type": "string",
+            "property_order": 1001
+          },
+          "TeamIdentifier": {
+            "title": "Team identifier",
+            "description": "An additional constraint to limit the scope of the rule that the system tests after matching the RuleType and RuleValue.",
+            "type": "string",
+            "property_order": 1003
+          }
+        }
+      }
+    }
+  }
+}

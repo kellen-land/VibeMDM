@@ -1,0 +1,242 @@
+{
+  "title": "Single Sign-On Extensions: Kerberos",
+  "description": "Configures Apple's built-in Kerberos SSO extension for Active Directory sign-in.",
+  "__id": "com.apple.extensiblesso(kerberos)",
+  "__payloadtype": "com.apple.extensiblesso",
+  "__platform": "ios",
+  "__category": "Single Sign-On",
+  "__order": 20,
+  "__multiple": true,
+  "__jamf": "Single Sign-On Extensions (Kerberos)",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "ExtensionIdentifier",
+    "TeamIdentifier",
+    "Type",
+    "Realm"
+  ],
+  "properties": {
+    "ExtensionData": {
+      "title": "Extension data",
+      "description": "This is the dictionary used by the Apple built-in Kerberos extension.",
+      "type": "object",
+      "property_order": 1004,
+      "properties": {
+        "allowAutomaticLogin": {
+          "title": "Allow automatic login",
+          "description": "If false, the system doesn't allow saving passwords in the keychain.",
+          "type": "boolean",
+          "default": true,
+          "property_order": 1013
+        },
+        "cacheName": {
+          "title": "Cache name",
+          "description": "The GSS name of the Kerberos cache to use. Rarely set by an administrator.",
+          "type": "string",
+          "property_order": 1000,
+          "x-deprecated": "iOS 15.0"
+        },
+        "certificateUUID": {
+          "title": "Certificate UUID",
+          "description": "The PayloadUUID of a PKINIT certificate.",
+          "type": "string",
+          "format": "payload-ref",
+          "property_order": 1003,
+          "x-ref-types": [
+            "com.apple.security.pkcs1",
+            "com.apple.security.root",
+            "com.apple.security.pem",
+            "com.apple.security.pkcs12",
+            "com.apple.security.scep",
+            "com.apple.security.acme",
+            "com.apple.ADCertificate.managed"
+          ]
+        },
+        "credentialBundleIdACL": {
+          "title": "Credential bundle ID ACL",
+          "description": "A list of bundle IDs allowed to access the ticket-granting ticket (TGT).",
+          "type": "array",
+          "property_order": 1005,
+          "items": {
+            "title": "Item",
+            "type": "string"
+          }
+        },
+        "credentialUseMode": {
+          "title": "Credential use mode",
+          "description": "This setting affects how other processes use the Kerberos Extension credential. Allowed values:\n\n- always: The system always uses the credential if the SPN matches the Kerberos Extension Hosts array and the caller hasn't specified another credential. However, the system won't use the credential if the calling app isn't in the credentialBundleIDACL.\n- whenNotSpecified: The system only uses the extension credential if the SPN matches the Kerberos Extension Hosts array. However, the system won't use the credential if the calling app isn't in the credentialBundleIDACL.",
+          "type": "string",
+          "enum": [
+            "always",
+            "whenNotSpecified",
+            "kerberosDefault"
+          ],
+          "default": "always",
+          "property_order": 1029,
+          "options": {
+            "enum_titles": [
+              "Always",
+              "When not specified",
+              "Kerberos default"
+            ]
+          }
+        },
+        "customUsernameLabel": {
+          "title": "Custom username label",
+          "description": "The custom user name label used in the Kerberos extension instead of \"Username,\" such as \"Company ID\".",
+          "type": "string",
+          "property_order": 1010
+        },
+        "domainRealmMapping": {
+          "title": "Domain realm mapping",
+          "description": "A custom domain-realm mapping for Kerberos. The system uses this when the DNS name of hosts doesn't match the realm name. Most administrators don't need to customize this.",
+          "type": "object",
+          "property_order": 1008,
+          "properties": {
+            "Realm": {
+              "title": "Realm",
+              "description": "The key should be the name of the realm, and the value is an array of DNS suffixes that map to the realm.",
+              "type": "array",
+              "property_order": 1000,
+              "items": {
+                "title": "Item",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "helpText": {
+          "title": "Help text",
+          "description": "The text to display to the user at the bottom of the Kerberos Login Window. You can also use this to display help information or disclaimer text.",
+          "type": "string",
+          "property_order": 1011
+        },
+        "includeManagedAppsInBundleIdACL": {
+          "title": "Include managed apps in bundle ID ACL",
+          "description": "If true, the Kerberos extension allows only managed apps to access and use the credential. This is in addition to the credentialBundleIDACL, if you specify that value.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1006
+        },
+        "isDefaultRealm": {
+          "title": "Is default realm",
+          "description": "Specifies whether this is the default realm if there's more than one Kerberos extension configuration.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1009
+        },
+        "performKerberosOnly": {
+          "title": "Perform Kerberos only",
+          "description": "If true, the Kerberos Extension handles Kerberos requests only. It doesn't check for password expiration, show the password expiration in the menu, check for external password changes, perform password sync, or retrieve the home directory.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1033
+        },
+        "preferredKDCs": {
+          "title": "Preferred KD cs",
+          "description": "The ordered list of preferred Key Distribution Centers (KDCs) to use for Kerberos traffic. Use this if the servers aren't discoverable through DNS. If you specify the servers, the system uses them for both connectivity checks and attempts to use them first for Kerberos traffic. If the servers don't respond, the device falls back to DNS discovery. Format each entry the same as it would be in a krb5.conf file, for example:\n\n- adserver1.example.com\n- tcp/adserver1.example.com:88\n- kkdcp://kerberosproxy.example.com:443/kkdcp",
+          "type": "array",
+          "property_order": 1030,
+          "items": {
+            "title": "Preferred KDC",
+            "type": "string"
+          }
+        },
+        "principalName": {
+          "title": "Principal name",
+          "description": "The principal (username) to use. You don't need to include the realm.",
+          "type": "string",
+          "property_order": 1001
+        },
+        "requireTLSForLDAP": {
+          "title": "Require TLS for LDAP",
+          "description": "Require that LDAP connections use TLS.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1028
+        },
+        "requireUserPresence": {
+          "title": "Require user presence",
+          "description": "If true, the system requires the user to provide Touch ID, Face ID or their passcode to access the keychain entry.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1014
+        },
+        "siteCode": {
+          "title": "Site code",
+          "description": "The name of the Active Directory site the Kerberos extension should use. Most administrators don't need to modify this value, as the Kerberos extension can normally find the site automatically.",
+          "type": "string",
+          "property_order": 1002
+        },
+        "useSiteAutoDiscovery": {
+          "title": "Use site auto discovery",
+          "description": "If false, the Kerberos extension doesn't automatically use LDAP and DNS to determine its AD site name.",
+          "type": "boolean",
+          "default": true,
+          "property_order": 1004
+        }
+      }
+    },
+    "ExtensionIdentifier": {
+      "title": "Extension identifier",
+      "description": "Set this to com.apple.AppSSOKerberos.KerberosExtension for this extension.",
+      "type": "string",
+      "enum": [
+        "com.apple.AppSSOKerberos.KerberosExtension"
+      ],
+      "property_order": 1000,
+      "options": {
+        "enum_titles": [
+          "Com Apple app SSO Kerberos Kerberos extension"
+        ]
+      }
+    },
+    "Hosts": {
+      "title": "Hosts",
+      "description": "One or more host or domain names for which the app extension performs SSO.\n\nThe system:\n\n- Matches host or domain names case-insensitively\n- Requires that all the host and domain names of all installed Extensible SSO payloads are unique\n\n> Note:\n> Host names that begin with a \".\" are wildcard suffixes that match all subdomains; otherwise the host name needs be an exact match.",
+      "type": "array",
+      "property_order": 1005,
+      "items": {
+        "title": "Hostname",
+        "type": "string"
+      }
+    },
+    "Realm": {
+      "title": "Realm",
+      "description": "The Kerberos realm. Use proper capitalization for this value. If in an Active Directory forest, this is the realm where the user logs in.",
+      "type": "string",
+      "property_order": 1003
+    },
+    "TeamIdentifier": {
+      "title": "Team identifier",
+      "description": "Set this to apple for this extension.",
+      "type": "string",
+      "enum": [
+        "apple"
+      ],
+      "property_order": 1001,
+      "options": {
+        "enum_titles": [
+          "Apple"
+        ]
+      }
+    },
+    "Type": {
+      "title": "Type",
+      "description": "Set this to Credential for this extension.",
+      "type": "string",
+      "enum": [
+        "Credential"
+      ],
+      "property_order": 1002,
+      "options": {
+        "enum_titles": [
+          "Credential"
+        ]
+      }
+    }
+  }
+}

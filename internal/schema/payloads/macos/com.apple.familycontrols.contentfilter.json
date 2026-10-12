@@ -1,0 +1,153 @@
+{
+  "title": "Parental Controls: Content filter",
+  "description": "Filters web content in Safari for the user (legacy Parental Controls).",
+  "__id": "com.apple.familycontrols.contentfilter",
+  "__payloadtype": "com.apple.familycontrols.contentfilter",
+  "__platform": "macos",
+  "__category": "Restrictions",
+  "__order": 100,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Parental Controls",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "restrictWeb"
+  ],
+  "properties": {
+    "allowListEnabled": {
+      "title": "Allow list enabled",
+      "description": "If true, enables web content filters.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1002,
+      "x-os": "macOS 15.2+"
+    },
+    "filterAllowList": {
+      "title": "Filter allow list",
+      "description": "The array of URLs that defines an allow list. When restrictWeb and useContentFilter are enabled, only URLs in the allow list are available to the user.",
+      "type": "array",
+      "property_order": 1006,
+      "items": {
+        "title": "Item",
+        "type": "string"
+      },
+      "x-os": "macOS 15.2+"
+    },
+    "filterBlacklist": {
+      "title": "Filter blacklist",
+      "description": "Use filterDenyList instead.",
+      "type": "array",
+      "property_order": 1009,
+      "items": {
+        "title": "Item",
+        "type": "string"
+      },
+      "x-deprecated": "macOS 15.2"
+    },
+    "filterDenyList": {
+      "title": "Filter deny list",
+      "description": "The array of URLs that defines a deny list. When restrictWeb and useContentFilter are enabled, no URLs in the deny list are available to the user.",
+      "type": "array",
+      "property_order": 1008,
+      "items": {
+        "title": "Item",
+        "type": "string"
+      },
+      "x-os": "macOS 15.2+"
+    },
+    "filterWhitelist": {
+      "title": "Filter whitelist",
+      "description": "Use filterAllowList instead.",
+      "type": "array",
+      "property_order": 1007,
+      "items": {
+        "title": "Item",
+        "type": "string"
+      },
+      "x-deprecated": "macOS 15.2"
+    },
+    "restrictWeb": {
+      "title": "Restrict web",
+      "description": "If true, enables web content filters.",
+      "type": "boolean",
+      "property_order": 1000
+    },
+    "siteAllowList": {
+      "title": "Site allow list",
+      "description": "An array of sites that defines an allow list. If specified, this defines additional allowed sites besides those in the automated allow list and deny list, including disallowed adult sites.\n\nThe device requires this key if allowListEnabled is true.",
+      "type": "array",
+      "property_order": 1004,
+      "items": {
+        "title": "Item",
+        "type": "object",
+        "required": [
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "title": "Address",
+            "description": "The site prefix, including the http(s) scheme.",
+            "type": "string",
+            "property_order": 1000
+          },
+          "pageTitle": {
+            "title": "Page title",
+            "description": "The site page title.",
+            "type": "string",
+            "property_order": 1001
+          }
+        }
+      },
+      "x-os": "macOS 15.2+"
+    },
+    "siteWhitelist": {
+      "title": "Site whitelist",
+      "description": "Use siteAllowList instead.",
+      "type": "array",
+      "property_order": 1005,
+      "items": {
+        "title": "Item",
+        "type": "object",
+        "required": [
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "title": "Address",
+            "description": "The site prefix, including http(s) scheme.",
+            "type": "string",
+            "property_order": 1000
+          },
+          "pageTitle": {
+            "title": "Page title",
+            "description": "The site page title.",
+            "type": "string",
+            "property_order": 1001
+          }
+        }
+      },
+      "x-deprecated": "macOS 15.2"
+    },
+    "useContentFilter": {
+      "title": "Use content filter",
+      "description": "If true, filters content automatically.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    },
+    "whitelistEnabled": {
+      "title": "Whitelist enabled",
+      "description": "Use allowListEnabled instead.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003,
+      "x-deprecated": "macOS 15.2"
+    }
+  }
+}

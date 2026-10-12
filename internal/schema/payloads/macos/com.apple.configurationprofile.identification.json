@@ -1,0 +1,92 @@
+{
+  "title": "Identification",
+  "description": "Pre-fills the user's name and email address in apps and services that use them.",
+  "__id": "com.apple.configurationprofile.identification",
+  "__payloadtype": "com.apple.configurationprofile.identification",
+  "__platform": "macos",
+  "__category": "General",
+  "__order": 10,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__deprecated": "15.4",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "PayloadIdentification"
+  ],
+  "properties": {
+    "PayloadIdentification": {
+      "title": "Payload identification",
+      "description": "The dictionary that contains details about the user.",
+      "type": "object",
+      "required": [
+        "UserName",
+        "FullName",
+        "EmailAddress",
+        "AuthMethod",
+        "Password"
+      ],
+      "property_order": 1000,
+      "properties": {
+        "AuthMethod": {
+          "title": "Auth method",
+          "description": "The authorization method. Either the profile contains the password or the user provides it.",
+          "type": "string",
+          "enum": [
+            "Password",
+            "UserEnteredPassword"
+          ],
+          "property_order": 1003,
+          "options": {
+            "enum_titles": [
+              "Password",
+              "User entered password"
+            ]
+          }
+        },
+        "EmailAddress": {
+          "title": "Email address",
+          "description": "The address for the account.",
+          "type": "string",
+          "property_order": 1002
+        },
+        "FullName": {
+          "title": "Full name",
+          "description": "The full name of the account.",
+          "type": "string",
+          "property_order": 1001
+        },
+        "Password": {
+          "title": "Password",
+          "description": "The password for the account. Required when the AuthMethod is Password.",
+          "type": "string",
+          "property_order": 1004,
+          "x-secret": true
+        },
+        "Prompt": {
+          "title": "Prompt",
+          "description": "The custom instructions for the user, if needed.",
+          "type": "string",
+          "property_order": 1005
+        },
+        "PromptMessage": {
+          "title": "Prompt message",
+          "description": "The additional descriptive text for the user prompt.",
+          "type": "string",
+          "property_order": 1006
+        },
+        "UserName": {
+          "title": "User name",
+          "description": "The UNIX user name for the accounts.",
+          "type": "string",
+          "property_order": 1000
+        }
+      }
+    }
+  }
+}

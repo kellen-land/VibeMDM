@@ -1,0 +1,1478 @@
+{
+  "title": "Restrictions",
+  "description": "Turns device features, apps and services on or off. Unset items keep Apple's default (allowed).",
+  "__id": "com.apple.applicationaccess",
+  "__payloadtype": "com.apple.applicationaccess",
+  "__platform": "ios",
+  "__category": "Restrictions",
+  "__order": 10,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "allowAccountModification": {
+      "title": "Allow account changes",
+      "description": "Off stops adding or changing Apple Accounts and Mail, Contacts and Calendar accounts.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 26,
+      "x-supervised": true
+    },
+    "allowActivityContinuation": {
+      "title": "Allow handoff",
+      "description": "If false, the system disables activity continuation. Support for this restriction on unsupervised devices and with Managed Apple Accounts is deprecated. In a future release, this restriction will begin requiring supervision and will apply to personal Apple Accounts only.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1001
+    },
+    "allowAddingGameCenterFriends": {
+      "title": "Allow adding Game Center friends",
+      "description": "If false, the system prohibits adding friends to Game Center. Requires a supervised device in iOS 13 and later.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1002,
+      "x-supervised": true
+    },
+    "allowAirDrop": {
+      "title": "Allow AirDrop",
+      "description": "Off turns AirDrop off.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 12,
+      "x-supervised": true
+    },
+    "allowAirPrint": {
+      "title": "Allow AirPrint",
+      "description": "If false, the system disables AirPrint.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1005,
+      "x-supervised": true
+    },
+    "allowAirPrintCredentialsStorage": {
+      "title": "Allow storage of AirPrint credentials in keychain",
+      "description": "If false, the system disables Keychain storage of user name and password for AirPrint.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1006,
+      "x-supervised": true
+    },
+    "allowAirPrintiBeaconDiscovery": {
+      "title": "Allow discovery of AirPrint printers using iBeacons",
+      "description": "If false, the system disables iBeacon discovery of AirPrint printers, which prevents spurious AirPrint Bluetooth beacons from phishing for network traffic.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1007,
+      "x-supervised": true
+    },
+    "allowAppCellularDataModification": {
+      "title": "Allow modifying cellular data usage for apps settings",
+      "description": "If false, the system disables changing settings for cellular data usage for apps.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1008,
+      "x-supervised": true
+    },
+    "allowAppClips": {
+      "title": "Allow App Clips",
+      "description": "Off blocks App Clips and removes existing ones. iOS 14+.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 41,
+      "x-supervised": true
+    },
+    "allowAppInstallation": {
+      "title": "Allow installing apps",
+      "description": "Off removes the App Store and blocks all app installs and updates by the user. MDM can still install apps.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 35,
+      "x-supervised": true
+    },
+    "allowAppRemoval": {
+      "title": "Allow deleting apps",
+      "description": "Off stops users deleting apps.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 38,
+      "x-supervised": true
+    },
+    "allowAppleIntelligenceReport": {
+      "title": "Allow Apple Intelligence report",
+      "description": "If false, the system disables Apple Intelligence reports.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1011,
+      "x-supervised": true,
+      "x-os": "iOS 18.4+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowApplePersonalizedAdvertising": {
+      "title": "Allow Apple personalized advertising",
+      "description": "If false, the system limits Apple personalized advertising.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1012
+    },
+    "allowAppsToBeHidden": {
+      "title": "Allow hiding apps",
+      "description": "If false, disables the ability for the user to hide apps. It doesn't affect the user's ability to leave it in the App Library, while removing it from the Home Screen.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1014,
+      "x-supervised": true,
+      "x-os": "iOS 18.0+"
+    },
+    "allowAppsToBeLocked": {
+      "title": "Allow locking apps",
+      "description": "If false, disables the ability for the user to lock apps. Because hiding apps also requires locking them, disallowing locking also disallows hiding.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1015,
+      "x-supervised": true,
+      "x-os": "iOS 18.0+"
+    },
+    "allowAssistant": {
+      "title": "Allow Siri",
+      "description": "Off turns Siri off. Apple is moving this to declarative Siri settings (iOS 26.4).",
+      "type": "boolean",
+      "default": true,
+      "property_order": 13,
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowAssistantUserGeneratedContent": {
+      "title": "Allow assistant user generated content",
+      "description": "If false, the system prevents Siri from querying user-generated content from the web.\n\nDeprecated: use the declarative management com.apple.configuration.siri.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1018,
+      "x-supervised": true,
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowAssistantWhileLocked": {
+      "title": "Allow Siri while locked",
+      "description": "Off turns Siri off on the Lock Screen when a passcode is set.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 14,
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowAutoCorrection": {
+      "title": "Allow auto correction",
+      "description": "If false, the system disables keyboard autocorrection.\n\nDeprecated: use the declarative management com.apple.configuration.keyboard.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1020,
+      "x-supervised": true,
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowAutoDim": {
+      "title": "Allow auto dim",
+      "description": "If false, disables auto dim on iPads with OLED displays.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1021,
+      "x-supervised": true,
+      "x-os": "iOS 17.4+"
+    },
+    "allowAutoUnlock": {
+      "title": "Allow auto unlock",
+      "description": "If false, the system disallows auto unlock. Support for this restriction on unsupervised devices is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1024
+    },
+    "allowAutomaticAppDownloads": {
+      "title": "Allow automatic app downloads",
+      "description": "Off stops apps bought on other devices downloading automatically.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 37,
+      "x-supervised": true
+    },
+    "allowBluetoothModification": {
+      "title": "Allow Bluetooth changes",
+      "description": "Off stops turning Bluetooth on or off.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 29,
+      "x-supervised": true
+    },
+    "allowBookstore": {
+      "title": "Allow Book Store",
+      "description": "If false, the system removes the Book Store tab from the Books app.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1027,
+      "x-supervised": true
+    },
+    "allowBookstoreErotica": {
+      "title": "Allow Book Store erotica",
+      "description": "If false, the system prevents the user from downloading Apple Books media that's tagged as erotica. Support for this restriction on unsupervised devices is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1028
+    },
+    "allowCallRecording": {
+      "title": "Allow call recording",
+      "description": "If false, disables call recording.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1029,
+      "x-supervised": true,
+      "x-os": "iOS 18.1+"
+    },
+    "allowCamera": {
+      "title": "Allow camera",
+      "description": "Off hides the Camera app and blocks taking photos. Unsupervised support is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 10
+    },
+    "allowCellularPlanModification": {
+      "title": "Allow cellular plan modification",
+      "description": "If false, the system prevents users from changing settings related to their cellular plan (available only on select carriers).",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1031,
+      "x-supervised": true
+    },
+    "allowChat": {
+      "title": "Allow use of iMessage",
+      "description": "If false, the system disables the use of iMessage with supervised devices. If the device supports text messaging, the user can still send and receive text messages.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1032,
+      "x-supervised": true
+    },
+    "allowCloudBackup": {
+      "title": "Allow iCloud Backup",
+      "description": "Off stops backing up to iCloud. Unsupervised support is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 47
+    },
+    "allowCloudDocumentSync": {
+      "title": "Allow iCloud Drive and document sync",
+      "description": "Off stops document syncing to iCloud.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 48,
+      "x-supervised": true
+    },
+    "allowCloudKeychainSync": {
+      "title": "Allow iCloud Keychain",
+      "description": "Off stops passwords syncing through iCloud. Unsupervised support is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 50
+    },
+    "allowCloudPhotoLibrary": {
+      "title": "Allow iCloud Photos",
+      "description": "Off turns iCloud Photos off; photos not fully downloaded are removed. Unsupervised support is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 49
+    },
+    "allowCloudPrivateRelay": {
+      "title": "Allow cloud private relay",
+      "description": "If false, the system disables iCloud Private Relay. Support for this restriction on unsupervised devices and with Managed Apple Accounts is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1044,
+      "x-supervised": true
+    },
+    "allowContinuousPathKeyboard": {
+      "title": "Allow continuous path keyboard",
+      "description": "If false, the system disables QuickPath keyboard.\n\nDeprecated: use the declarative management com.apple.configuration.keyboard.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1047,
+      "x-supervised": true,
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowDefaultBrowserModification": {
+      "title": "Allow default browser modification",
+      "description": "If false, disables default browser preference modification. The MDM Settings command to set the default browser preference still works when applying this.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1048,
+      "x-supervised": true,
+      "x-os": "iOS 18.2+"
+    },
+    "allowDefaultCallingAppModification": {
+      "title": "Allow default calling app modification",
+      "description": "If false, disables default calling app preference modification. The MDM Settings command to set the default calling app preference still works when applying this.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1049,
+      "x-supervised": true,
+      "x-os": "iOS 18.4+"
+    },
+    "allowDefaultMessagingAppModification": {
+      "title": "Allow default messaging app modification",
+      "description": "If false, disables default messaging app preference modification. The MDM Settings command to set the default messaging app preference still works when applying this.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1050,
+      "x-supervised": true,
+      "x-os": "iOS 18.4+"
+    },
+    "allowDefinitionLookup": {
+      "title": "Allow definition lookup",
+      "description": "If false, the system disables definition lookup.\n\nDeprecated: use the declarative management com.apple.configuration.keyboard.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1051,
+      "x-supervised": true,
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowDeviceNameModification": {
+      "title": "Allow device name changes",
+      "description": "Off stops renaming the device.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 27,
+      "x-supervised": true
+    },
+    "allowDiagnosticSubmission": {
+      "title": "Allow sending diagnostics to Apple",
+      "description": "Off stops automatic diagnostic reports.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 22
+    },
+    "allowDiagnosticSubmissionModification": {
+      "title": "Allow modifying diagnostics settings",
+      "description": "If false, the system disables changing the diagnostic submission and app analytics settings in the Diagnostics & Usage UI in Settings.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1055,
+      "x-supervised": true
+    },
+    "allowDictation": {
+      "title": "Allow dictation",
+      "description": "If false, the system disallows dictation input.\n\nDeprecated: use the declarative management com.apple.configuration.keyboard.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1056,
+      "x-supervised": true,
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowESIMModification": {
+      "title": "Allow eSIM modification",
+      "description": "If false, the system disables modifications of eSIMs. This also disables the phone number sharing setup on iPhones, in iOS 27 and later.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1064,
+      "x-supervised": true
+    },
+    "allowESIMOutgoingTransfers": {
+      "title": "Allow eSIM outgoing transfers",
+      "description": "If false, prevents the transfer of an eSIM from the device on which the restriction is installed to a different device.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1065,
+      "x-supervised": true,
+      "x-os": "iOS 18.0+"
+    },
+    "allowEnablingRestrictions": {
+      "title": "Allow Screen Time",
+      "description": "Off stops users turning on Screen Time restrictions.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 34,
+      "x-supervised": true
+    },
+    "allowEnterpriseAppTrust": {
+      "title": "Allow trusting enterprise apps",
+      "description": "Off removes the Trust Enterprise Developer button in Settings.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 42
+    },
+    "allowEnterpriseBookBackup": {
+      "title": "Allow enterprise books backup",
+      "description": "If false, the system disables backup of Enterprise books.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1061
+    },
+    "allowEnterpriseBookMetadataSync": {
+      "title": "Allow enterprise books notes and highlights sync",
+      "description": "If false, the system disables sync of Enterprise books, notes, and highlights.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1062
+    },
+    "allowEraseContentAndSettings": {
+      "title": "Allow Erase All Content and Settings",
+      "description": "Off hides the erase option in Settings.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 23,
+      "x-supervised": true
+    },
+    "allowExplicitContent": {
+      "title": "Allow explicit music, podcasts and news",
+      "description": "Off hides content marked explicit.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 45,
+      "x-supervised": true
+    },
+    "allowExternalIntelligenceIntegrations": {
+      "title": "Allow external intelligence integrations",
+      "description": "If false, disables the use of external, cloud-based intelligence services with Siri. In iOS, this restriction is temporarily allowed on unsupervised and user enrollments. In a future release, this restriction will require supervision, and will be ignored on unsupervised devices.\n\nDeprecated: use the declarative management com.apple.configuration.external-intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1067,
+      "x-os": "iOS 18.2+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowExternalIntelligenceIntegrationsSignIn": {
+      "title": "Allow external intelligence integrations sign-in",
+      "description": "If false, forces external intelligence providers into anonymous mode. If a user is already signed in to an external intelligence provider, applying this restriction signs them out when attempting the next request.\n\nDeprecated: use the declarative management com.apple.configuration.external-intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1068,
+      "x-os": "iOS 18.2+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowFilesNetworkDriveAccess": {
+      "title": "Allow files network drive access",
+      "description": "If false, the system prevents connecting to network drives in the Files app.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1070,
+      "x-supervised": true
+    },
+    "allowFilesUSBDriveAccess": {
+      "title": "Allow files USB drive access",
+      "description": "If false, the system prevents connecting to any connected USB devices in the Files app.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1071,
+      "x-supervised": true
+    },
+    "allowFindMyDevice": {
+      "title": "Allow Find My Device",
+      "description": "Off turns off Find My Device in the Find My app. iOS 13+.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 21,
+      "x-supervised": true
+    },
+    "allowFindMyFriends": {
+      "title": "Allow find my friends",
+      "description": "If false, the system disables Find My Friends in the Find My app.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1073,
+      "x-supervised": true
+    },
+    "allowFindMyFriendsModification": {
+      "title": "Allow find my friends modification",
+      "description": "If false, the system disables changes to Find My Friends.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1074,
+      "x-supervised": true
+    },
+    "allowFingerprintForUnlock": {
+      "title": "Allow Touch ID / Face ID unlock",
+      "description": "Off requires the passcode to unlock. Unsupervised support is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 15
+    },
+    "allowFingerprintModification": {
+      "title": "Allow Touch ID / Face ID changes",
+      "description": "Off stops adding or removing fingerprints and faces.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 25,
+      "x-supervised": true
+    },
+    "allowGameCenter": {
+      "title": "Allow Game Center",
+      "description": "Off turns Game Center off.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 44,
+      "x-supervised": true
+    },
+    "allowGenmoji": {
+      "title": "Allow Genmoji",
+      "description": "If false, prohibits creating new Genmoji.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1078,
+      "x-supervised": true,
+      "x-os": "iOS 18.0+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowGlobalBackgroundFetchWhenRoaming": {
+      "title": "Allow automatic sync while roaming",
+      "description": "If false, the system disables global background fetch activity when an iOS phone is roaming. Support for this restriction on unsupervised devices is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1079
+    },
+    "allowHostPairing": {
+      "title": "Allow pairing with computers",
+      "description": "Off blocks pairing with any Mac or PC except the supervising one.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 19,
+      "x-supervised": true
+    },
+    "allowImagePlayground": {
+      "title": "Allow Image Playground",
+      "description": "If false, prohibits the use of image generation.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1081,
+      "x-supervised": true,
+      "x-os": "iOS 18.0+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowImageWand": {
+      "title": "Allow Image Wand",
+      "description": "If false, prohibits the use of Image Wand.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1082,
+      "x-supervised": true,
+      "x-os": "iOS 18.0+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowInAppPurchases": {
+      "title": "Allow in-app purchases",
+      "description": "Off blocks in-app purchases. Unsupervised support is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 39
+    },
+    "allowKeyboardShortcuts": {
+      "title": "Allow keyboard shortcuts",
+      "description": "If false, the system disables keyboard shortcuts.\n\nDeprecated: use the declarative management com.apple.configuration.keyboard.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1089,
+      "x-supervised": true,
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowListedAppBundleIDs": {
+      "title": "Allow listed apps",
+      "description": "If present, the system only shows or can launch apps with bundle IDs in the array. Include the value com.apple.webapp to allow all webclips. This applies to App Store apps, marketplace apps, and locally installed apps (using Configurator, Xcode, and so forth).\n\nDeprecated: use the declarative management com.apple.configuration.app.settings configuration.",
+      "type": "array",
+      "property_order": 1090,
+      "items": {
+        "title": "Allow listed app",
+        "type": "string"
+      },
+      "x-supervised": true,
+      "x-deprecated": "iOS 27.0"
+    },
+    "allowLiveVoicemail": {
+      "title": "Allow live voicemail",
+      "description": "If false, the system disables live voicemail on the device.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1091,
+      "x-supervised": true,
+      "x-os": "iOS 17.2+"
+    },
+    "allowLockScreenControlCenter": {
+      "title": "Allow Control Center on Lock Screen",
+      "description": "Off hides Control Center while locked.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 16
+    },
+    "allowLockScreenNotificationsView": {
+      "title": "Allow notification history on Lock Screen",
+      "description": "Off hides past notifications while locked; new ones still appear.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 17
+    },
+    "allowLockScreenTodayView": {
+      "title": "Allow lock screen today view",
+      "description": "If false, the system disables the Today view in Notification Center on the Lock Screen.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1095
+    },
+    "allowMailPrivacyProtection": {
+      "title": "Allow mail privacy protection",
+      "description": "If false, the system disables Mail Privacy Protection on the device.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1096,
+      "x-supervised": true
+    },
+    "allowMailSmartReplies": {
+      "title": "Allow mail smart replies",
+      "description": "If false, disables smart replies in Mail.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1097,
+      "x-supervised": true,
+      "x-os": "iOS 18.4+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowMailSummary": {
+      "title": "Allow mail summary",
+      "description": "If false, disables the ability to create summaries of email messages manually. This doesn't affect automatic summary generation.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1098,
+      "x-supervised": true,
+      "x-os": "iOS 18.1+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowManagedAppsCloudSync": {
+      "title": "Allow managed apps to use iCloud",
+      "description": "Off stops managed apps syncing with iCloud.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 51
+    },
+    "allowManagedToWriteUnmanagedContacts": {
+      "title": "Allow managed apps to write to managed contacts accounts",
+      "description": "If true, the system allows managed apps to write contacts to unmanaged accounts. If allowOpenFromManagedToUnmanaged is true, this restriction has no effect.\n\n> Important:\n> Use MDM to install profiles that contain this restriction.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1100
+    },
+    "allowMarketplaceAppInstallation": {
+      "title": "Allow alternative app marketplaces",
+      "description": "Off blocks installing marketplace apps from the web (EU). iOS 17.4+.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 40,
+      "x-supervised": true,
+      "x-os": "iOS 17.4+"
+    },
+    "allowMultiplayerGaming": {
+      "title": "Allow multiplayer gaming",
+      "description": "If false, the system prohibits multiplayer gaming.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1103,
+      "x-supervised": true
+    },
+    "allowMusicService": {
+      "title": "Allow Apple Music",
+      "description": "If false, the system disables the Music service, and the Music app reverts to classic mode.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1104,
+      "x-supervised": true
+    },
+    "allowNFC": {
+      "title": "Allow NFC",
+      "description": "If false, the system disables NFC.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1106,
+      "x-supervised": true
+    },
+    "allowNews": {
+      "title": "Allow use of News",
+      "description": "If false, the system disables News.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1105,
+      "x-supervised": true
+    },
+    "allowNotesTranscription": {
+      "title": "Allow notes transcription",
+      "description": "If false, disables transcription in Notes.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1107,
+      "x-supervised": true,
+      "x-os": "iOS 18.4+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowNotesTranscriptionSummary": {
+      "title": "Allow notes transcription summary",
+      "description": "If false, disables transcription summarization in Notes.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1108,
+      "x-supervised": true,
+      "x-os": "iOS 18.3+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowNotificationsModification": {
+      "title": "Allow modifying notifications settings",
+      "description": "If false, the system disables modification of notification settings.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1109,
+      "x-supervised": true
+    },
+    "allowOTAPKIUpdates": {
+      "title": "Allow OTAPKI updates",
+      "description": "If false, the system disables over-the-air PKI updates. Setting this restriction to false doesn't disable CRL and OCSP checks.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1112
+    },
+    "allowOpenFromManagedToUnmanaged": {
+      "title": "Allow opening work documents in personal apps",
+      "description": "Off keeps documents from managed apps and accounts inside managed apps.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 53
+    },
+    "allowOpenFromUnmanagedToManaged": {
+      "title": "Allow opening personal documents in work apps",
+      "description": "Off keeps documents from personal apps out of managed apps.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 54
+    },
+    "allowPairedWatch": {
+      "title": "Allow pairing with Apple Watch",
+      "description": "If false, the system disables pairing with an Apple Watch, and the system unpairs any currently paired Apple Watch and erases its content.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1113,
+      "x-supervised": true
+    },
+    "allowPassbookWhileLocked": {
+      "title": "Allow Wallet while locked",
+      "description": "If false, the system hides Passbook notifications from the Lock Screen.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1114
+    },
+    "allowPasscodeModification": {
+      "title": "Allow passcode changes",
+      "description": "Off stops adding, changing or removing the passcode.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 24,
+      "x-supervised": true
+    },
+    "allowPasswordAutoFill": {
+      "title": "Allow password auto fill",
+      "description": "If false, the system disables:\n\n- The AutoFill Passwords feature in iOS, with Keychain and third-party password managers\n- Prompting the user to use a saved password in Safari or in apps\n- Automatic strong passwords\n- Suggesting strong passwords to users\n\nHowever, if false, the system doesn't prevent AutoFill for contact info and credit cards in Safari.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1116,
+      "x-supervised": true
+    },
+    "allowPasswordProximityRequests": {
+      "title": "Allow password proximity requests",
+      "description": "If false, the system disables requesting passwords from nearby devices.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1117,
+      "x-supervised": true
+    },
+    "allowPasswordSharing": {
+      "title": "Allow password sharing",
+      "description": "If false, the system disables sharing passwords with the AirDrop passwords feature, or with the Passwords app.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1118,
+      "x-supervised": true
+    },
+    "allowPersonalHotspotModification": {
+      "title": "Allow Personal Hotspot changes",
+      "description": "Off stops changing the Personal Hotspot setting.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 30,
+      "x-supervised": true
+    },
+    "allowPersonalizedHandwritingResults": {
+      "title": "Allow personalized handwriting results",
+      "description": "If false, prevents the system from generating text in the user's handwriting.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1120,
+      "x-supervised": true,
+      "x-os": "iOS 18.0+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowPhotoStream": {
+      "title": "Allow Photo Stream",
+      "description": "If false, the system disables Photo Stream.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1121,
+      "x-deprecated": "iOS 17.0"
+    },
+    "allowPodcasts": {
+      "title": "Allow podcasts",
+      "description": "If false, the system disables podcasts.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1122,
+      "x-supervised": true
+    },
+    "allowPredictiveKeyboard": {
+      "title": "Allow predictive keyboard",
+      "description": "If false, the system disables predictive keyboards.\n\nDeprecated: use the declarative management com.apple.configuration.keyboard.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1123,
+      "x-supervised": true,
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowProximitySetupToNewDevice": {
+      "title": "Allow proximity setup to new device",
+      "description": "If false, disables the prompt to set up new devices that are nearby. Starting with iOS 26.3, this also prevents exporting iOS data to set up new Android devices.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1125,
+      "x-supervised": true
+    },
+    "allowRCSMessaging": {
+      "title": "Allow RCS messaging",
+      "description": "If false, prevents the use of RCS messaging.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1129,
+      "x-supervised": true,
+      "x-os": "iOS 18.1+"
+    },
+    "allowRadioService": {
+      "title": "Allow iTunes radio",
+      "description": "If false, the system disables Apple Music Radio.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1126,
+      "x-supervised": true
+    },
+    "allowRemoteScreenObservation": {
+      "title": "Allow Classroom screen viewing",
+      "description": "Off stops the Classroom app viewing this screen.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 57
+    },
+    "allowSafari": {
+      "title": "Allow Safari",
+      "description": "Off hides Safari and blocks web clips.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 43,
+      "x-supervised": true
+    },
+    "allowSafariHistoryClearing": {
+      "title": "Allow Safari history clearing",
+      "description": "If false, the system disables the ability to clear browsing history in Safari.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1135,
+      "x-supervised": true,
+      "x-os": "iOS 26.0+"
+    },
+    "allowSafariPrivateBrowsing": {
+      "title": "Allow Safari private browsing",
+      "description": "If false, the system disables the ability to use private browsing in Safari.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1136,
+      "x-supervised": true,
+      "x-os": "iOS 26.0+"
+    },
+    "allowSafariSummary": {
+      "title": "Allow Safari summary",
+      "description": "If false, the system disables the ability to summarize content in Safari.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1137,
+      "x-supervised": true,
+      "x-os": "iOS 18.4+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowSatelliteConnection": {
+      "title": "Allow use of satellite connectivity",
+      "description": "If false, the system prohibits the connection to and use of satellite services.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1138,
+      "x-supervised": true,
+      "x-os": "iOS 18.2+"
+    },
+    "allowScreenShot": {
+      "title": "Allow screenshots and screen recording",
+      "description": "Off also stops Classroom from viewing the screen.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 11
+    },
+    "allowSharedDeviceTemporarySession": {
+      "title": "Allow shared device temporary session",
+      "description": "If false, the system makes temporary sessions unavailable on Shared iPad.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1140,
+      "x-supervised": true
+    },
+    "allowSharedStream": {
+      "title": "Allow shared stream",
+      "description": "If false, the system disables Shared Photo Stream. Support for this restriction on unsupervised devices is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1141
+    },
+    "allowSiriAI": {
+      "title": "Allow Siri Apple Intelligence integration",
+      "description": "If false, the system disables Apple Intelligence integration in Siri.\n\nDeprecated: use the declarative management com.apple.configuration.siri.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1142,
+      "x-os": "iOS 27.0+",
+      "x-deprecated": "iOS 27.0"
+    },
+    "allowSpellCheck": {
+      "title": "Allow spell check",
+      "description": "If false, the system disables the keyboard spell checker.\n\nDeprecated: use the declarative management com.apple.configuration.keyboard.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1143,
+      "x-supervised": true,
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowSpotlightInternetResults": {
+      "title": "Allow Siri suggestions",
+      "description": "If false, the system disables Spotlight Internet search results in Siri Suggestions. Support for this restriction on unsupervised devices is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1144
+    },
+    "allowSystemAppRemoval": {
+      "title": "Allow system app removal",
+      "description": "If false, the system disables the removal of system apps from the device.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1146,
+      "x-supervised": true
+    },
+    "allowUIAppInstallation": {
+      "title": "Allow App Store",
+      "description": "Off removes the App Store; apps can still be installed by MDM or Configurator.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 36,
+      "x-supervised": true
+    },
+    "allowUIConfigurationProfileInstallation": {
+      "title": "Allow installing profiles",
+      "description": "Off stops users installing configuration profiles and certificates themselves.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 33,
+      "x-supervised": true
+    },
+    "allowUSBRestrictedMode": {
+      "title": "Allow USB Restricted Mode",
+      "description": "Off lets USB accessories connect while the device is locked.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 18,
+      "x-supervised": true
+    },
+    "allowUnmanagedToReadManagedContacts": {
+      "title": "Allow unmanaged apps to read managed contacts accounts",
+      "description": "If true, the system allows unmanaged apps to read from managed contacts accounts. If allowOpenFromManagedToUnmanaged is true, this restriction has no effect.\n\n> Important:\n> Use MDM to install profiles that contain this restriction.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1151
+    },
+    "allowUnpairedExternalBootToRecovery": {
+      "title": "Allow unpaired external boot to recovery",
+      "description": "If true, the system allows unpaired devices to boot devices into recovery.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1152,
+      "x-supervised": true
+    },
+    "allowUntrustedTLSPrompt": {
+      "title": "Allow user to accept untrusted TLS certificates",
+      "description": "If false, the system automatically rejects untrusted HTTPS certificates without prompting the user.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1153
+    },
+    "allowVPNCreation": {
+      "title": "Allow adding VPNs",
+      "description": "Off stops users adding VPN configurations.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 31,
+      "x-supervised": true
+    },
+    "allowVideoConferencing": {
+      "title": "Allow video conferencing",
+      "description": "If false, the system hides the FaceTime app. Requires a supervised device in iOS 13 and later.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1155,
+      "x-supervised": true
+    },
+    "allowVideoConferencingRemoteControl": {
+      "title": "Allow video conferencing remote control",
+      "description": "If false, disables the ability for a remote FaceTime session to request control of the device.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1156,
+      "x-supervised": true,
+      "x-os": "iOS 18.4+"
+    },
+    "allowVisualIntelligenceSummary": {
+      "title": "Allow visual intelligence summary",
+      "description": "If false, the system disables visual intelligence summarization.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1157,
+      "x-supervised": true,
+      "x-os": "iOS 18.3+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowVoiceDialing": {
+      "title": "Allow voice dialing while device is locked",
+      "description": "If false, the system disables voice dialing if the device is locked with a passcode.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1158,
+      "x-deprecated": "iOS 17.0"
+    },
+    "allowWallpaperModification": {
+      "title": "Allow wallpaper changes",
+      "description": "Off stops changing the wallpaper.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 28,
+      "x-supervised": true
+    },
+    "allowWebDistributionAppInstallation": {
+      "title": "Allow app installation from web sites",
+      "description": "If false, the device prevents installation of apps directly from the web.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1161,
+      "x-supervised": true,
+      "x-os": "iOS 17.5+"
+    },
+    "allowWritingTools": {
+      "title": "Allow writing tools",
+      "description": "If false, disables Apple Intelligence writing tools.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1162,
+      "x-supervised": true,
+      "x-os": "iOS 18.0+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowedCameraRestrictionBundleIDs": {
+      "title": "Allowed exceptions to camera restriction",
+      "description": "If present, the system exempts apps with bundle IDs in the array from the allowCamera restriction. The system doesn't grant these apps access to the camera automatically; they're only exempted from the allowCamera restriction. This key has no effect when the camera isn't restricted. Multiple payloads combine using an intersect operation. Requires a supervised device.",
+      "type": "array",
+      "property_order": 1057,
+      "items": {
+        "title": "Bundle ID to be excepted",
+        "type": "string"
+      },
+      "x-supervised": true,
+      "x-os": "iOS 26.0+"
+    },
+    "allowedExternalIntelligenceWorkspaceIDs": {
+      "title": "Allowed external intelligence workspace IDs",
+      "description": "An array of strings, but currently restricted to a single element. If present, Apple Intelligence allows use of only the given external integration workspace ID, and requires a sign-in to make requests. The user is required to sign in to integrations that support signing in. Multiple payloads combine using an intersect operation. This means the allowed set of workspace IDs can become the empty set if multiple payloads specify conflicting values.\n\nDeprecated: use the declarative management com.apple.configuration.external-intelligence.settings configuration.",
+      "type": "array",
+      "property_order": 1058,
+      "items": {
+        "title": "Allowed workspace ID",
+        "type": "string"
+      },
+      "x-supervised": true,
+      "x-os": "iOS 18.3+",
+      "x-deprecated": "iOS 26.4"
+    },
+    "allowiPhoneMirroring": {
+      "title": "Allow iPhone mirroring",
+      "description": "If false, prohibits the use of iPhone Mirroring. In macOS, this prevents the Mac from mirroring any iPhone. In iOS, this prevents the iPhone from mirroring to any Mac.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1085,
+      "x-supervised": true,
+      "x-os": "iOS 18.0+"
+    },
+    "allowiPhoneWidgetsOnMac": {
+      "title": "Allow iPhone widget on Mac",
+      "description": "If false, the system disallows iPhone widgets on a Mac that signs in with the same Apple Account for iCloud.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1086,
+      "x-supervised": true,
+      "x-os": "iOS 17.0+"
+    },
+    "allowiTunes": {
+      "title": "Allow use of iTunes",
+      "description": "If false, the system disables the iTunes Music Store and removes its icon from the Home Screen. Users can't preview, purchase, or download content. Requires a supervised device in iOS 13 and later.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1087,
+      "x-supervised": true
+    },
+    "autonomousSingleAppModePermittedAppIDs": {
+      "title": "Autonomous single app mode permitted app i ds",
+      "description": "If present, the system allows apps identified by the bundle IDs listed in the array to autonomously enter Single App Mode.",
+      "type": "array",
+      "property_order": 1163,
+      "items": {
+        "title": "Apps allow list for autonomous single app mode",
+        "type": "string"
+      },
+      "x-supervised": true
+    },
+    "blacklistedAppBundleIDs": {
+      "title": "Blacklisted apps",
+      "description": "Deprecated: use the declarative management com.apple.configuration.app.settings configuration.",
+      "type": "array",
+      "property_order": 1164,
+      "items": {
+        "title": "Blacklisted app",
+        "type": "string"
+      },
+      "x-supervised": true,
+      "x-deprecated": "iOS 15.0"
+    },
+    "blockedAppBundleIDs": {
+      "title": "Blocked apps",
+      "description": "If present, the system prevents showing or launching apps with bundle IDs in the array. Include the value com.apple.webapp to restrict all webclips. This applies to App Store apps, marketplace apps, and locally installed apps (using Configurator, Xcode, and so forth).\n\nDeprecated: use the declarative management com.apple.configuration.app.settings configuration.\n\n> Note:\n> Denying system apps may disable other functionality. For example, denying the App Store app may prevent users from accepting the terms and conditions for the user-based Volume Purchase Program (VPP).",
+      "type": "array",
+      "property_order": 1165,
+      "items": {
+        "title": "Blocked app",
+        "type": "string"
+      },
+      "x-supervised": true,
+      "x-deprecated": "iOS 27.0"
+    },
+    "deniedICCIDsForRCS": {
+      "title": "Denied ICCI ds for RCS",
+      "description": "An array of strings representing ICCIDs of cellular plans. The device prevents use of any matching cellular networks with RCS messaging. The array must contain no more than 4 ICCID strings.",
+      "type": "array",
+      "property_order": 1167,
+      "items": {
+        "title": "Denied ICCID for RCS",
+        "type": "string"
+      },
+      "x-supervised": true,
+      "x-os": "iOS 26.0+"
+    },
+    "deniedICCIDsForiMessageFaceTime": {
+      "title": "Denied ICCI ds fori message FaceTime",
+      "description": "An array of strings representing ICCIDs of cellular plans. The device prevents use of any matching cellular networks in iMessage and FaceTime. The array must contain no more than 4 ICCID strings.",
+      "type": "array",
+      "property_order": 1166,
+      "items": {
+        "title": "Denied ICCID for iMessage and FaceTime",
+        "type": "string"
+      },
+      "x-supervised": true,
+      "x-os": "iOS 26.0+"
+    },
+    "forceAirDropUnmanaged": {
+      "title": "Treat AirDrop as personal",
+      "description": "On treats AirDrop as an unmanaged destination for managed documents.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 56
+    },
+    "forceAirPlayOutgoingRequestsPairingPassword": {
+      "title": "Force AirPlay outgoing requests pairing password",
+      "description": "If true, the system forces all devices receiving AirPlay requests from this device to use a pairing password.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1175
+    },
+    "forceAirPrintTrustedTLSRequirement": {
+      "title": "Disallow AirPrint to destinations with untrusted certificates",
+      "description": "If true, the system requires trusted certificates for TLS printing communication.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1176,
+      "x-supervised": true
+    },
+    "forceAssistantProfanityFilter": {
+      "title": "Enable Siri profanity filter",
+      "description": "If true, the system forces the use of the profanity filter for Siri and dictation. Requires a supervised device in iOS.\n\nDeprecated: use the declarative management com.apple.configuration.siri.settings configuration.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1177,
+      "x-supervised": true,
+      "x-deprecated": "iOS 26.4"
+    },
+    "forceAuthenticationBeforeAutoFill": {
+      "title": "Force authentication before auto fill",
+      "description": "If true, the user needs to authenticate before the system can autofill passwords or credit card information in Safari and apps. If this restriction isn't enforced, the user can toggle this feature in Settings. Only supported on devices with Face ID or Touch ID.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1178,
+      "x-supervised": true
+    },
+    "forceAutomaticDateAndTime": {
+      "title": "Force automatic date and time",
+      "description": "On keeps Set Automatically turned on in Date & Time.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 20,
+      "x-supervised": true
+    },
+    "forceClassroomAutomaticallyJoinClasses": {
+      "title": "Join Classroom classes automatically",
+      "description": "On accepts the teacher's requests without asking the student.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 58,
+      "x-supervised": true
+    },
+    "forceClassroomRequestPermissionToLeaveClasses": {
+      "title": "Ask the teacher to leave a class",
+      "description": "On makes students ask before leaving an unmanaged class.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 61,
+      "x-supervised": true
+    },
+    "forceClassroomUnpromptedAppAndDeviceLock": {
+      "title": "Let Classroom lock apps without asking",
+      "description": "On lets the teacher lock apps or the device without asking the student.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 59,
+      "x-supervised": true
+    },
+    "forceClassroomUnpromptedScreenObservation": {
+      "title": "Let Classroom view the screen without asking",
+      "description": "On lets the teacher of a managed class view the screen without asking.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 60,
+      "x-supervised": true
+    },
+    "forceEncryptedBackup": {
+      "title": "Force encrypted backups",
+      "description": "On encrypts all backups.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 52
+    },
+    "forceITunesStorePasswordEntry": {
+      "title": "Require iTunes password for all purchases",
+      "description": "If true, the system forces the user to enter their iTunes password for each transaction.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1189,
+      "x-deprecated": "iOS 17.0"
+    },
+    "forceLimitAdTracking": {
+      "title": "Force limit ad tracking",
+      "description": "If true, the system limits ad tracking. Additionally, it disables app tracking and the Allow Apps to Request to Track setting.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1190
+    },
+    "forceOnDeviceOnlyDictation": {
+      "title": "Force on device only dictation",
+      "description": "If true, the system disables connections to Siri servers for the purposes of dictation.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1191,
+      "x-deprecated": "iOS 26.4"
+    },
+    "forceOnDeviceOnlyTranslation": {
+      "title": "Force on device only translation",
+      "description": "If true, the device can't connect to Siri servers for the purposes of translation.\n\nDeprecated: use the declarative management com.apple.configuration.intelligence.settings configuration.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1192,
+      "x-deprecated": "iOS 26.4"
+    },
+    "forcePreserveESIMOnErase": {
+      "title": "Force preserve ESIM on erase",
+      "description": "If true, the system preserves eSIM when it erases the device due to too many failed password attempts or the Erase All Content and Settings option in Settings > General > Reset.\n\n> Note:\n> The system doesn't preserve eSIM if Find My initiates erasing the device.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1193,
+      "x-supervised": true,
+      "x-os": "iOS 17.2+"
+    },
+    "forceWatchWristDetection": {
+      "title": "Force Apple Watch wrist detection",
+      "description": "If true, the system forces a paired Apple Watch to use Wrist Detection.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1194
+    },
+    "forceWiFiPowerOn": {
+      "title": "Disallow Wi-Fi from being turned off",
+      "description": "If true, the system prevents turning off Wi-Fi in Settings or Control Center, even by entering or leaving Airplane Mode. It doesn't prevent selecting which Wi-Fi network to use. and later.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1195,
+      "x-supervised": true
+    },
+    "forceWiFiToAllowedNetworksOnly": {
+      "title": "Only join managed Wi-Fi networks",
+      "description": "On limits the device to Wi-Fi networks installed by a profile. iOS 14.5+.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 32,
+      "x-supervised": true
+    },
+    "forceWiFiWhitelisting": {
+      "title": "Only join Wi-Fi networks installed by profiles",
+      "description": "Use forceWiFiToAllowedNetworksOnly instead.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1197,
+      "x-supervised": true,
+      "x-deprecated": "iOS 14.5"
+    },
+    "ratingApps": {
+      "title": "Maximum app age rating",
+      "description": "Hides apps above this age rating. Ratings vary by region; these are the common bands.",
+      "type": "integer",
+      "default": 1000,
+      "minimum": 0,
+      "maximum": 1000,
+      "property_order": 46
+    },
+    "ratingAppsExemptedBundleIDs": {
+      "title": "Apps exempted from rating restrictions",
+      "description": "If present, the system exempts apps with bundle IDs in the array from age-based rating restrictions. The system uses intersection combine rules to combine multiple payloads and any exceptions that parental control apps provide, including ScreenTime.",
+      "type": "array",
+      "property_order": 1199,
+      "items": {
+        "title": "Exempted app",
+        "type": "string"
+      },
+      "x-os": "iOS 26.1+"
+    },
+    "ratingMovies": {
+      "title": "Movies ranking number",
+      "description": "The maximum level of movie content allowed on the device. Support for this restriction on unsupervised devices is deprecated.\n\nPossible values, with the U.S. description of the rating level:\n\n- 1000: All\n- 500: NC-17\n- 400: R\n- 300: PG-13\n- 200: PG\n- 100: G\n- 0: None",
+      "type": "integer",
+      "default": 1000,
+      "minimum": 0,
+      "maximum": 1000,
+      "property_order": 1200
+    },
+    "ratingRegion": {
+      "title": "Region code",
+      "description": "The two-letter key that profile tools use to display the proper ratings for the given region. The client doesn't recognize or report this data.",
+      "type": "string",
+      "enum": [
+        "us",
+        "au",
+        "ca",
+        "de",
+        "fr",
+        "ie",
+        "jp",
+        "nz",
+        "gb"
+      ],
+      "property_order": 1201,
+      "options": {
+        "enum_titles": [
+          "Us",
+          "Au",
+          "CA",
+          "De",
+          "Fr",
+          "Ie",
+          "Jp",
+          "Nz",
+          "Gb"
+        ]
+      }
+    },
+    "ratingTVShows": {
+      "title": "TV shows ranking number",
+      "description": "The maximum level of TV content allowed on the device. Support for this restriction on unsupervised devices is deprecated.\n\nPossible values, with the U.S. description of the rating level:\n\n- 1000: All\n- 600: TV-MA\n- 500: TV-14\n- 400: TV-PG\n- 300: TV-G\n- 200: TV-Y7\n- 100: TV-Y\n- 0: None",
+      "type": "integer",
+      "default": 1000,
+      "minimum": 0,
+      "maximum": 1000,
+      "property_order": 1202
+    },
+    "requireManagedPasteboard": {
+      "title": "Apply these rules to copy and paste",
+      "description": "On makes the two settings above also limit copy and paste. iOS 15+.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 55
+    },
+    "safariAcceptCookies": {
+      "title": "Accept cookies in Safari",
+      "description": "Defines the conditions under which the device accepts cookies. The user-facing settings changed in iOS 11, although the possible values remain the same. Support for this restriction on unsupervised devices is deprecated. Allowed values:\n\n- 0: Enables Prevent Cross-Site Tracking and Block All Cookies, and the user canʼt disable either setting.\n- 1 or 1.5: Enables Prevent Cross-Site Tracking, and the user canʼt disable it. Doesn't enable Block All Cookies, but the user can enable it.\n- 2: Enables Prevent Cross-Site Tracking, but doesn't enable Block All Cookies.",
+      "type": "number",
+      "enum": [
+        0,
+        1,
+        1.5,
+        2
+      ],
+      "default": 2,
+      "property_order": 1204
+    },
+    "safariAllowAutoFill": {
+      "title": "Allow AutoFill in Safari",
+      "description": "If false, the system disables Safari AutoFill for passwords, contact info, and credit cards, and also prevents using the Keychain for AutoFill. Requires a supervised device in iOS 13 and later.\n\n> Note:\n> The system still allows third-party password managers, and apps can use AutoFill.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1205,
+      "x-supervised": true
+    },
+    "safariAllowJavaScript": {
+      "title": "Allow JavaScript",
+      "description": "If false, Safari doesn't execute JavaScript. This restriction will require supervision in a future release.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1206
+    },
+    "safariAllowPopups": {
+      "title": "Allow pop-ups",
+      "description": "If false, Safari doesn't allow pop-up windows. Support for this restriction on unsupervised devices is deprecated.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1207
+    },
+    "safariForceFraudWarning": {
+      "title": "Enable fraud warning",
+      "description": "If true, the system enables Safari fraud warning.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1208
+    },
+    "whitelistedAppBundleIDs": {
+      "title": "Whitelisted apps",
+      "description": "Deprecated: use the declarative management com.apple.configuration.app.settings configuration.",
+      "type": "array",
+      "property_order": 1209,
+      "items": {
+        "title": "Whitelisted app",
+        "type": "string"
+      },
+      "x-supervised": true,
+      "x-deprecated": "iOS 15.0"
+    }
+  }
+}

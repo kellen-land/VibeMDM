@@ -1,0 +1,101 @@
+{
+  "title": "AirPlay",
+  "description": "Sets passwords for AirPlay destinations and limits which ones the device can use.",
+  "__id": "com.apple.airplay",
+  "__payloadtype": "com.apple.airplay",
+  "__platform": "ios",
+  "__category": "General",
+  "__order": 30,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "AllowList": {
+      "title": "Allow list",
+      "description": "If present, only AirPlay destinations in this list are available to the device. This allow list applies to supervised devices.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "Item",
+        "type": "object",
+        "properties": {
+          "DeviceID": {
+            "title": "Device ID",
+            "description": "The device ID of the AirPlay destination in the format xx:xx:xx:xx:xx:xx. This field isn't case-sensitive.\n\nThe system limits the list of visible AirPlay destinations to devices that are present in the AllowList field of all installed AirPlay payloads.\n\nSpecifying the same MACAddress more than once, whether in the same payload across different payloads, results in undefined behavior.\n\nAs of tvOS 18, DeviceID isn't supported.",
+            "type": "string",
+            "pattern": "^([0-9A-Fa-f]{2}:){5}([0-9A-Fa-f]{2})$",
+            "property_order": 1000,
+            "x-deprecated": "iOS 18.0"
+          },
+          "DeviceName": {
+            "title": "Device name",
+            "description": "The name of the AirPlay device.\n\nThe system limits the list of visible AirPlay destinations to devices that are present in the AllowList field of all installed AirPlay payloads.",
+            "type": "string",
+            "property_order": 1001,
+            "x-os": "iOS 18.0+"
+          }
+        }
+      },
+      "x-supervised": true
+    },
+    "Passwords": {
+      "title": "Passwords",
+      "description": "If present, sets passwords for known AirPlay destinations. Using multiple entries for the same destination, whether within the same payload or across multiple installed payloads, is an error and results in undefined behavior.",
+      "type": "array",
+      "property_order": 1001,
+      "items": {
+        "title": "Password",
+        "type": "object",
+        "required": [
+          "Password"
+        ],
+        "properties": {
+          "DeviceName": {
+            "title": "Device name",
+            "description": "The name of the AirPlay destination.",
+            "type": "string",
+            "property_order": 1000
+          },
+          "Password": {
+            "title": "Password",
+            "description": "The password for the AirPlay destination.",
+            "type": "string",
+            "property_order": 1001,
+            "x-secret": true
+          }
+        }
+      }
+    },
+    "Whitelist": {
+      "title": "Whitelist",
+      "description": "Use AllowList instead. This key is deprecated in iOS 14.5 and macOS 11.3.",
+      "type": "array",
+      "property_order": 1002,
+      "items": {
+        "title": "Item",
+        "type": "object",
+        "properties": {
+          "DeviceID": {
+            "title": "Device ID",
+            "description": "The device ID of the AirPlay destination in the format xx:xx:xx:xx:xx:xx. This field isn't case-sensitive.\n\nThe system limits the list of visible AirPlay destinations to devices that are present in the AllowList field of all installed AirPlay payloads.\n\nSpecifying the same MACAddress more than once, whether in the same payload across different payloads, results in undefined behavior.\n\nAs of tvOS 18, DeviceID isn't supported.",
+            "type": "string",
+            "pattern": "^([0-9A-Fa-f]{2}:){5}([0-9A-Fa-f]{2})$",
+            "property_order": 1000,
+            "x-deprecated": "iOS 18.0"
+          },
+          "DeviceName": {
+            "title": "Device name",
+            "description": "The name of the AirPlay device.\n\nThe system limits the list of visible AirPlay destinations to devices that are present in the AllowList field of all installed AirPlay payloads.",
+            "type": "string",
+            "property_order": 1001,
+            "x-os": "iOS 18.0+"
+          }
+        }
+      },
+      "x-supervised": true,
+      "x-deprecated": "iOS 14.5"
+    }
+  }
+}

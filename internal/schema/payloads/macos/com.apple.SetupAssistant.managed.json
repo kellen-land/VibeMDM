@@ -1,0 +1,121 @@
+{
+  "title": "Skip Setup Items",
+  "description": "Skips Setup Assistant screens shown after updates or when a user logs in for the first time.",
+  "__id": "com.apple.SetupAssistant.managed",
+  "__payloadtype": "com.apple.SetupAssistant.managed",
+  "__platform": "macos",
+  "__category": "Users and Login",
+  "__order": 50,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Skip Setup Items",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "SkipAccessibility": {
+      "title": "Skip accessibility",
+      "description": "If true, the system skips the Accessibility pane.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1008,
+      "x-deprecated": "macOS 15.0"
+    },
+    "SkipAppearance": {
+      "title": "Skip appearance",
+      "description": "If true, the system skips the Choose Your Look pane.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1005,
+      "x-deprecated": "macOS 15.0"
+    },
+    "SkipCloudSetup": {
+      "title": "Skip cloud setup",
+      "description": "If true, the system skips the Apple Account setup pane.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000,
+      "x-deprecated": "macOS 15.0"
+    },
+    "SkipPrivacySetup": {
+      "title": "Skip privacy setup",
+      "description": "If true, the system skips the Privacy consent pane.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1002,
+      "x-deprecated": "macOS 15.0"
+    },
+    "SkipScreenTime": {
+      "title": "Skip Screen Time",
+      "description": "If true, the system skips the Screen Time pane.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1007,
+      "x-deprecated": "macOS 15.0"
+    },
+    "SkipSetupItems": {
+      "title": "Skip setup items",
+      "description": "An array of strings that describe the setup items to skip. SkipKeys provides a list of valid strings and their meanings.",
+      "type": "array",
+      "property_order": 1009,
+      "items": {
+        "title": "Skip setup items",
+        "type": "string"
+      },
+      "x-os": "macOS 15.0+"
+    },
+    "SkipSiriSetup": {
+      "title": "Skip Siri setup",
+      "description": "If true, the system skips the Siri setup pane.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001,
+      "x-deprecated": "macOS 15.0"
+    },
+    "SkipTouchIDSetup": {
+      "title": "Skip Touch ID setup",
+      "description": "If true, the system skips the Touch ID setup pane.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1006,
+      "x-deprecated": "macOS 15.0"
+    },
+    "SkipTrueTone": {
+      "title": "Skip true tone",
+      "description": "If true, the system skips the True Tone Display pane.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1004,
+      "x-deprecated": "macOS 15.0"
+    },
+    "SkipUnlockWithWatch": {
+      "title": "Skip unlock with watch",
+      "description": "If true, the system skips the Unlock With Apple Watch pane.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1010,
+      "x-deprecated": "macOS 15.0"
+    },
+    "SkipWallpaper": {
+      "title": "Skip wallpaper",
+      "description": "If 'true', the system skips the Wallpaper selection window.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1011,
+      "x-os": "macOS 14.1+",
+      "x-deprecated": "macOS 15.0"
+    },
+    "SkipiCloudStorageSetup": {
+      "title": "SkipiCloud storage setup",
+      "description": "If true, the system skips the iCloud Storage pane.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003,
+      "x-deprecated": "macOS 15.0"
+    }
+  }
+}

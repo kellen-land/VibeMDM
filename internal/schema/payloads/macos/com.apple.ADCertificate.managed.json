@@ -1,0 +1,95 @@
+{
+  "title": "AD Certificate",
+  "description": "Requests a certificate from Active Directory Certificate Services.",
+  "__id": "com.apple.ADCertificate.managed",
+  "__payloadtype": "com.apple.ADCertificate.managed",
+  "__platform": "macos",
+  "__category": "Certificates",
+  "__order": 50,
+  "__multiple": true,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "CertServer",
+    "CertTemplate"
+  ],
+  "properties": {
+    "AllowAllAppsAccess": {
+      "title": "Allow all apps access",
+      "description": "If true, gives apps access to the private key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1006
+    },
+    "CertServer": {
+      "title": "Certificate server",
+      "description": "The fully qualified host name of the CA.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "CertTemplate": {
+      "title": "Certificate template",
+      "description": "The certificate template for your environment. The default user certificate value is User. The default computer certificate value is Machine.",
+      "type": "string",
+      "property_order": 1001
+    },
+    "CertificateAcquisitionMechanism": {
+      "title": "Certificate acquisition mechanism",
+      "description": "This value is most commonly RPC; if using web enrollment, use HTTP.",
+      "type": "string",
+      "property_order": 1005
+    },
+    "CertificateAuthority": {
+      "title": "Certificate authority",
+      "description": "The name of the certificate authority (CA), which the device determines from the common name (CN) of the Active Directory entry. Valid values:\n\n- CN=<your CA Name>\n- CN=Certification Authorities\n- CN=Public Key Services\n- CN=Services\n- CN=Configuration\n- CN=<your base Domain Name>",
+      "type": "string",
+      "property_order": 1004
+    },
+    "CertificateRenewalTimeInterval": {
+      "title": "Certificate renewal time interval",
+      "description": "The number of days in advance of certificate expiration that the notification center notifies the user.",
+      "type": "integer",
+      "property_order": 1003
+    },
+    "Description": {
+      "title": "Description",
+      "description": "A user-friendly description of the certification identity.",
+      "type": "string",
+      "property_order": 1002
+    },
+    "EnableAutoRenewal": {
+      "title": "Enable auto renewal",
+      "description": "If true, the certificate obtained with this payload attempts auto-renewal. Auto-renewal can only be used with device Active Directory certificate payloads.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1010
+    },
+    "KeyIsExtractable": {
+      "title": "Key is extractable",
+      "description": "If true, the system allows exporting the private key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1008
+    },
+    "Keysize": {
+      "title": "Key size",
+      "description": "The RSA key size for the certificate signing request (CSR).",
+      "type": "integer",
+      "default": 2048,
+      "property_order": 1009
+    },
+    "PromptForCredentials": {
+      "title": "Prompt for credentials",
+      "description": "If true, the system prompts the user for credentials when is installs the profile. This key applies only to user certificates with the Manual Download profile delivery method. Omit this key for computer certificates.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1007
+    }
+  }
+}

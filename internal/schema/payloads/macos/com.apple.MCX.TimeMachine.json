@@ -1,0 +1,83 @@
+{
+  "title": "Time Machine",
+  "description": "Sets the Time Machine backup destination and what is backed up.",
+  "__id": "com.apple.MCX.TimeMachine",
+  "__payloadtype": "com.apple.MCX.TimeMachine",
+  "__platform": "macos",
+  "__category": "System",
+  "__order": 30,
+  "__multiple": false,
+  "__channels": [
+    "device"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "BackupDestURL"
+  ],
+  "properties": {
+    "AutoBackup": {
+      "title": "Auto backup",
+      "description": "If true, performs automatic backups at regular intervals.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1000
+    },
+    "BackupAllVolumes": {
+      "title": "Backup all volumes",
+      "description": "If true, backs up only the startup volume by default.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    },
+    "BackupDestURL": {
+      "title": "Backup dest URL",
+      "description": "The URL of the backup destination.",
+      "type": "string",
+      "property_order": 1002
+    },
+    "BackupSizeMB": {
+      "title": "Backup size MB",
+      "description": "The backup size limit, in megabytes. Set to 0 for unlimited.",
+      "type": "integer",
+      "default": 0,
+      "property_order": 1003
+    },
+    "BackupSkipSys": {
+      "title": "Backup skip sys",
+      "description": "If true, skips system files and folders by default.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1004
+    },
+    "BasePaths": {
+      "title": "Base paths",
+      "description": "The list of paths to back up besides the startup volume.",
+      "type": "array",
+      "property_order": 1006,
+      "items": {
+        "title": "Base path",
+        "type": "string"
+      }
+    },
+    "MobileBackups": {
+      "title": "Mobile backups",
+      "description": "If true, create local backup snapshots when not connected to the network.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1005
+    },
+    "SkipPaths": {
+      "title": "Skip paths",
+      "description": "The path to skip from start volume.",
+      "type": "array",
+      "property_order": 1007,
+      "items": {
+        "title": "Skip path",
+        "type": "string"
+      }
+    }
+  }
+}

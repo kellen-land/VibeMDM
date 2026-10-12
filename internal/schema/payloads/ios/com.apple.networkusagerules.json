@@ -1,0 +1,88 @@
+{
+  "title": "Network Usage Rules",
+  "description": "Stops apps using cellular data or data roaming.",
+  "__id": "com.apple.networkusagerules",
+  "__payloadtype": "com.apple.networkusagerules",
+  "__platform": "ios",
+  "__category": "Restrictions",
+  "__order": 160,
+  "__multiple": false,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "ApplicationRules": {
+      "title": "Application rules",
+      "description": "An array of application rules, that apply to only managed apps.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "Application rule",
+        "type": "object",
+        "properties": {
+          "AllowCellularData": {
+            "title": "Allow cellular data",
+            "description": "If false, disables cellular data for all matching managed apps.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 1002
+          },
+          "AllowRoamingCellularData": {
+            "title": "Allow roaming cellular data",
+            "description": "If false, disables cellular data while roaming for all matching managed apps.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 1001
+          },
+          "AppIdentifierMatches": {
+            "title": "app identifier matches",
+            "description": "A list of managed app identifiers, as strings, that must follow the associated rules. If this key is missing, the rules apply to all managed apps on the device.\n\nEach string in the AppIdentifierMatches array may either be an exact app identifier match (for example, com.mycompany.myapp) or it may specify a prefix match for the bundle ID by using the \\* wildcard character. If used, this character must appear after a period (.) and may only appear once, at the end of the string; for example, com.mycompany.\\*.",
+            "type": "array",
+            "property_order": 1000,
+            "items": {
+              "title": "app identifier match",
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "SIMRules": {
+      "title": "SIM rules",
+      "description": "An array of SIM rules, that apply to all apps.",
+      "type": "array",
+      "property_order": 1001,
+      "items": {
+        "title": "SIM rule",
+        "type": "object",
+        "required": [
+          "ICCIDs",
+          "WiFiAssistPolicy"
+        ],
+        "properties": {
+          "ICCIDs": {
+            "title": "ICCI ds",
+            "description": "One or more ICCIDs of SIM cards for which the WiFiAssistPolicy applies. All ICCIDs in all installed Network Usage Rules payloads must be unique. An example ICCID is 89310410106543789301.",
+            "type": "array",
+            "property_order": 1000,
+            "items": {
+              "title": "ICCID",
+              "type": "string"
+            }
+          },
+          "WiFiAssistPolicy": {
+            "title": "Wi fi assist policy",
+            "description": "The Wi-Fi Assist policy to apply to the SIM cards specified in the ICCIDs. Allowed values:\n\n- 2: Use the default system policy for the specified SIM card(s).\n- 3: Make Wi-Fi Assist switch more aggressively from a poor Wi-Fi connection to cellular data for the specified SIM card(s). This setting may increase cellular data use and may impact battery life.\n\nFor more information, see About Wi-Fi Assist.",
+            "type": "integer",
+            "enum": [
+              2,
+              3
+            ],
+            "property_order": 1001
+          }
+        }
+      }
+    }
+  }
+}

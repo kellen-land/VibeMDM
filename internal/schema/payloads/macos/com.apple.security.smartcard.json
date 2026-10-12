@@ -1,0 +1,79 @@
+{
+  "title": "Smart Card",
+  "description": "Controls smart card login and pairing, and which certificates are trusted.",
+  "__id": "com.apple.security.smartcard",
+  "__payloadtype": "com.apple.security.smartcard",
+  "__platform": "macos",
+  "__category": "Security",
+  "__order": 90,
+  "__multiple": false,
+  "__channels": [
+    "device"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "UserPairing": {
+      "title": "User pairing",
+      "description": "If false, users don't get the pairing dialog, although existing pairings still work.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1000
+    },
+    "allowSmartCard": {
+      "title": "Allow smart card",
+      "description": "If false, the system disables smart cards for logins, authorizations, and screen saver unlocking. It's still allowed for other functions, such as signing emails and accessing the web. The device requires a restart for a setting change to take effect.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1001
+    },
+    "checkCertificateTrust": {
+      "title": "Check certificate trust",
+      "description": "Configures the certificate trust check and has one of the following possible values:\n\n- 0: Turns off certificate trust check.\n- 1: Turns on certificate trust check. The device performs a standard validity check but doesn't include additional revocation checks.\n- 2: Turns on certificate trust check. The device also performs a soft revocation check. Until CRL/OCSP explicitly rejects the certificate, the device considers it valid. This setting means that unavailable or unreachable CRL/OCSP allow this check to succeed.\n- 3: Turns on certificate trust check.",
+      "type": "integer",
+      "enum": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "default": 0,
+      "property_order": 1002,
+      "options": {
+        "enum_titles": [
+          "Turns off certificate trust check",
+          "Turns on certificate trust check",
+          "Turns on certificate trust check",
+          "Turns on certificate trust check"
+        ]
+      }
+    },
+    "enforceSmartCard": {
+      "title": "Enforce smart card",
+      "description": "If true, a user can only log in or authenticate with a smart card.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1005
+    },
+    "oneCardPerUser": {
+      "title": "One card per user",
+      "description": "If true, a user can pair with only one smart card, although existing pairings are allowed if already set up.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003
+    },
+    "tokenRemovalAction": {
+      "title": "Token removal action",
+      "description": "If 1, the device enables the screen saver when the user removes the smart card.",
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ],
+      "default": 0,
+      "property_order": 1004
+    }
+  }
+}

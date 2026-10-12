@@ -1,0 +1,147 @@
+{
+  "title": "Printing",
+  "description": "Adds printers, sets the default printer and limits printing to the printers listed.",
+  "__id": "com.apple.mcxprinting",
+  "__payloadtype": "com.apple.mcxprinting",
+  "__platform": "macos",
+  "__category": "General",
+  "__order": 50,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "AllowLocalPrinters": {
+      "title": "Allow local printers",
+      "description": "If true, allows printers that connect directly to a user's computer.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1001
+    },
+    "DefaultPrinter": {
+      "title": "Default printer",
+      "description": "The default printer for the user.",
+      "type": "object",
+      "property_order": 1008,
+      "properties": {
+        "DeviceURI": {
+          "title": "Device URI",
+          "description": "The device URI.",
+          "type": "string",
+          "property_order": 1000
+        },
+        "DisplayName": {
+          "title": "Display name",
+          "description": "The display name.",
+          "type": "string",
+          "property_order": 1001
+        }
+      }
+    },
+    "FooterFontName": {
+      "title": "Footer font name",
+      "description": "The footer font name.",
+      "type": "string",
+      "property_order": 1007
+    },
+    "FooterFontSize": {
+      "title": "Footer font size",
+      "description": "The footer font size.",
+      "type": "string",
+      "property_order": 1006
+    },
+    "PrintFooter": {
+      "title": "Print footer",
+      "description": "If true, prints the page footer (including the user name and date).",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1004
+    },
+    "PrintMACAddress": {
+      "title": "Print Mac address",
+      "description": "If true, includes the MAC address.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1005
+    },
+    "RequireAdminToAddPrinters": {
+      "title": "Require admin to add printers",
+      "description": "If true, requires an administrator password to add printers.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1000
+    },
+    "RequireAdminToPrintLocally": {
+      "title": "Require admin to print locally",
+      "description": "If true, requires an administrator password to print locally.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1002
+    },
+    "ShowOnlyManagedPrinters": {
+      "title": "Show only managed printers",
+      "description": "If true, shows only managed printers.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003
+    },
+    "UserPrinterList": {
+      "title": "User printer list",
+      "description": "The printers available to a user.",
+      "type": "object",
+      "property_order": 1009,
+      "properties": {
+        "Printer": {
+          "title": "Printer",
+          "description": "A dictionary of printer details.",
+          "type": "object",
+          "property_order": 1000,
+          "properties": {
+            "DeviceURI": {
+              "title": "Device URI",
+              "description": "The device URI.",
+              "type": "string",
+              "property_order": 1000
+            },
+            "DisplayName": {
+              "title": "Display name",
+              "description": "The display name.",
+              "type": "string",
+              "property_order": 1001
+            },
+            "Location": {
+              "title": "Location",
+              "description": "The printer's location.",
+              "type": "string",
+              "property_order": 1002
+            },
+            "Model": {
+              "title": "Model",
+              "description": "The printer's model.",
+              "type": "string",
+              "property_order": 1003
+            },
+            "PPDURL": {
+              "title": "PPDURL",
+              "description": "The printer's PPDURL.",
+              "type": "string",
+              "property_order": 1005
+            },
+            "PrinterLocked": {
+              "title": "Printer locked",
+              "description": "If true, locks the printer.",
+              "type": "boolean",
+              "default": false,
+              "property_order": 1004
+            }
+          }
+        }
+      }
+    }
+  }
+}

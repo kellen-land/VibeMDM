@@ -1,0 +1,101 @@
+{
+  "title": "Single Sign-On Extensions",
+  "description": "Configures an SSO extension app (redirect or credential), such as Microsoft Enterprise SSO or Okta, including Platform SSO on macOS.",
+  "__id": "com.apple.extensiblesso",
+  "__payloadtype": "com.apple.extensiblesso",
+  "__platform": "ios",
+  "__category": "Single Sign-On",
+  "__order": 10,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "ExtensionIdentifier",
+    "Type"
+  ],
+  "properties": {
+    "DeniedBundleIdentifiers": {
+      "title": "Denied bundle identifiers",
+      "description": "An array of bundle identifiers of apps that don't use SSO provided by this extension.",
+      "type": "array",
+      "property_order": 1008,
+      "items": {
+        "title": "Bundle identifier",
+        "type": "string"
+      }
+    },
+    "ExtensionData": {
+      "title": "Extension data",
+      "description": "A dictionary of arbitrary data passed through to the app extension.",
+      "type": "object",
+      "property_order": 1004
+    },
+    "ExtensionIdentifier": {
+      "title": "Extension identifier",
+      "description": "The bundle identifier of the app extension that performs SSO for the specified URLs.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "Hosts": {
+      "title": "Hosts",
+      "description": "An array of host or domain names that apps can authenticate through the app extension.\n\nRequired for Credential payloads. Ignored for Redirect payloads.\n\nThe system:\n\n- Matches host or domain names case-insensitively\n- Requires that all the host and domain names of all installed Extensible SSO payloads are unique\n\n> Note:\n> Host names that begin with a \".\" are wildcard suffixes that match all subdomains; otherwise the host name needs be an exact match.",
+      "type": "array",
+      "property_order": 1006,
+      "items": {
+        "title": "Hostname",
+        "type": "string"
+      }
+    },
+    "Realm": {
+      "title": "Realm",
+      "description": "The realm name for Credential payloads. Use proper capitalization for this value. Ignored for Redirect payloads.",
+      "type": "string",
+      "property_order": 1003
+    },
+    "ScreenLockedBehavior": {
+      "title": "Screen locked behavior",
+      "description": "If set to Cancel, the system cancels authentication requests when the screen is locked. If set to DoNotHandle, the request continues without SSO instead. This doesn't apply to requests where userInterfaceEnabled is false, or for background URLSession requests.",
+      "type": "string",
+      "enum": [
+        "Cancel",
+        "DoNotHandle"
+      ],
+      "default": "Cancel",
+      "property_order": 1007,
+      "options": {
+        "enum_titles": [
+          "Cancel",
+          "Do not handle"
+        ]
+      }
+    },
+    "Type": {
+      "title": "Type",
+      "description": "The type of SSO.",
+      "type": "string",
+      "enum": [
+        "Credential",
+        "Redirect"
+      ],
+      "property_order": 1002,
+      "options": {
+        "enum_titles": [
+          "Credential",
+          "Redirect"
+        ]
+      }
+    },
+    "URLs": {
+      "title": "UR ls",
+      "description": "An array of URL prefixes of identity providers where the app extension performs SSO.\n\nRequired for Redirect payloads. Ignored for Credential payloads.\n\nThe URLs need to begin with http:// or https://.\n\nThe system:\n\n- Matches scheme and host name case-insensitively\n- Doesn't allow query parameters and URL fragments\n- Requires that the URLs of all installed Extensible SSO payloads are unique",
+      "type": "array",
+      "property_order": 1005,
+      "items": {
+        "title": "URL",
+        "type": "string"
+      }
+    }
+  }
+}

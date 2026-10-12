@@ -1,0 +1,51 @@
+{
+  "title": "Login Items",
+  "description": "Opens apps, documents and network shares when the user logs in.",
+  "__id": "com.apple.loginitems.managed",
+  "__payloadtype": "com.apple.loginitems.managed",
+  "__platform": "macos",
+  "__category": "Users and Login",
+  "__order": 20,
+  "__multiple": true,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "AutoLaunchedApplicationDictionary-managed"
+  ],
+  "properties": {
+    "AutoLaunchedApplicationDictionary-managed": {
+      "title": "Auto launched application dictionary managed",
+      "description": "An array of login item dictionaries.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "Item",
+        "type": "object",
+        "required": [
+          "Path"
+        ],
+        "properties": {
+          "Hide": {
+            "title": "Hide",
+            "description": "If true, the system hides this item in the Users & Groups login items list.",
+            "type": "boolean",
+            "default": false,
+            "property_order": 1001
+          },
+          "Path": {
+            "title": "Path",
+            "description": "The URL or path string to the item's location.",
+            "type": "string",
+            "property_order": 1000
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "title": "Security & Privacy: FileVault",
+  "description": "Turns on FileVault and sets how the recovery key is created. Use Settings → FileVault in VibeMDM to escrow keys to the server.",
+  "__id": "com.apple.MCX.FileVault2",
+  "__payloadtype": "com.apple.MCX.FileVault2",
+  "__platform": "macos",
+  "__category": "Security",
+  "__order": 30,
+  "__multiple": false,
+  "__channels": [
+    "device"
+  ],
+  "__requires": [
+    "User-approved MDM"
+  ],
+  "__jamf": "Security & Privacy → FileVault",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "Enable"
+  ],
+  "properties": {
+    "Certificate": {
+      "title": "Certificate",
+      "description": "The DER-encoded certificate data if the system creates an institutional recovery key. This key isn't supported on a Mac with Apple silicon.",
+      "type": "string",
+      "format": "data",
+      "property_order": 1006
+    },
+    "Defer": {
+      "title": "Defer",
+      "description": "If true, the system defers enabling FileVault until the designated user logs out. For details, see fdesetup(8). Only a local user or a mobile account user can enable FileVault.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    },
+    "DeferDontAskAtUserLogout": {
+      "title": "Defer dont ask at user logout",
+      "description": "If true, the system prevents requests to enable FileVault at user logout time.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1012
+    },
+    "DeferForceAtUserLoginMaxBypassAttempts": {
+      "title": "Defer force at user login max bypass attempts",
+      "description": "The maximum number of times users can bypass enabling FileVault before the system requires the user to enable it to log in. If the value is 0, the system requires the user to enable FileVault the next time they attempt to log in. Set this key to -1 to disable this feature.",
+      "type": "integer",
+      "minimum": -1,
+      "maximum": 9999,
+      "property_order": 1011
+    },
+    "Enable": {
+      "title": "Enable",
+      "description": "Set to On to enable FileVault and set to Off to disable FileVault. Payloads set to On sent through MDM need to either include full authentication information in the payload or have the Defer option set to true. When Defer is true, the system prompts for the authentication information when the user enables FileVault.",
+      "type": "string",
+      "enum": [
+        "On",
+        "Off"
+      ],
+      "property_order": 1000,
+      "options": {
+        "enum_titles": [
+          "On",
+          "Off"
+        ]
+      }
+    },
+    "ForceEnableInSetupAssistant": {
+      "title": "Force enable in setup assistant",
+      "description": "If true, and installation of this payload occurs after enrolling with MDM in Setup Assistant, the system requests Setup Assistant to enable FileVault at setup time.\n\nTo use this, enable the Await Device Configured ADE configuration option and send this profile with this key set, before sending the DeviceConfiguredCommand.\n\nAn admin SecureToken user is required, otherwise the FileVault pane doesn't appear.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1013,
+      "x-os": "macOS 14.0+"
+    },
+    "OutputPath": {
+      "title": "Output path",
+      "description": "The path to the location of the recovery key and computer information property list.",
+      "type": "string",
+      "property_order": 1005
+    },
+    "Password": {
+      "title": "Password",
+      "description": "The password of the Open Directory user to add to FileVault. Use the UserEntersMissingInfo key to prompt for this information.",
+      "type": "string",
+      "property_order": 1009,
+      "x-secret": true
+    },
+    "PayloadCertificateUUID": {
+      "title": "Payload certificate UUID",
+      "description": "The UUID of the payload within the same profile containing the asymmetric recovery key certificate payload.",
+      "type": "string",
+      "format": "payload-ref",
+      "property_order": 1007,
+      "x-ref-types": [
+        "com.apple.security.pkcs1",
+        "com.apple.security.root",
+        "com.apple.security.pem",
+        "com.apple.security.pkcs12",
+        "com.apple.security.scep",
+        "com.apple.security.acme",
+        "com.apple.ADCertificate.managed"
+      ]
+    },
+    "ShowRecoveryKey": {
+      "title": "Show recovery key",
+      "description": "If false, the system prevents display of the personal recovery key to the user after the system enables FileVault.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1004
+    },
+    "UseKeychain": {
+      "title": "Use Keychain",
+      "description": "If true and you don't include certificate information in this payload, the system uses the keychain created at /Library/Keychains/FileVaultMaster.keychain when it adds the institutional recovery key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1010
+    },
+    "UseRecoveryKey": {
+      "title": "Use recovery key",
+      "description": "If true, the system creates a personal recovery key and displays it to the user.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1003
+    },
+    "UserEntersMissingInfo": {
+      "title": "User enters missing info",
+      "description": "If true, the system enables a prompt for missing user name or password fields.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1002
+    },
+    "Username": {
+      "title": "Username",
+      "description": "The user name of the Open Directory user to add to FileVault.",
+      "type": "string",
+      "property_order": 1008
+    }
+  }
+}

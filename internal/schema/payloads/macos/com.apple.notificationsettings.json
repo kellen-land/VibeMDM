@@ -1,0 +1,110 @@
+{
+  "title": "Notifications",
+  "description": "Sets how each app's notifications appear and stops users changing them.",
+  "__id": "com.apple.notificationsettings",
+  "__payloadtype": "com.apple.notificationsettings",
+  "__platform": "macos",
+  "__category": "General",
+  "__order": 60,
+  "__multiple": true,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "NotificationSettings"
+  ],
+  "properties": {
+    "NotificationSettings": {
+      "title": "Apps",
+      "description": "An array of notification settings dictionaries.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "App",
+        "type": "object",
+        "required": [
+          "BundleIdentifier"
+        ],
+        "properties": {
+          "AlertType": {
+            "title": "Banner style",
+            "description": "The type of alert for notifications for this app:\n\n- 0: None\n- 1: Temporary Banner\n- 2: Persistent Banner",
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2
+            ],
+            "default": 1,
+            "property_order": 1004,
+            "options": {
+              "enum_titles": [
+                "None",
+                "Temporary banner",
+                "Persistent banner"
+              ]
+            }
+          },
+          "BadgesEnabled": {
+            "title": "Badges",
+            "description": "If true, enables badges for this app.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 1005
+          },
+          "BundleIdentifier": {
+            "title": "App bundle ID",
+            "description": "The bundle identifier of the app to which to apply these notification settings.",
+            "type": "string",
+            "property_order": 1000,
+            "options": {
+              "inputAttributes": {
+                "placeholder": "com.example.app"
+              }
+            }
+          },
+          "CriticalAlertEnabled": {
+            "title": "Critical alerts",
+            "description": "If true, enables critical alerts that can ignore Do Not Disturb and ringer settings for this app.",
+            "type": "boolean",
+            "default": false,
+            "property_order": 1008
+          },
+          "NotificationsEnabled": {
+            "title": "Allow notifications",
+            "description": "If true, enables notifications for this app.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 1001
+          },
+          "ShowInLockScreen": {
+            "title": "Show on Lock Screen",
+            "description": "If true, enables notifications on the Lock Screen for this app.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 1003
+          },
+          "ShowInNotificationCenter": {
+            "title": "Show in Notification Center",
+            "description": "If true, enables notifications in the Notification Center for this app.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 1002
+          },
+          "SoundsEnabled": {
+            "title": "Sounds",
+            "description": "If true, enables sounds for this app.",
+            "type": "boolean",
+            "default": true,
+            "property_order": 1006
+          }
+        }
+      }
+    }
+  }
+}

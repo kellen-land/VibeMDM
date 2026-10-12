@@ -1,0 +1,41 @@
+{
+  "title": "Lock Screen Message",
+  "description": "Shows a message, such as who to return the device to, and an asset tag on the Lock Screen.",
+  "__id": "com.apple.shareddeviceconfiguration",
+  "__payloadtype": "com.apple.shareddeviceconfiguration",
+  "__platform": "ios",
+  "__category": "General",
+  "__order": 10,
+  "__multiple": false,
+  "__supervised": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "AssetTagInformation": {
+      "title": "Asset tag",
+      "description": "Shown on the Lock Screen with the message above.",
+      "type": "string",
+      "property_order": 2
+    },
+    "IfLostReturnToMessage": {
+      "title": "If lost message",
+      "description": "Deprecated. Use LockScreenFootnote instead.",
+      "type": "string",
+      "property_order": 1001,
+      "x-deprecated": "iOS 9.3.1"
+    },
+    "LockScreenFootnote": {
+      "title": "Lock Screen message",
+      "description": "Shown at the bottom of the Lock Screen. iOS 9.3.1+.",
+      "type": "string",
+      "property_order": 1,
+      "options": {
+        "inputAttributes": {
+          "placeholder": "If found, please return to IT, +1 555 0100"
+        }
+      }
+    }
+  }
+}

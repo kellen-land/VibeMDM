@@ -1,0 +1,605 @@
+{
+  "title": "Dock",
+  "description": "Sets the Dock's size, position and behaviour, and the apps, folders and links in it.",
+  "__id": "com.apple.dock",
+  "__payloadtype": "com.apple.dock",
+  "__platform": "macos",
+  "__category": "General",
+  "__order": 110,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "AllowDockFixupOverride": {
+      "title": "Allow Dock fixup override",
+      "description": "If true, use the file in /Library/Preferences/com.apple.dockfixup.plist when a new user or migrated user logs in. This option has no effect for existing users. Only available on the device channel.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1026
+    },
+    "MCXDockSpecialFolders": {
+      "title": "Special folders (My Applications, Documents, Network Home)",
+      "description": "One or more special folders that the device may create at user login time and place in the Dock.\n\nThe \"My Applications\" item is only used for Simple Finder environments. The \"Original Network Home\" item is only used for mobile account users.",
+      "type": "array",
+      "property_order": 1025,
+      "items": {
+        "title": "MCX Dock special folders items",
+        "type": "string",
+        "enum": [
+          "AddDockMCXMyApplicationsFolder",
+          "AddDockMCXDocumentsFolder",
+          "AddDockMCXSharedFolder",
+          "AddDockMCXOriginalNetworkHomeFolder"
+        ],
+        "options": {
+          "enum_titles": [
+            "Add Dock MCX my applications folder",
+            "Add Dock MCX documents folder",
+            "Add Dock MCX shared folder",
+            "Add Dock MCX original network home folder"
+          ]
+        }
+      }
+    },
+    "autohide": {
+      "title": "Automatically hide and show the Dock",
+      "description": "If true, enables \"Automatically hide and show the Dock.\"",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1018
+    },
+    "autohide-immutable": {
+      "title": "Lock auto-hide",
+      "description": "If true, locks \"Automatically hide.\"",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1019
+    },
+    "contents-immutable": {
+      "title": "Lock Dock contents",
+      "description": "If true, disables changes to the Dock.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1024
+    },
+    "dblclickbehavior": {
+      "title": "Double-click a window's title bar to",
+      "description": "The behavior when the window's title bar is double-clicked.",
+      "type": "string",
+      "enum": [
+        "minimize",
+        "maximize",
+        "none"
+      ],
+      "property_order": 1012,
+      "options": {
+        "enum_titles": [
+          "Minimize",
+          "Maximize",
+          "None"
+        ]
+      }
+    },
+    "dblclickbehavior-immutable": {
+      "title": "Lock title bar double-click",
+      "description": "If true, locks \"Double-click a window's title bar.\"",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1013
+    },
+    "largesize": {
+      "title": "Magnified icon size",
+      "description": "The size of the largest magnification.",
+      "type": "integer",
+      "minimum": 16,
+      "maximum": 128,
+      "property_order": 1004
+    },
+    "launchanim": {
+      "title": "Animate opening applications",
+      "description": "If true, enables \"Animate opening applications.\"",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1016
+    },
+    "launchanim-immutable": {
+      "title": "Lock opening animation",
+      "description": "If true, locks \"Animate opening applications.\"",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1017
+    },
+    "magnification": {
+      "title": "Magnification",
+      "description": "If true, enables magnification.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1002
+    },
+    "magnify-immutable": {
+      "title": "Lock magnification",
+      "description": "If true, locks magnification.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003
+    },
+    "magsize-immutable": {
+      "title": "Lock magnified icon size",
+      "description": "If true, locks the magnification slider.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1005
+    },
+    "mineffect": {
+      "title": "Minimize windows using",
+      "description": "The minimize effect.",
+      "type": "string",
+      "enum": [
+        "genie",
+        "scale"
+      ],
+      "property_order": 1008,
+      "options": {
+        "enum_titles": [
+          "Genie",
+          "Scale"
+        ]
+      }
+    },
+    "mineffect-immutable": {
+      "title": "Lock minimize effect",
+      "description": "If true, locks \"Minimize windows using.\"",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1009
+    },
+    "minimize-to-application": {
+      "title": "Minimize windows into application icon",
+      "description": "If true, enables \"Minimize windows into application icon.\"",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1014
+    },
+    "minintoapp-immutable": {
+      "title": "Lock minimize into application icon",
+      "description": "If true, disables the \"Minimize windows into application icon\" checkbox.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1015
+    },
+    "orientation": {
+      "title": "Position on screen",
+      "description": "The orientation of the Dock.",
+      "type": "string",
+      "enum": [
+        "bottom",
+        "left",
+        "right"
+      ],
+      "property_order": 1006,
+      "options": {
+        "enum_titles": [
+          "Bottom",
+          "Left",
+          "Right"
+        ]
+      }
+    },
+    "persistent-apps": {
+      "title": "Apps",
+      "description": "An array of items located on the Applications side of the Dock that users can remove from the Dock.",
+      "type": "array",
+      "property_order": 1030,
+      "items": {
+        "title": "Persistent app",
+        "type": "object",
+        "required": [
+          "tile-data",
+          "tile-type"
+        ],
+        "properties": {
+          "tile-data": {
+            "title": "Tile data",
+            "description": "The information about the Dock item.",
+            "type": "object",
+            "required": [
+              "label",
+              "file-type"
+            ],
+            "property_order": 1000,
+            "properties": {
+              "file-data": {
+                "title": "File data",
+                "description": "The data in a file. For Apple use only.",
+                "type": "object",
+                "property_order": 1003
+              },
+              "file-type": {
+                "title": "File type",
+                "description": "The type of tile:\n\n- 0: URL\n- 1: File\n- 3: Directory",
+                "type": "integer",
+                "enum": [
+                  0,
+                  1,
+                  3
+                ],
+                "property_order": 1002,
+                "options": {
+                  "enum_titles": [
+                    "URL",
+                    "File",
+                    "Directory"
+                  ]
+                }
+              },
+              "label": {
+                "title": "Label",
+                "description": "The label of the Dock item.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "url": {
+                "title": "URL",
+                "description": "The URL string.",
+                "type": "string",
+                "property_order": 1001
+              }
+            }
+          },
+          "tile-type": {
+            "title": "Tile type",
+            "description": "The type of tile.",
+            "type": "string",
+            "enum": [
+              "file-tile",
+              "directory-tile",
+              "url-tile"
+            ],
+            "property_order": 1001,
+            "options": {
+              "enum_titles": [
+                "File tile",
+                "Directory tile",
+                "URL tile"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "persistent-others": {
+      "title": "Files and folders",
+      "description": "An array of items located on the Documents side of the Dock that users can remove from the Dock.",
+      "type": "array",
+      "property_order": 1031,
+      "items": {
+        "title": "Persistent other",
+        "type": "object",
+        "required": [
+          "tile-data",
+          "tile-type"
+        ],
+        "properties": {
+          "tile-data": {
+            "title": "Tile data",
+            "description": "The information about the Dock item.",
+            "type": "object",
+            "required": [
+              "label",
+              "file-type"
+            ],
+            "property_order": 1000,
+            "properties": {
+              "file-data": {
+                "title": "File data",
+                "description": "The data in a file. For Apple use only.",
+                "type": "object",
+                "property_order": 1003
+              },
+              "file-type": {
+                "title": "File type",
+                "description": "The type of tile:\n\n- 0: URL\n- 1: File\n- 3: Directory",
+                "type": "integer",
+                "enum": [
+                  0,
+                  1,
+                  3
+                ],
+                "property_order": 1002,
+                "options": {
+                  "enum_titles": [
+                    "URL",
+                    "File",
+                    "Directory"
+                  ]
+                }
+              },
+              "label": {
+                "title": "Label",
+                "description": "The label of the Dock item.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "url": {
+                "title": "URL",
+                "description": "The URL string.",
+                "type": "string",
+                "property_order": 1001
+              }
+            }
+          },
+          "tile-type": {
+            "title": "Tile type",
+            "description": "The type of tile.",
+            "type": "string",
+            "enum": [
+              "file-tile",
+              "directory-tile",
+              "url-tile"
+            ],
+            "property_order": 1001,
+            "options": {
+              "enum_titles": [
+                "File tile",
+                "Directory tile",
+                "URL tile"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "position-immutable": {
+      "title": "Lock position",
+      "description": "If true, locks the position.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1007
+    },
+    "show-process-indicators": {
+      "title": "Show indicators for open applications",
+      "description": "If true, shows the process indicator.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1020
+    },
+    "show-recents": {
+      "title": "Show suggested and recent apps in Dock",
+      "description": "If true, enables \"Show recent items.\"",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1022
+    },
+    "showindicators-immutable": {
+      "title": "Lock open-application indicators",
+      "description": "If true, locks \"Show indicators.\"",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1021
+    },
+    "showrecents-immutable": {
+      "title": "Lock recent apps setting",
+      "description": "If true, disables \"Show recent applications\" checkbox.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1023
+    },
+    "size-immutable": {
+      "title": "Lock icon size",
+      "description": "If true, locks the size slider.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    },
+    "static-apps": {
+      "title": "Apps (locked)",
+      "description": "An array of items located on the Applications side of the Dock that users can't remove from that location.",
+      "type": "array",
+      "property_order": 1029,
+      "items": {
+        "title": "Static app",
+        "type": "object",
+        "required": [
+          "tile-data",
+          "tile-type"
+        ],
+        "properties": {
+          "tile-data": {
+            "title": "Tile data",
+            "description": "The information about the Dock item.",
+            "type": "object",
+            "required": [
+              "label",
+              "file-type"
+            ],
+            "property_order": 1000,
+            "properties": {
+              "file-data": {
+                "title": "File data",
+                "description": "The data in a file. For Apple use only.",
+                "type": "object",
+                "property_order": 1003
+              },
+              "file-type": {
+                "title": "File type",
+                "description": "The type of tile:\n\n- 0: URL\n- 1: File\n- 3: Directory",
+                "type": "integer",
+                "enum": [
+                  0,
+                  1,
+                  3
+                ],
+                "property_order": 1002,
+                "options": {
+                  "enum_titles": [
+                    "URL",
+                    "File",
+                    "Directory"
+                  ]
+                }
+              },
+              "label": {
+                "title": "Label",
+                "description": "The label of the Dock item.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "url": {
+                "title": "URL",
+                "description": "The URL string.",
+                "type": "string",
+                "property_order": 1001
+              }
+            }
+          },
+          "tile-type": {
+            "title": "Tile type",
+            "description": "The type of tile.",
+            "type": "string",
+            "enum": [
+              "file-tile",
+              "directory-tile",
+              "url-tile"
+            ],
+            "property_order": 1001,
+            "options": {
+              "enum_titles": [
+                "File tile",
+                "Directory tile",
+                "URL tile"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "static-only": {
+      "title": "Use only the items below (no user items)",
+      "description": "If true, uses the static-apps and static-others dictionaries for the Dock and ignores any items in the persistent-apps and persistent-others dictionaries. If false, the contents are merged with the static items listed first.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1027
+    },
+    "static-others": {
+      "title": "Files and folders (locked)",
+      "description": "An array of items located on the Documents side of the Dock that users can't remove from that location.",
+      "type": "array",
+      "property_order": 1028,
+      "items": {
+        "title": "Static other",
+        "type": "object",
+        "required": [
+          "tile-data",
+          "tile-type"
+        ],
+        "properties": {
+          "tile-data": {
+            "title": "Tile data",
+            "description": "The information about the Dock item.",
+            "type": "object",
+            "required": [
+              "label",
+              "file-type"
+            ],
+            "property_order": 1000,
+            "properties": {
+              "file-data": {
+                "title": "File data",
+                "description": "The data in a file. For Apple use only.",
+                "type": "object",
+                "property_order": 1003
+              },
+              "file-type": {
+                "title": "File type",
+                "description": "The type of tile:\n\n- 0: URL\n- 1: File\n- 3: Directory",
+                "type": "integer",
+                "enum": [
+                  0,
+                  1,
+                  3
+                ],
+                "property_order": 1002,
+                "options": {
+                  "enum_titles": [
+                    "URL",
+                    "File",
+                    "Directory"
+                  ]
+                }
+              },
+              "label": {
+                "title": "Label",
+                "description": "The label of the Dock item.",
+                "type": "string",
+                "property_order": 1000
+              },
+              "url": {
+                "title": "URL",
+                "description": "The URL string.",
+                "type": "string",
+                "property_order": 1001
+              }
+            }
+          },
+          "tile-type": {
+            "title": "Tile type",
+            "description": "The type of tile.",
+            "type": "string",
+            "enum": [
+              "file-tile",
+              "directory-tile",
+              "url-tile"
+            ],
+            "property_order": 1001,
+            "options": {
+              "enum_titles": [
+                "File tile",
+                "Directory tile",
+                "URL tile"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "tilesize": {
+      "title": "Icon size",
+      "description": "The tile size. Values must be in the range from 16 to 128.",
+      "type": "integer",
+      "minimum": 16,
+      "maximum": 128,
+      "property_order": 1000
+    },
+    "windowtabbing": {
+      "title": "Prefer tabs when opening documents",
+      "description": "Set the \"Prefer tabs when opening documents\" to the provided value.",
+      "type": "string",
+      "enum": [
+        "manual",
+        "always",
+        "fullscreen"
+      ],
+      "property_order": 1010,
+      "options": {
+        "enum_titles": [
+          "Manual",
+          "Always",
+          "Fullscreen"
+        ]
+      }
+    },
+    "windowtabbing-immutable": {
+      "title": "Lock tab preference",
+      "description": "If true, disables \"Prefer tabs when opening documents\" checkbox.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1011
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "title": "Login Window: Options",
+  "description": "More login window options for the user.",
+  "__id": "loginwindow",
+  "__payloadtype": "loginwindow",
+  "__platform": "macos",
+  "__category": "Users and Login",
+  "__order": 11,
+  "__multiple": false,
+  "__channels": [
+    "device"
+  ],
+  "__jamf": "Login Window → Options",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "DisableLoginItemsSuppression": {
+      "title": "Disable login items suppression",
+      "description": "If true, the system prevents the user from disabling login item launches by using the Shift key.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000
+    }
+  }
+}

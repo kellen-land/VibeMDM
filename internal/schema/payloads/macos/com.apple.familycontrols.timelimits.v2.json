@@ -1,0 +1,246 @@
+{
+  "title": "Parental Controls: Time limits",
+  "description": "Limits how long and when the user can use the Mac (legacy Parental Controls).",
+  "__id": "com.apple.familycontrols.timelimits.v2",
+  "__payloadtype": "com.apple.familycontrols.timelimits.v2",
+  "__platform": "macos",
+  "__category": "Restrictions",
+  "__order": 110,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Parental Controls",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "familyControlsEnabled"
+  ],
+  "properties": {
+    "familyControlsEnabled": {
+      "title": "Family controls enabled",
+      "description": "If true, enables time limits.",
+      "type": "boolean",
+      "property_order": 1000
+    },
+    "time-limits": {
+      "title": "Time limits",
+      "description": "The time limits to enforce if familyControlsEnabled is enabled.",
+      "type": "object",
+      "property_order": 1001,
+      "properties": {
+        "weekday-allowance": {
+          "title": "Weekday allowance",
+          "description": "The weekday allowance settings.",
+          "type": "object",
+          "required": [
+            "enabled",
+            "rangeType"
+          ],
+          "property_order": 1000,
+          "properties": {
+            "enabled": {
+              "title": "Enabled",
+              "description": "If true, enable these settings.",
+              "type": "boolean",
+              "property_order": 1000
+            },
+            "end": {
+              "title": "End",
+              "description": "The curfew end time, in the format %d:%d:%d.",
+              "type": "string",
+              "property_order": 1003
+            },
+            "rangeType": {
+              "title": "Range type",
+              "description": "The type of day range, which has the following possible values:\n\n- 0: Weekday\n- 1: Weekend",
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "property_order": 1001,
+              "options": {
+                "enum_titles": [
+                  "Weekday",
+                  "Weekend"
+                ]
+              }
+            },
+            "secondsPerDay": {
+              "title": "Seconds per day",
+              "description": "The allowance for that day, in seconds.",
+              "type": "integer",
+              "property_order": 1004
+            },
+            "start": {
+              "title": "Start",
+              "description": "The curfew start time, in the format '%d:%d:%d'.",
+              "type": "string",
+              "property_order": 1002
+            }
+          }
+        },
+        "weekday-curfew": {
+          "title": "Weekday curfew",
+          "description": "The weekday curfew settings.",
+          "type": "object",
+          "required": [
+            "enabled",
+            "rangeType"
+          ],
+          "property_order": 1001,
+          "properties": {
+            "enabled": {
+              "title": "Enabled",
+              "description": "If true, enable these settings.",
+              "type": "boolean",
+              "property_order": 1000
+            },
+            "end": {
+              "title": "End",
+              "description": "The curfew end time, in the format %d:%d:%d.",
+              "type": "string",
+              "property_order": 1003
+            },
+            "rangeType": {
+              "title": "Range type",
+              "description": "The type of day range, which has the following possible values:\n\n- 0: Weekday\n- 1: Weekend",
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "property_order": 1001,
+              "options": {
+                "enum_titles": [
+                  "Weekday",
+                  "Weekend"
+                ]
+              }
+            },
+            "secondsPerDay": {
+              "title": "Seconds per day",
+              "description": "The allowance for that day, in seconds.",
+              "type": "integer",
+              "property_order": 1004
+            },
+            "start": {
+              "title": "Start",
+              "description": "The curfew start time, in the format '%d:%d:%d'.",
+              "type": "string",
+              "property_order": 1002
+            }
+          }
+        },
+        "weekend-allowance": {
+          "title": "Weekend allowance",
+          "description": "The weekend allowance settings.",
+          "type": "object",
+          "required": [
+            "enabled",
+            "rangeType"
+          ],
+          "property_order": 1002,
+          "properties": {
+            "enabled": {
+              "title": "Enabled",
+              "description": "If true, enable these settings.",
+              "type": "boolean",
+              "property_order": 1000
+            },
+            "end": {
+              "title": "End",
+              "description": "The curfew end time, in the format %d:%d:%d.",
+              "type": "string",
+              "property_order": 1003
+            },
+            "rangeType": {
+              "title": "Range type",
+              "description": "The type of day range, which has the following possible values:\n\n- 0: Weekday\n- 1: Weekend",
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "property_order": 1001,
+              "options": {
+                "enum_titles": [
+                  "Weekday",
+                  "Weekend"
+                ]
+              }
+            },
+            "secondsPerDay": {
+              "title": "Seconds per day",
+              "description": "The allowance for that day, in seconds.",
+              "type": "integer",
+              "property_order": 1004
+            },
+            "start": {
+              "title": "Start",
+              "description": "The curfew start time, in the format '%d:%d:%d'.",
+              "type": "string",
+              "property_order": 1002
+            }
+          }
+        },
+        "weekend-curfew": {
+          "title": "Weekend curfew",
+          "description": "The weekend curfew settings.",
+          "type": "object",
+          "required": [
+            "enabled",
+            "rangeType"
+          ],
+          "property_order": 1003,
+          "properties": {
+            "enabled": {
+              "title": "Enabled",
+              "description": "If true, enable these settings.",
+              "type": "boolean",
+              "property_order": 1000
+            },
+            "end": {
+              "title": "End",
+              "description": "The curfew end time, in the format %d:%d:%d.",
+              "type": "string",
+              "property_order": 1003
+            },
+            "rangeType": {
+              "title": "Range type",
+              "description": "The type of day range, which has the following possible values:\n\n- 0: Weekday\n- 1: Weekend",
+              "type": "integer",
+              "enum": [
+                0,
+                1
+              ],
+              "property_order": 1001,
+              "options": {
+                "enum_titles": [
+                  "Weekday",
+                  "Weekend"
+                ]
+              }
+            },
+            "secondsPerDay": {
+              "title": "Seconds per day",
+              "description": "The allowance for that day, in seconds.",
+              "type": "integer",
+              "property_order": 1004
+            },
+            "start": {
+              "title": "Start",
+              "description": "The curfew start time, in the format '%d:%d:%d'.",
+              "type": "string",
+              "property_order": 1002
+            }
+          }
+        }
+      }
+    }
+  }
+}

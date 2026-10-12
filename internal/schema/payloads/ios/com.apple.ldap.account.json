@@ -1,0 +1,103 @@
+{
+  "title": "LDAP",
+  "description": "Adds an LDAP directory for looking up contacts.",
+  "__id": "com.apple.ldap.account",
+  "__payloadtype": "com.apple.ldap.account",
+  "__platform": "ios",
+  "__category": "Accounts",
+  "__order": 40,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "LDAPAccountHostName"
+  ],
+  "properties": {
+    "LDAPAccountDescription": {
+      "title": "Account description",
+      "description": "The description of the account.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "LDAPAccountHostName": {
+      "title": "Account hostname",
+      "description": "The server's address.",
+      "type": "string",
+      "property_order": 1001
+    },
+    "LDAPAccountPassword": {
+      "title": "Account password",
+      "description": "The user's password. Only use this in encrypted profiles.",
+      "type": "string",
+      "property_order": 1003,
+      "x-secret": true
+    },
+    "LDAPAccountUseSSL": {
+      "title": "Use SSL",
+      "description": "If true, the system enables SSL.",
+      "type": "boolean",
+      "default": true,
+      "property_order": 1004
+    },
+    "LDAPAccountUserName": {
+      "title": "Account username",
+      "description": "The user's user name.",
+      "type": "string",
+      "property_order": 1002
+    },
+    "LDAPSearchSettings": {
+      "title": "Search settings",
+      "description": "An array of search settings dictionaries.",
+      "type": "array",
+      "property_order": 1005,
+      "items": {
+        "title": "An LDAP search setting",
+        "type": "object",
+        "required": [
+          "LDAPSearchSettingSearchBase"
+        ],
+        "properties": {
+          "LDAPSearchSettingDescription": {
+            "title": "Description",
+            "description": "The description of this search setting.",
+            "type": "string",
+            "property_order": 1000
+          },
+          "LDAPSearchSettingScope": {
+            "title": "Search setting scope",
+            "description": "The type of recursion to use in the search:\n\n- LDAPSearchSettingScopeBase: The search uses only the immediate node that the search base points to.\n- LDAPSearchSettingScopeOneLevel: The search uses the node plus its immediate children.\n- LDAPSearchSettingScopeSubtree: The search uses the node plus all children, regardless of depth.",
+            "type": "string",
+            "enum": [
+              "LDAPSearchSettingScopeBase",
+              "LDAPSearchSettingScopeOneLevel",
+              "LDAPSearchSettingScopeSubtree"
+            ],
+            "default": "LDAPSearchSettingScopeSubtree",
+            "property_order": 1002,
+            "options": {
+              "enum_titles": [
+                "LDAP search setting scope base",
+                "LDAP search setting scope one level",
+                "LDAP search setting scope subtree"
+              ]
+            }
+          },
+          "LDAPSearchSettingSearchBase": {
+            "title": "Search setting search base",
+            "description": "The path to the node where a search should start.",
+            "type": "string",
+            "property_order": 1001
+          }
+        }
+      }
+    },
+    "VPNUUID": {
+      "title": "VPNUUID",
+      "description": "The VPNUUID of the per-app VPN the account uses for network communication.",
+      "type": "string",
+      "property_order": 1006
+    }
+  }
+}

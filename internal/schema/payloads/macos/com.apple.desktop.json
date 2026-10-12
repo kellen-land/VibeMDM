@@ -1,0 +1,35 @@
+{
+  "title": "Desktop",
+  "description": "Sets and locks the desktop picture.",
+  "__id": "com.apple.desktop",
+  "__payloadtype": "com.apple.desktop",
+  "__platform": "macos",
+  "__category": "General",
+  "__order": 100,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Restrictions → Desktop",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "locked": {
+      "title": "Locked",
+      "description": "If true, locks the desktop picture. Replaced with allowWallpaperModification in macOS 10.13.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000,
+      "x-deprecated": "macOS 10.13"
+    },
+    "override-picture-path": {
+      "title": "Override picture path",
+      "description": "The path to the desktop picture. If set, this picture is always locked.",
+      "type": "string",
+      "property_order": 1001
+    }
+  }
+}

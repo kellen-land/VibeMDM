@@ -1,0 +1,55 @@
+{
+  "title": "Mobility",
+  "description": "Creates mobile accounts for directory users and syncs their home folders.",
+  "__id": "com.apple.MCX(Mobility)",
+  "__payloadtype": "com.apple.MCX",
+  "__platform": "macos",
+  "__category": "Users and Login",
+  "__order": 30,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "cachedaccounts.WarnOnCreate.allowNever": {
+      "title": "Cachedaccounts warn on create allow never",
+      "description": "If true, the system allows the user to stop the prompts about mobile account creation every time the user logs in. This key is only valid if com.apple.cachedaccounts.WarnOnCreate is true.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1002
+    },
+    "cachedaccounts.askForSecureTokenAuthBypass": {
+      "title": "Cachedaccounts ask for secure token auth bypass",
+      "description": "If true, the system bypasses the secure token authorization dialog. This dialog only appears on APFS volumes.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1004
+    },
+    "cachedaccounts.expiry.delete.disusedSeconds": {
+      "title": "Cachedaccounts expiry delete disused seconds",
+      "description": "The minimum number of seconds a mobile account can exist before the system makes an automatic attempt to remove the mobile account. Set to 0 to attempt removing it at the next login or logout. Set to -1 to never attempt removing the mobile account.",
+      "type": "integer",
+      "default": -1,
+      "property_order": 1003
+    },
+    "com.apple.cachedaccounts.CreateAtLogin": {
+      "title": "Com Apple cachedaccounts create at login",
+      "description": "If true, the system creates the mobile account at login time.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000
+    },
+    "com.apple.cachedaccounts.WarnOnCreate": {
+      "title": "Com Apple cachedaccounts warn on create",
+      "description": "If true, the system asks the user whether to create the mobile account and it allows the user to not create it.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    }
+  }
+}

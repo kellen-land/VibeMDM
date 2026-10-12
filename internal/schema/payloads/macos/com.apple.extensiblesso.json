@@ -1,0 +1,548 @@
+{
+  "title": "Single Sign-On Extensions",
+  "description": "Configures an SSO extension app (redirect or credential), such as Microsoft Enterprise SSO or Okta, including Platform SSO on macOS.",
+  "__id": "com.apple.extensiblesso",
+  "__payloadtype": "com.apple.extensiblesso",
+  "__platform": "macos",
+  "__category": "Single Sign-On",
+  "__order": 10,
+  "__multiple": true,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__requires": [
+    "User-approved MDM"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "ExtensionIdentifier",
+    "Type"
+  ],
+  "properties": {
+    "AuthenticationMethod": {
+      "title": "Authentication method",
+      "description": "The Platform SSO authentication method the extension uses. Requires that the SSO Extension also supports the method.\nDon't use this. Use the AuthenticationMethod key in the PlatformSSO dictionary instead.",
+      "type": "string",
+      "enum": [
+        "Password",
+        "UserSecureEnclaveKey",
+        "SmartCard",
+        "OpenID"
+      ],
+      "property_order": 1009,
+      "options": {
+        "enum_titles": [
+          "Password",
+          "User secure enclave key",
+          "Smart card",
+          "Open ID"
+        ]
+      },
+      "x-deprecated": "macOS 14.0"
+    },
+    "DeniedBundleIdentifiers": {
+      "title": "Denied bundle identifiers",
+      "description": "An array of bundle identifiers of apps that don't use SSO provided by this extension.",
+      "type": "array",
+      "property_order": 1008,
+      "items": {
+        "title": "Bundle identifier",
+        "type": "string"
+      }
+    },
+    "ExtensionData": {
+      "title": "Extension data",
+      "description": "A dictionary of arbitrary data passed through to the app extension.",
+      "type": "object",
+      "property_order": 1004
+    },
+    "ExtensionIdentifier": {
+      "title": "Extension identifier",
+      "description": "The bundle identifier of the app extension that performs SSO for the specified URLs.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "Hosts": {
+      "title": "Hosts",
+      "description": "An array of host or domain names that apps can authenticate through the app extension.\n\nRequired for Credential payloads. Ignored for Redirect payloads.\n\nThe system:\n\n- Matches host or domain names case-insensitively\n- Requires that all the host and domain names of all installed Extensible SSO payloads are unique\n\n> Note:\n> Host names that begin with a \".\" are wildcard suffixes that match all subdomains; otherwise the host name needs be an exact match.",
+      "type": "array",
+      "property_order": 1006,
+      "items": {
+        "title": "Hostname",
+        "type": "string"
+      }
+    },
+    "PlatformSSO": {
+      "title": "Platform SSO",
+      "description": "The dictionary to configure Platform SSO. Requires setting Type to Redirect.",
+      "type": "object",
+      "property_order": 1011,
+      "properties": {
+        "AccessKeyReaderGroupIdentifier": {
+          "title": "Access key reader group identifier",
+          "description": "The reader group identifier for use with the AccessKey. The value needs to match the configured access key. Required if NewUserAuthenticationMethods contains AccessKey.",
+          "type": "string",
+          "format": "data",
+          "property_order": 1014,
+          "x-os": "macOS 26.0+"
+        },
+        "AccessKeyReaderIssuerCertificateUUID": {
+          "title": "Access key reader issuer certificate UUID",
+          "description": "The PayloadUUID of a certificate payload for the issuer certificate of the Terminal identity of the access key. Other specifications refer to the key as the \"Reader CA Public Key\". The key must be an elliptic curve key. Required if NewUserAuthenticationMethods includes AccessKey. The issuer of the Terminal identity of the access key needs to match this certificate, otherwise the device fails the authentication.",
+          "type": "string",
+          "format": "payload-ref",
+          "property_order": 1016,
+          "x-os": "macOS 26.2+",
+          "x-ref-types": [
+            "com.apple.security.pkcs1",
+            "com.apple.security.root",
+            "com.apple.security.pem",
+            "com.apple.security.pkcs12",
+            "com.apple.security.scep",
+            "com.apple.security.acme",
+            "com.apple.ADCertificate.managed"
+          ]
+        },
+        "AccessKeyTerminalIdentityUUID": {
+          "title": "Access key terminal identity UUID",
+          "description": "The PayloadUUID of an identity payload to use as the Terminal identity of the access key. The identity needs to be trusted by the access key. Required if NewUserAuthenticationMethods includes AccessKey. Allowed identity payload types:\n\n- com.apple.security.pkcs12\n- com.apple.security.acme\n- com.apple.security.scep",
+          "type": "string",
+          "format": "payload-ref",
+          "property_order": 1015,
+          "x-os": "macOS 26.0+",
+          "x-ref-types": [
+            "com.apple.security.pkcs1",
+            "com.apple.security.root",
+            "com.apple.security.pem",
+            "com.apple.security.pkcs12",
+            "com.apple.security.scep",
+            "com.apple.security.acme",
+            "com.apple.ADCertificate.managed"
+          ]
+        },
+        "AccountDisplayName": {
+          "title": "Account display name",
+          "description": "The display name for the account in notifications and authentication requests.",
+          "type": "string",
+          "property_order": 1002
+        },
+        "AdditionalGroups": {
+          "title": "Additional groups",
+          "description": "The list of created groups that don't have administrator access.",
+          "type": "array",
+          "property_order": 1012,
+          "items": {
+            "title": "Group",
+            "type": "string"
+          }
+        },
+        "AdministratorGroups": {
+          "title": "Administrator groups",
+          "description": "The list of groups to use for administrator access. The system requests membership during authentication.",
+          "type": "array",
+          "property_order": 1011,
+          "items": {
+            "title": "Group",
+            "type": "string"
+          }
+        },
+        "AllowAccessKeyExpressMode": {
+          "title": "Allow access key express mode",
+          "description": "If true, the system uses the access key in express mode, and doesn't require authentication before use.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1017,
+          "x-os": "macOS 26.0+"
+        },
+        "AllowDeviceIdentifiersInAttestation": {
+          "title": "Allow device identifiers in attestation",
+          "description": "If true, the system includes the device UDID and serial number in Platform SSO attestations.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1024,
+          "x-os": "macOS 15.4+"
+        },
+        "AllowWebLoginPasswordSync": {
+          "title": "Allow web login password sync",
+          "description": "If true, the system detects the password during web login and synchronizes it to the local account password for the user.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1029,
+          "x-os": "macOS 27.0+"
+        },
+        "AuthenticationGracePeriod": {
+          "title": "Authentication grace period",
+          "description": "The amount of time (in seconds) after receiving or updating a FileVaultPolicy, LoginPolicy, or UnlockPolicy that the system can use unregistered local accounts. Required when AllowAuthenticationGracePeriod is set.",
+          "type": "integer",
+          "property_order": 1022,
+          "x-os": "macOS 15.0+"
+        },
+        "AuthenticationMethod": {
+          "title": "Authentication method",
+          "description": "The Platform SSO authentication method to use with the extension. Requires that the SSO Extension also support the method. OpenID is available in macOS 27 and later.",
+          "type": "string",
+          "enum": [
+            "Password",
+            "UserSecureEnclaveKey",
+            "SmartCard",
+            "OpenID"
+          ],
+          "property_order": 1000,
+          "options": {
+            "enum_titles": [
+              "Password",
+              "User secure enclave key",
+              "Smart card",
+              "Open ID"
+            ]
+          }
+        },
+        "AuthorizationGroups": {
+          "title": "Authorization groups",
+          "description": "The pairing of Authorization Rights to group names. When using this, the system updates the Authorization Right to use the group.",
+          "type": "object",
+          "property_order": 1013,
+          "additionalProperties": {
+            "title": "ANY",
+            "description": "The key is an access right value, the value is the group to be associated with that access right.",
+            "type": "string"
+          }
+        },
+        "EnableAuthorization": {
+          "title": "Enable authorization",
+          "description": "Enables using identity provider accounts at authorization prompts. Requires that UseSharedDeviceKeys is true. The system assigns groups using AdministratorGroups, AdditionalGroups, or AuthorizationGroups.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1006
+        },
+        "EnableCreateFirstUserDuringSetup": {
+          "title": "Enable create first user during setup",
+          "description": "If true, the device uses Platform SSO to create the first user account on the Mac during Setup Assistant.",
+          "type": "boolean",
+          "default": true,
+          "property_order": 1005,
+          "x-os": "macOS 26.0+"
+        },
+        "EnableCreateUserAtLogin": {
+          "title": "Enable create user at login",
+          "description": "Enables creating users at the Login Window with an AuthenticationMethod of either Password or SmartCard. Requires that UseSharedDeviceKeys is true.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1004
+        },
+        "EnableRegistrationDuringSetup": {
+          "title": "Enable registration during setup",
+          "description": "If true, the system enables the PlatformSSO registration process during Setup Assistant on devices running macOS 26 and later. Set this key to true when configuring PlatformSSO before enrollment using the com.apple.psso.required error response.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1027,
+          "x-os": "macOS 26.0+"
+        },
+        "FileVaultPolicy": {
+          "title": "File vault policy",
+          "description": "The policy to apply when using Platform SSO at FileVault unlock on a Mac with Apple silicon.\n\n* AttemptAuthentication: The device attempts Platform SSO authentication before proceeding. If offline, unlock continues if the local account password matches. If online and the credential is incorrect, then the device requires a successful Platform SSO authentication is required, even if taken offline. Only use when AuthenticationMethod is Password.\n* RequireAuthentication: The device requires Platform SSO authentication before proceeding.",
+          "type": "array",
+          "property_order": 1018,
+          "items": {
+            "title": "Policy",
+            "type": "string",
+            "enum": [
+              "AttemptAuthentication",
+              "RequireAuthentication",
+              "AllowOfflineGracePeriod",
+              "AllowAuthenticationGracePeriod",
+              "RequireTouchID",
+              "RequireTouchIDOrWatch",
+              "AllowOpenIDForTouchIDFallback"
+            ],
+            "options": {
+              "enum_titles": [
+                "Attempt authentication",
+                "Require authentication",
+                "Allow offline grace period",
+                "Allow authentication grace period",
+                "Require Touch ID",
+                "Require Touch ID or watch",
+                "Allow open ID for Touch ID fallback"
+              ]
+            }
+          },
+          "x-os": "macOS 15.0+"
+        },
+        "LoginFrequency": {
+          "title": "Login frequency",
+          "description": "The duration, in seconds, until the system requires a full login instead of a refresh. The default value is 64,800 (18 hours). The minimum value is 3600 (1 hour).",
+          "type": "integer",
+          "default": 64800,
+          "minimum": 3600,
+          "property_order": 1003
+        },
+        "LoginPolicy": {
+          "title": "Login policy",
+          "description": "The policy to apply when using Platform SSO at the Login Window.\n\n* AttemptAuthentication: The device attempts Platform SSO authentication before proceeding. If offline, login continues if the local account password matches. If online and the credential is incorrect, then the device requires a successful Platform SSO authentication to proceed, even if taken offline. Only use when AuthenticationMethod is Password.\n* RequireAuthentication: The device requires Platform SSO authentication before proceeding.",
+          "type": "array",
+          "property_order": 1019,
+          "items": {
+            "title": "Policy",
+            "type": "string",
+            "enum": [
+              "AttemptAuthentication",
+              "RequireAuthentication",
+              "AllowOfflineGracePeriod",
+              "AllowAuthenticationGracePeriod",
+              "RequireTouchID",
+              "RequireTouchIDOrWatch",
+              "AllowOpenIDForTouchIDFallback"
+            ],
+            "options": {
+              "enum_titles": [
+                "Attempt authentication",
+                "Require authentication",
+                "Allow offline grace period",
+                "Allow authentication grace period",
+                "Require Touch ID",
+                "Require Touch ID or watch",
+                "Allow open ID for Touch ID fallback"
+              ]
+            }
+          },
+          "x-os": "macOS 15.0+"
+        },
+        "NewUserAuthenticationMethods": {
+          "title": "New user authentication methods",
+          "description": "The set of authentication methods to use for newly created accounts at login or during Setup Assistant. The system uses Password and SmartCard if this key isn't present.",
+          "type": "array",
+          "property_order": 1008,
+          "items": {
+            "title": "New user authentication method",
+            "type": "string",
+            "enum": [
+              "Password",
+              "SmartCard",
+              "AccessKey",
+              "OpenID"
+            ],
+            "options": {
+              "enum_titles": [
+                "Password",
+                "Smart card",
+                "Access key",
+                "Open ID"
+              ]
+            }
+          },
+          "x-os": "macOS 26.0+"
+        },
+        "NewUserAuthorizationMode": {
+          "title": "New user authorization mode",
+          "description": "The permission to apply to newly created accounts at login. Allowed values:\n\n* Standard: The account is a standard user.\n* Admin: The system adds the account to the local administrators group.\n* Groups: The system assigns groups to the account using AdministratorGroups, AdditionalGroups, or AuthorizationGroups.\n* Temporary: The system uses a temporary session configuration for newly created accounts at login.",
+          "type": "string",
+          "enum": [
+            "Standard",
+            "Admin",
+            "Groups",
+            "Temporary"
+          ],
+          "property_order": 1009,
+          "options": {
+            "enum_titles": [
+              "Standard",
+              "Admin",
+              "Groups",
+              "Temporary"
+            ]
+          }
+        },
+        "NonPlatformSSOAccounts": {
+          "title": "Non platform SSO accounts",
+          "description": "The list of local accounts that aren't subject to the FileVaultPolicy, LoginPolicy, or UnlockPolicy. The accounts don't receive a prompt to register for Platform SSO.",
+          "type": "array",
+          "property_order": 1023,
+          "items": {
+            "title": "Username",
+            "type": "string"
+          },
+          "x-os": "macOS 15.0+"
+        },
+        "OfflineGracePeriod": {
+          "title": "Offline grace period",
+          "description": "The amount of time (in seconds) after the last successful Platform SSO login for using a local account password offline. Required when setting AllowOfflineGracePeriod.",
+          "type": "integer",
+          "property_order": 1021,
+          "x-os": "macOS 15.0+"
+        },
+        "SynchronizeProfilePicture": {
+          "title": "Synchronize profile picture",
+          "description": "If true, the system requests the user's profile picture from the SSO extension.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1025,
+          "x-os": "macOS 26.0+"
+        },
+        "TemporarySessionQuickLogin": {
+          "title": "Temporary session quick login",
+          "description": "If true, the system uses a quicker Authenticated Guest Mode login to Mac behavior. The system erases user data from only select locations in the user home directory after each session completes. Once every eight hours the system erases the full user home directory after a session completes. Turn this on for shared environments that have a high frequency of short sessions.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1026,
+          "x-os": "macOS 26.0+"
+        },
+        "TokenToUserMapping": {
+          "title": "Token to user mapping",
+          "description": "The attribute mapping to use when creating users, or for authorization.",
+          "type": "object",
+          "property_order": 1007,
+          "properties": {
+            "AccountName": {
+              "title": "Account name",
+              "description": "The claim name to use for the user's account name.",
+              "type": "string",
+              "property_order": 1000
+            },
+            "FullName": {
+              "title": "Full name",
+              "description": "The claim name to use for the user's full name.",
+              "type": "string",
+              "property_order": 1001
+            }
+          }
+        },
+        "UnlockPolicy": {
+          "title": "Unlock policy",
+          "description": "The policy to apply when using Platform SSO at screensaver unlock.\n\n* AttemptAuthentication: The device attempts Platform SSO authentication before proceeding. If offline, unlock will continue if the local account password matches. If online and the credential is incorrect, then the device requires a successful Platform SSO authentication to proceed, even if taken offline. Only use when AuthenticationMethod is Password.\n* RequireAuthentication: The device requires Platform SSO authentication before proceeding.",
+          "type": "array",
+          "property_order": 1020,
+          "items": {
+            "title": "Policy",
+            "type": "string",
+            "enum": [
+              "AttemptAuthentication",
+              "RequireAuthentication",
+              "AllowOfflineGracePeriod",
+              "AllowAuthenticationGracePeriod",
+              "AllowTouchIDOrWatchForUnlock",
+              "RequireTouchID",
+              "RequireTouchIDOrWatch",
+              "AllowOpenIDForTouchIDFallback"
+            ],
+            "options": {
+              "enum_titles": [
+                "Attempt authentication",
+                "Require authentication",
+                "Allow offline grace period",
+                "Allow authentication grace period",
+                "Allow Touch ID or watch for unlock",
+                "Require Touch ID",
+                "Require Touch ID or watch",
+                "Allow open ID for Touch ID fallback"
+              ]
+            }
+          },
+          "x-os": "macOS 15.0+"
+        },
+        "UseSharedDeviceKeys": {
+          "title": "Use shared device keys",
+          "description": "If true, the system uses the same signing and encryption keys for all users. Only supported on the device channel.",
+          "type": "boolean",
+          "default": false,
+          "property_order": 1001
+        },
+        "UserAuthorizationMode": {
+          "title": "User authorization mode",
+          "description": "The permission to apply to an account each time the user authenticates. Allowed values:\n\n* Standard: The account is a standard user.\n* Admin: The system adds the account to the local administrators group.\n* Groups: The system assigns group to the account using AdministratorGroups, AdditionalGroups, or AuthorizationGroups.",
+          "type": "string",
+          "enum": [
+            "Standard",
+            "Admin",
+            "Groups"
+          ],
+          "property_order": 1010,
+          "options": {
+            "enum_titles": [
+              "Standard",
+              "Admin",
+              "Groups"
+            ]
+          }
+        },
+        "WebLoginURLAllowList": {
+          "title": "Web login URL allow list",
+          "description": "The set of allowed hosts that the system can load in the PSSO web view. Required if AuthenticationMethod is OpenID, or NewUserAuthenticationMethods contains OpenID.",
+          "type": "array",
+          "property_order": 1028,
+          "items": {
+            "title": "Hosts",
+            "type": "string"
+          },
+          "x-os": "macOS 27.0+"
+        }
+      },
+      "x-os": "macOS 14.0+"
+    },
+    "Realm": {
+      "title": "Realm",
+      "description": "The realm name for Credential payloads. Use proper capitalization for this value. Ignored for Redirect payloads.",
+      "type": "string",
+      "property_order": 1003
+    },
+    "RegistrationToken": {
+      "title": "Registration token",
+      "description": "The token this device uses for registration with Platform SSO. Use it for silent registration with the Identity Provider. Requires that AuthenticationMethod in PlatformSSO isn't empty.",
+      "type": "string",
+      "property_order": 1010
+    },
+    "ScreenLockedBehavior": {
+      "title": "Screen locked behavior",
+      "description": "If set to Cancel, the system cancels authentication requests when the screen is locked. If set to DoNotHandle, the request continues without SSO instead. This doesn't apply to requests where userInterfaceEnabled is false, or for background URLSession requests.",
+      "type": "string",
+      "enum": [
+        "Cancel",
+        "DoNotHandle"
+      ],
+      "default": "Cancel",
+      "property_order": 1007,
+      "options": {
+        "enum_titles": [
+          "Cancel",
+          "Do not handle"
+        ]
+      }
+    },
+    "TeamIdentifier": {
+      "title": "Team identifier",
+      "description": "The team identifier of the app extension. The device requires this key on macOS and ignores it elsewhere.",
+      "type": "string",
+      "property_order": 1001
+    },
+    "Type": {
+      "title": "Type",
+      "description": "The type of SSO.",
+      "type": "string",
+      "enum": [
+        "Credential",
+        "Redirect"
+      ],
+      "property_order": 1002,
+      "options": {
+        "enum_titles": [
+          "Credential",
+          "Redirect"
+        ]
+      }
+    },
+    "URLs": {
+      "title": "UR ls",
+      "description": "An array of URL prefixes of identity providers where the app extension performs SSO.\n\nRequired for Redirect payloads. Ignored for Credential payloads.\n\nThe URLs need to begin with http:// or https://.\n\nThe system:\n\n- Matches scheme and host name case-insensitively\n- Doesn't allow query parameters and URL fragments\n- Requires that the URLs of all installed Extensible SSO payloads are unique",
+      "type": "array",
+      "property_order": 1005,
+      "items": {
+        "title": "URL",
+        "type": "string"
+      }
+    }
+  }
+}

@@ -299,6 +299,8 @@ export interface ConfigProfile {
   /** "" | "custom:<uuid>" | "builtin:<domain>" when the profile was built from a JSON schema form. */
   schema_source?: string
   schema_values?: Record<string, unknown> | null
+  /** Payload editor values; null for an uploaded .mobileconfig or a Custom Settings profile. */
+  payloads?: PayloadValues[] | null
   created_at: string
   updated_at: string
 }
@@ -1627,6 +1629,20 @@ export interface SchemaNode {
   anyOf?: SchemaNode[]
   oneOf?: SchemaNode[]
   links?: { rel?: string; href: string }[]
+  /** Types the values of keys the object doesn't list (Apple's dictionaries keyed by team ID, bundle ID, …). */
+  additionalProperties?: SchemaNode | boolean
+  /** VibeMDM payload editors: only on supervised devices. */
+  'x-supervised'?: boolean
+  /** e.g. "iOS 17.0+" when the key is newer than the payload. */
+  'x-os'?: string
+  /** e.g. "macOS 13.0": deprecated by Apple since. */
+  'x-deprecated'?: string
+  /** Hidden from viewers; edited as a password field. */
+  'x-secret'?: boolean
+  /** format "payload-ref": the payload types this field may point to. */
+  'x-ref-types'?: string[]
+  /** macOS: "device" or "user" when the key applies at only one level. */
+  'x-channel'?: string
   options?: {
     enum_titles?: string[]
     infoText?: string
@@ -2150,22 +2166,37 @@ export function normalizeMobileScope(s: Partial<MobileScope> | null | undefined)
   return { all_mobile_devices: !!s?.all_mobile_devices, targets: sel(s?.targets), exclusions: sel(s?.exclusions) }
 }
 
-/** One payload of a mobile profile built with the payload editors. */
-export interface MobilePayloadValues {
+/** One payload of a profile built with the payload editors. */
+export interface PayloadValues {
+  /** Editor id (usually the PayloadType). */
   type: string
+  /** The payload's PayloadUUID, so other payloads in the profile can reference it. */
+  uuid?: string
   values: SchemaValues
 }
+export type MobilePayloadValues = PayloadValues
 
-/** A built-in payload editor (GET /api/v1/mobile-device-payloads). */
-export interface MobilePayloadDef {
+/** A built-in payload editor (GET /api/v1/profile-payloads?platform=macos|ios). */
+export interface PayloadDef {
   type: string
+  payload_type: string
+  platform: 'ios' | 'macos'
   title: string
   description: string
   category: string
   multiple: boolean
   order: number
+  /** macOS: "device" (computer level) and/or "user". */
+  channels?: string[]
+  supervised?: boolean
+  requires?: string[]
+  os?: string
+  deprecated?: string
+  /** The Jamf Pro payload it corresponds to, when the title differs. */
+  jamf?: string
   schema: SchemaNode
 }
+export type MobilePayloadDef = PayloadDef
 
 export interface MobileConfigProfile {
   id: string
@@ -2195,16 +2226,18 @@ export interface MobileProfileDeployment {
   updated_at: string
 }
 
-export interface MobilePayloadErrors {
+export interface PayloadErrors {
   index: number
   errors: SchemaFieldError[]
 }
+export type MobilePayloadErrors = PayloadErrors
 
-export interface MobileProfilePreview {
+export interface ProfilePreview {
   payload: string
   error?: string
-  payload_errors: MobilePayloadErrors[]
+  payload_errors: PayloadErrors[]
 }
+export type MobileProfilePreview = ProfilePreview
 
 export interface MobileScopePreview {
   count: number

@@ -1,0 +1,36 @@
+{
+  "title": "Certificate (root)",
+  "description": "Installs a root certificate authority.",
+  "__id": "com.apple.security.root",
+  "__payloadtype": "com.apple.security.root",
+  "__platform": "macos",
+  "__category": "Certificates",
+  "__order": 11,
+  "__multiple": true,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "PayloadContent"
+  ],
+  "properties": {
+    "PayloadCertificateFileName": {
+      "title": "Payload certificate filename",
+      "description": "The file name of the enclosed certificate.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "PayloadContent": {
+      "title": "Payload certificate data",
+      "description": "The binary representation of the payload encoded in base64.",
+      "type": "string",
+      "format": "data",
+      "property_order": 1001
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "title": "Security & Privacy: Gatekeeper",
+  "description": "Chooses which apps Gatekeeper allows: App Store only, or App Store and identified developers.",
+  "__id": "com.apple.systempolicy.control",
+  "__payloadtype": "com.apple.systempolicy.control",
+  "__platform": "macos",
+  "__category": "Security",
+  "__order": 50,
+  "__multiple": true,
+  "__channels": [
+    "device"
+  ],
+  "__jamf": "Security & Privacy → General",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "AllowIdentifiedDevelopers": {
+      "title": "Allow identified developers",
+      "description": "If true, enables Gatekeeper's \"Mac App Store and identified developers\" option.\n\nIf false, enables Gatekeeper's \"Mac App Store\" option.\n\nIf the value of EnableAssessment isn't set to true, this key has no effect.",
+      "type": "boolean",
+      "property_order": 1001
+    },
+    "EnableAssessment": {
+      "title": "Enable assessment",
+      "description": "If true, enables Gatekeeper. If false, disables Gatekeeper.",
+      "type": "boolean",
+      "property_order": 1000
+    },
+    "EnableXProtectMalwareUpload": {
+      "title": "Enable x protect malware upload",
+      "description": "If false, prevents Gatekeeper from prompting the user to upload blocked malware to Apple for purposes of improving malware detection.",
+      "type": "boolean",
+      "property_order": 1002,
+      "x-os": "macOS 15.0+"
+    }
+  }
+}

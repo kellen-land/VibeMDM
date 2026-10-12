@@ -1,0 +1,105 @@
+{
+  "title": "Per-App VPN app mapping",
+  "description": "Assigns Mac apps to a per-app VPN by bundle ID and code requirement.",
+  "__id": "com.apple.vpn.managed.appmapping",
+  "__payloadtype": "com.apple.vpn.managed.appmapping",
+  "__platform": "macos",
+  "__category": "Network",
+  "__order": 41,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "AppLayerVPNMapping"
+  ],
+  "properties": {
+    "AppLayerVPNMapping": {
+      "title": "app layer VPN mapping",
+      "description": "The array of VPN mapping dictionaries.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "Item",
+        "type": "object",
+        "required": [
+          "Identifier",
+          "VPNUUID",
+          "DesignatedRequirement",
+          "SigningIdentifier"
+        ],
+        "properties": {
+          "DesignatedRequirement": {
+            "title": "Designated requirement",
+            "description": "The code signature designated requirement of the app using the per-app VPN.",
+            "type": "string",
+            "property_order": 1002
+          },
+          "Identifier": {
+            "title": "Identifier",
+            "description": "The bundle identifier of the app using the per-app VPN.",
+            "type": "string",
+            "property_order": 1000
+          },
+          "MatchTools": {
+            "title": "Match tools",
+            "description": "An array of dictionaries. Each dictionary specifies a per-app VPN rule. Use this property to restrict this per-app VPN rule to only match the app's spawned _helper tool_ network traffic.\n\nFor example, to match network traffic that the curl command generates when run from the Terminal.app, create an app mapping payload for Terminal.app and set the payload's MatchTools key to an array that contains a dictionary that matches the curl command-line tool.",
+            "type": "array",
+            "property_order": 1005,
+            "items": {
+              "title": "Match tool",
+              "type": "object",
+              "required": [
+                "DesignatedRequirement",
+                "SigningIdentifier"
+              ],
+              "properties": {
+                "DesignatedRequirement": {
+                  "title": "Designated requirement",
+                  "description": "The code signature designated requirement of the command-line tool using the per-app VPN.",
+                  "type": "string",
+                  "property_order": 1000
+                },
+                "Path": {
+                  "title": "Path",
+                  "description": "The file-system path of the command-line tool using the per-app VPN.",
+                  "type": "string",
+                  "property_order": 1002
+                },
+                "SigningIdentifier": {
+                  "title": "Signing identifier",
+                  "description": "The code signature signing identifier of the command-line tool using the per-app VPN.",
+                  "type": "string",
+                  "property_order": 1001
+                }
+              }
+            }
+          },
+          "Path": {
+            "title": "Path",
+            "description": "The file-system path of the executable using the per-app VPN.",
+            "type": "string",
+            "property_order": 1004
+          },
+          "SigningIdentifier": {
+            "title": "Signing identifier",
+            "description": "The code signature signing identifier of the app using the per-app VPN.",
+            "type": "string",
+            "property_order": 1003
+          },
+          "VPNUUID": {
+            "title": "VPNUUID",
+            "description": "The identifier of the per-app VPN payload, which defines the per-app VPN that the app uses. See the VPNUUID key of the AppLayerVPN payload.",
+            "type": "string",
+            "property_order": 1001
+          }
+        }
+      }
+    }
+  }
+}

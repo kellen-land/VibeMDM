@@ -1,0 +1,83 @@
+{
+  "title": "System Migration",
+  "description": "Tells Migration Assistant which files to move when migrating from Windows.",
+  "__id": "com.apple.systemmigration",
+  "__payloadtype": "com.apple.systemmigration",
+  "__platform": "macos",
+  "__category": "System",
+  "__order": 70,
+  "__multiple": false,
+  "__channels": [
+    "device"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "CustomBehavior": {
+      "title": "Custom behavior",
+      "description": "The list of custom behavior dictionaries.",
+      "type": "array",
+      "property_order": 1000,
+      "items": {
+        "title": "Item",
+        "type": "object",
+        "required": [
+          "Context",
+          "Paths"
+        ],
+        "properties": {
+          "Context": {
+            "title": "Context",
+            "description": "The context that custom paths apply to.",
+            "type": "string",
+            "property_order": 1000
+          },
+          "Paths": {
+            "title": "Paths",
+            "description": "The list of custom behavior path dictionaries.",
+            "type": "array",
+            "property_order": 1001,
+            "items": {
+              "title": "Path",
+              "type": "object",
+              "required": [
+                "SourcePath",
+                "SourcePathInUserHome",
+                "TargetPath",
+                "TargetPathInUserHome"
+              ],
+              "properties": {
+                "SourcePath": {
+                  "title": "Source path",
+                  "description": "The path to the migrating file or directory on the source system.",
+                  "type": "string",
+                  "property_order": 1000
+                },
+                "SourcePathInUserHome": {
+                  "title": "Source path in user home",
+                  "description": "If true, the source path is located within a user home directory.",
+                  "type": "boolean",
+                  "property_order": 1001
+                },
+                "TargetPath": {
+                  "title": "Target path",
+                  "description": "The path to the destination file or directory on the target system.",
+                  "type": "string",
+                  "property_order": 1002
+                },
+                "TargetPathInUserHome": {
+                  "title": "Target path in user home",
+                  "description": "If true, the target path is located within a user home directory.",
+                  "type": "boolean",
+                  "property_order": 1003
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

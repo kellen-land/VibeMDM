@@ -1,0 +1,178 @@
+{
+  "title": "Accessibility",
+  "description": "Sets accessibility options such as zoom, contrast, VoiceOver and mouse keys.",
+  "__id": "com.apple.universalaccess",
+  "__payloadtype": "com.apple.universalaccess",
+  "__platform": "macos",
+  "__category": "General",
+  "__order": 90,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "closeViewFarPoint": {
+      "title": "Close view far point",
+      "description": "The minimum zoom level in the Zoom options.",
+      "type": "integer",
+      "property_order": 1000
+    },
+    "closeViewHotkeysEnabled": {
+      "title": "Close view hotkeys enabled",
+      "description": "If true, enables \"Use keyboard shortcuts\" in the Zoom options.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    },
+    "closeViewNearPoint": {
+      "title": "Close view near point",
+      "description": "The maximum zoom level in the Zoom options.",
+      "type": "integer",
+      "property_order": 1002
+    },
+    "closeViewScrollWheelToggle": {
+      "title": "Close view scroll wheel toggle",
+      "description": "If true, enables \"Use scroll gesture\" in the Zoom options.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003
+    },
+    "closeViewShowPreview": {
+      "title": "Close view show preview",
+      "description": "If true, enables \"Show preview rectangle\" in the Zoom options. Only available in macOS 10.15 and earlier.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1004,
+      "x-deprecated": "macOS 10.15"
+    },
+    "closeViewSmoothImages": {
+      "title": "Close view smooth images",
+      "description": "If true, enables \"Smooth images\" in the Zoom options.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1005
+    },
+    "contrast": {
+      "title": "Display contrast",
+      "description": "The contrast value in the Display options.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "property_order": 1006
+    },
+    "flashScreen": {
+      "title": "Flash screen",
+      "description": "If true, enables \"Flash the screen\" in the Audio options.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1007
+    },
+    "grayscale": {
+      "title": "Use grayscale",
+      "description": "If true, enables \"Use grayscale\" in the Display options.\n\nThis option is deprecated in macOS 11.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1008,
+      "x-deprecated": "macOS 11.0"
+    },
+    "mouseDriver": {
+      "title": "Mouse driver",
+      "description": "If true, enables Mouse Keys in the Mouse & Trackpad options.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1009
+    },
+    "mouseDriverCursorSize": {
+      "title": "Mouse driver cursor size",
+      "description": "The size of the cursor.",
+      "type": "integer",
+      "property_order": 1010
+    },
+    "mouseDriverIgnoreTrackpad": {
+      "title": "Mouse driver ignore trackpad",
+      "description": "If true, ignores the built-in trackpad.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1011
+    },
+    "mouseDriverInitialDelay": {
+      "title": "Mouse driver initial delay",
+      "description": "The initial delay before moving the mouse with Mouse Keys.",
+      "type": "integer",
+      "property_order": 1012
+    },
+    "mouseDriverMaxSpeed": {
+      "title": "Mouse driver max speed",
+      "description": "The maximum speed for the cursor when using Mouse Keys.",
+      "type": "integer",
+      "property_order": 1013
+    },
+    "slowKey": {
+      "title": "Slow key",
+      "description": "If true, enables \"Slow Keys\" in the Keyboard options.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1014
+    },
+    "slowKeyBeepOn": {
+      "title": "Slow key beep on",
+      "description": "If true, enables \"click key sounds\" for Slow Keys.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1015
+    },
+    "slowKeyDelay": {
+      "title": "Slow key delay",
+      "description": "The acceptance delay, in milliseconds, for Slow Keys.",
+      "type": "integer",
+      "property_order": 1016
+    },
+    "stereoAsMono": {
+      "title": "Stereo as mono",
+      "description": "If true, plays stereo audio as mono.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1017
+    },
+    "stickyKey": {
+      "title": "Sticky key",
+      "description": "If true, enables Sticky Keys in the Keyboard options.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1018
+    },
+    "stickyKeyBeepOnModifier": {
+      "title": "Sticky key beep on modifier",
+      "description": "If true, enables the beep when a modifier key is set for Sticky Keys.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1019
+    },
+    "stickyKeyShowWindow": {
+      "title": "Sticky key show window",
+      "description": "If true, enables \"Display pressed keys on screen\" for Sticky Keys.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1020
+    },
+    "voiceOverOnOffKey": {
+      "title": "Voice over on off key",
+      "description": "If true, enables Voice Over.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1021
+    },
+    "whiteOnBlack": {
+      "title": "White on black",
+      "description": "If true, enables Invert Colors in Display Accommodations.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1022
+    }
+  }
+}

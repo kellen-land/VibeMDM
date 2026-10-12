@@ -1,0 +1,54 @@
+{
+  "title": "Screen Saver",
+  "description": "Requires a password after sleep or screen saver and sets the login window's screen saver.",
+  "__id": "com.apple.screensaver",
+  "__payloadtype": "com.apple.screensaver",
+  "__platform": "macos",
+  "__category": "General",
+  "__order": 130,
+  "__multiple": false,
+  "__channels": [
+    "device"
+  ],
+  "__jamf": "Login Window → Screen Saver / Security & Privacy → General",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "moduleName"
+  ],
+  "properties": {
+    "askForPassword": {
+      "title": "Ask for password",
+      "description": "If true, the device prompts the user for a password when the screen saver is unlocked or stopped. When you use this prompt, you must also provide askForPasswordDelay.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000
+    },
+    "askForPasswordDelay": {
+      "title": "Ask for password delay",
+      "description": "The number of seconds to delay before the device requires a password to unlock or stop the screen saver (the grace period). A value of 2147483647 (hexadecimal equivalent of 0x7FFFFFFF) disables this requirement, and a value of 0 immediately requires the password. To use this option, you must set askForPassword to true.",
+      "type": "integer",
+      "property_order": 1001
+    },
+    "idleTime": {
+      "title": "Idle time",
+      "description": "The number of seconds of inactivity before the screen saver activates (0 = Never activate).",
+      "type": "integer",
+      "property_order": 1002
+    },
+    "loginWindowModulePath": {
+      "title": "Login window module path",
+      "description": "The full path to the screen-saver module to use.",
+      "type": "string",
+      "property_order": 1003
+    },
+    "moduleName": {
+      "title": "Module name",
+      "description": "The name of the screen saver module.",
+      "type": "string",
+      "property_order": 1004
+    }
+  }
+}

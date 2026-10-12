@@ -31,7 +31,7 @@ prepare for the Apple certifications:
 | 5 | [Inventory and groups](05-inventory-and-groups.md) | Computers, inventory sources, extension attributes, smart and static groups, searches, network organization |
 | 6 | [Scoping](06-scoping.md) | Targets, limitations and exclusions, with worked examples |
 | 7 | [Policies, scripts and packages](07-policies-scripts-packages.md) | Triggers, frequencies, `$4`–`$11`, packages, Self Service, custom and local triggers |
-| 8 | [Configuration profiles](08-configuration-profiles.md) | Profiles, deployment status, Application & Custom Settings (JSON schemas), MCX |
+| 8 | [Configuration profiles](08-configuration-profiles.md) | Profiles, payload editors for every Jamf Pro payload, payload variables, Application & Custom Settings (JSON schemas), MCX |
 | 9 | [Mac Apps and Installomator](09-apps-installomator.md) | App catalog, labels, options, custom labels, argument quoting |
 | 10 | [Software updates](10-software-updates.md) | DDM enforcement and settings plans, status, SOFA, super |
 | 11 | [FileVault](11-filevault.md) | Escrow, Escrow Buddy remediation, audited key reveal, Secure Token |

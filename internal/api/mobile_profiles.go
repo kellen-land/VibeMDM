@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -15,19 +14,8 @@ import (
 	"github.com/vibemdm/vibemdm/internal/store"
 )
 
-// mobilePayloadView is one payload editor in the catalog.
-type mobilePayloadView struct {
-	schema.MobilePayload
-	Schema json.RawMessage `json:"schema"`
-}
-
 func (h *Handler) listMobilePayloads(w http.ResponseWriter, r *http.Request) {
-	ps := schema.MobilePayloads()
-	out := make([]mobilePayloadView, 0, len(ps))
-	for _, p := range ps {
-		out = append(out, mobilePayloadView{MobilePayload: p, Schema: p.Raw})
-	}
-	writeJSON(w, 200, listResp[mobilePayloadView]{Items: out, Total: len(out)})
+	writePayloadEditors(w, r, schema.PlatformIOS)
 }
 
 type mobileProfileReq struct {
@@ -42,13 +30,7 @@ type mobileProfileReq struct {
 
 // buildMobilePayload renders the editor payloads; perrs is set when values are invalid.
 func (h *Handler) buildMobilePayload(ctx context.Context, identifier, name, description string, payloads []model.MobilePayloadValues) (string, []schema.PayloadErrors, error) {
-	settings, _ := h.st.GetSettings(ctx)
-	in := schema.MobileProfileInput{Identifier: identifier, DisplayName: name, Description: description, Organization: settings.OrgName}
-	for _, p := range payloads {
-		in.Payloads = append(in.Payloads, schema.PayloadValues{Type: p.Type, Values: p.Values})
-	}
-	out, perrs, err := schema.BuildMobileProfile(in)
-	return string(out), perrs, err
+	return h.buildPayloadXML(ctx, schema.PlatformIOS, identifier, name, description, "", payloads)
 }
 
 func (h *Handler) previewMobileProfile(w http.ResponseWriter, r *http.Request) {
@@ -317,9 +299,6 @@ func (h *Handler) mobileScopePreview(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"count": len(ids), "mobile_devices": devices})
 }
 
-// mobileSecretKeys are payload keys whose values viewers must not see.
-var mobileSecretKeys = map[string]bool{"Password": true, "SharedSecret": true, "AuthPassword": true, "ProxyPassword": true, "PayloadCertificatePassword": true}
-
 // redactMobileProfileFor hides passwords, shared secrets and identity files from viewers.
 func redactMobileProfileFor(r *http.Request, p *model.MobileConfigProfile) {
 	if isAdmin(r) {
@@ -328,29 +307,5 @@ func redactMobileProfileFor(r *http.Request, p *model.MobileConfigProfile) {
 	if p.Payload != "" {
 		p.Payload = inspector.Redact(p.Payload)
 	}
-	for i := range p.Payloads {
-		p.Payloads[i].Values = redactValues(p.Payloads[i].Values, p.Payloads[i].Type == "com.apple.security.pkcs12").(map[string]any)
-	}
-}
-
-func redactValues(v any, identity bool) any {
-	switch t := v.(type) {
-	case map[string]any:
-		out := make(map[string]any, len(t))
-		for k, x := range t {
-			if mobileSecretKeys[k] || (identity && k == "PayloadContent") {
-				out[k] = "[redacted]"
-				continue
-			}
-			out[k] = redactValues(x, identity)
-		}
-		return out
-	case []any:
-		out := make([]any, len(t))
-		for i, x := range t {
-			out[i] = redactValues(x, identity)
-		}
-		return out
-	}
-	return v
+	redactPayloads(schema.PlatformIOS, p.Payloads)
 }

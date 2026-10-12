@@ -1,0 +1,227 @@
+{
+  "title": "Login Window",
+  "description": "Sets the login window's banner, which users and buttons it shows, and auto-login.",
+  "__id": "com.apple.loginwindow",
+  "__payloadtype": "com.apple.loginwindow",
+  "__platform": "macos",
+  "__category": "Users and Login",
+  "__order": 10,
+  "__multiple": true,
+  "__channels": [
+    "device"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "AdminHostInfo": {
+      "title": "Admin host info",
+      "description": "The admin host info. If present in the payload, the system displays its value in the Login Window as additional computer information. Before macOS 10.10, this string could only contain host name, system version, or IP address. After macOS 10.10, setting this key to any value allows the user to click the time area of the menu bar to toggle through various computer information values.",
+      "type": "string",
+      "enum": [
+        "HostName",
+        "SystemVersion",
+        "IPAddress"
+      ],
+      "property_order": 1005,
+      "options": {
+        "enum_titles": [
+          "Host name",
+          "System version",
+          "IP address"
+        ]
+      }
+    },
+    "AdminMayDisableMCX": {
+      "title": "Admin may disable MCX",
+      "description": "If true, a local administrator user can bypass or disable managed preferences (MCX settings) for their login session. The device presents the user with this option at login only when the user is a local administrator, and other users are not logged in.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1006
+    },
+    "AllowList": {
+      "title": "Allow list",
+      "description": "The list of user GUIDs or group GUIDs of users that the system allows to log in. An asterisk (*) string specifies all users or groups. This only applies to network accounts and mobile accounts.",
+      "type": "array",
+      "property_order": 1007,
+      "items": {
+        "title": "Item",
+        "type": "string"
+      }
+    },
+    "AutologinPassword": {
+      "title": "Autologin password",
+      "description": "An optional user password to set up auto login. This must match the AutologinUsername user's current password.",
+      "type": "string",
+      "property_order": 1024,
+      "x-os": "macOS 14.0+",
+      "x-secret": true
+    },
+    "AutologinUsername": {
+      "title": "Autologin username",
+      "description": "The user short name for an existing user to set up auto login.",
+      "type": "string",
+      "property_order": 1023,
+      "x-os": "macOS 14.0+"
+    },
+    "DenyList": {
+      "title": "Deny list",
+      "description": "The list of user GUIDs or group GUIDs of users that the system disallows to log in. This list takes priority over the list in the AllowList key. This only applies to network accounts and mobile accounts.",
+      "type": "array",
+      "property_order": 1008,
+      "items": {
+        "title": "Item",
+        "type": "string"
+      }
+    },
+    "DisableConsoleAccess": {
+      "title": "Disable console access",
+      "description": "If true, the system disregards the >console special user name, which provides a command line UI.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1014
+    },
+    "DisableFDEAutoLogin": {
+      "title": "Disable FDE auto login",
+      "description": "If true, the system disables the automatic login option when using FileVault.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1022
+    },
+    "DisableScreenLockImmediate": {
+      "title": "Disable screen lock immediate",
+      "description": "If true, the system disables the immediate Screen Lock functions.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1020
+    },
+    "ForceCaptivePortalConnectionFromLockScreen": {
+      "title": "Enable captive WiFi portal for login and unlock",
+      "description": "If true, the system allows use of the captive WiFi portal at login or unlock.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1026,
+      "x-os": "macOS 27.0+"
+    },
+    "ForceWifiConfigurationOnLockScreen": {
+      "title": "Enable WiFi network selection for login and unlock",
+      "description": "If true, the system allows the user to select WiFi networks at login or unlock.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1025,
+      "x-os": "macOS 27.0+"
+    },
+    "HideAdminUsers": {
+      "title": "Hide admin users",
+      "description": "If true, the system hides administrator users when showing a user list.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1003
+    },
+    "HideLocalUsers": {
+      "title": "Hide local users",
+      "description": "If true, the system shows only network and system users when showing a user list.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    },
+    "HideMobileAccounts": {
+      "title": "Hide mobile accounts",
+      "description": "If true, the system hides mobile account users in a user list. In some cases, mobile users show up as network users.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1009
+    },
+    "IncludeNetworkUser": {
+      "title": "Include network user",
+      "description": "If true, the system shows network users when showing a user list.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1002
+    },
+    "LogOutDisabledWhileLoggedIn": {
+      "title": "Log out disabled while logged in",
+      "description": "If true, the system disables the Log Out menu item when the user is logged in.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1019
+    },
+    "LoginwindowText": {
+      "title": "Loginwindow text",
+      "description": "The text to display in the Login Window.",
+      "type": "string",
+      "property_order": 1015
+    },
+    "PowerOffDisabledWhileLoggedIn": {
+      "title": "Power off disabled while logged in",
+      "description": "If true, the system disables the Power Off menu item when the user is logged in.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1018
+    },
+    "RestartDisabled": {
+      "title": "Restart disabled",
+      "description": "If true, the system disables the Restart item.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1011
+    },
+    "RestartDisabledWhileLoggedIn": {
+      "title": "Restart disabled while logged in",
+      "description": "If true, the system disables the Restart menu item when the user is logged in.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1017
+    },
+    "RetriesUntilHint": {
+      "title": "Retries until hint",
+      "description": "If specified, allows a certain number of retries until the device shows a password hint. The device shows no hints if set to a value of 0.",
+      "type": "integer",
+      "default": 0,
+      "property_order": 1012
+    },
+    "SHOWFULLNAME": {
+      "title": "Show name and password fields (instead of a list of users)",
+      "description": "If true, the system shows the name and password dialog. If false, the system displays a list of users.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000
+    },
+    "SHOWOTHERUSERS_MANAGED": {
+      "title": "SHOWOTHERUSERS MANAGED",
+      "description": "If true, the system displays \"Other...\" when it shows a list of users.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1004
+    },
+    "ShutDownDisabled": {
+      "title": "Shut down disabled",
+      "description": "If true, the system disables the Shut Down button.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1010
+    },
+    "ShutDownDisabledWhileLoggedIn": {
+      "title": "Shut down disabled while logged in",
+      "description": "If true, the system disables the Shut Down menu item when the user is logged in.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1016
+    },
+    "SleepDisabled": {
+      "title": "Sleep disabled",
+      "description": "If true, the system disables the Sleep button.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1013
+    },
+    "showInputMenu": {
+      "title": "Show input menu",
+      "description": "If true, the system shows the Input Menu in the Login Window.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1021
+    }
+  }
+}

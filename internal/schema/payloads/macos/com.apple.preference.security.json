@@ -1,0 +1,42 @@
+{
+  "title": "Security & Privacy: General",
+  "description": "Stops users changing the password and controls the lock message.",
+  "__id": "com.apple.preference.security",
+  "__payloadtype": "com.apple.preference.security",
+  "__platform": "macos",
+  "__category": "Security",
+  "__order": 20,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Security & Privacy → General",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "dontAllowFireWallUI": {
+      "title": "Dont allow fire wall UI",
+      "description": "If true, disables user changes to the firewall settings.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1002
+    },
+    "dontAllowLockMessageUI": {
+      "title": "Dont allow lock message UI",
+      "description": "If true, disables user changes to the lock message.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1001
+    },
+    "dontAllowPasswordResetUI": {
+      "title": "Dont allow password reset UI",
+      "description": "If true, disables user changes to the password.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1000
+    }
+  }
+}

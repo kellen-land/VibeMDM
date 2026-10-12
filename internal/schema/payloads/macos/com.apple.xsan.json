@@ -1,0 +1,70 @@
+{
+  "title": "Xsan",
+  "description": "Joins the Mac to an Xsan volume.",
+  "__id": "com.apple.xsan",
+  "__payloadtype": "com.apple.xsan",
+  "__platform": "macos",
+  "__category": "System",
+  "__order": 90,
+  "__multiple": false,
+  "__channels": [
+    "device"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "sanName",
+    "sharedSecret"
+  ],
+  "properties": {
+    "fsnameservers": {
+      "title": "File system name servers",
+      "description": "An array of storage area network (SAN) File System Name Server coordinators. The list should contain the same addresses in the same order as the metadata controller (MDC) /Library/Preferences/Xsan/fsnameservers file.\n\nThis key is required for StorNext SANs.",
+      "type": "array",
+      "property_order": 1002,
+      "items": {
+        "title": "Fsnameserver",
+        "type": "string"
+      }
+    },
+    "sanAuthMethod": {
+      "title": "San auth method",
+      "description": "The authentication method for the SAN. This key is required for all Xsan SANs. It's optional for StorNext SANs but should be set if the StorNext SAN uses an auth_secret file.\n\nThe SAN accepts only one value: auth_secret",
+      "type": "string",
+      "enum": [
+        "auth_secret"
+      ],
+      "property_order": 1003,
+      "options": {
+        "enum_titles": [
+          "Auth secret"
+        ]
+      }
+    },
+    "sanConfigURLs": {
+      "title": "San config UR ls",
+      "description": "An array of LDAP URLs where Xsan systems can obtain SAN configuration updates. There should be one entry for each Xsan MDC.\n\nThis key is required for all Xsan SANs.\n\nExample URL: ldaps://mdc1.example.com:389.",
+      "type": "array",
+      "property_order": 1001,
+      "items": {
+        "title": "San config UR l",
+        "type": "string"
+      }
+    },
+    "sanName": {
+      "title": "San name",
+      "description": "The name of the SAN. This key is required for all Xsan SANs. The name must exactly match the name of the SAN defined in the metadata server.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "sharedSecret": {
+      "title": "Shared secret",
+      "description": "The shared secret used for Xsan network authentication. This key is required when the sanAuthMethod key is present. The value should equal the content of the MDC's /Library/Preferences/Xsan/.auth_secret file.",
+      "type": "string",
+      "property_order": 1004,
+      "x-secret": true
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "title": "Screen Saver (user)",
+  "description": "Sets the user's screen saver and when it starts.",
+  "__id": "com.apple.screensaver.user",
+  "__payloadtype": "com.apple.screensaver.user",
+  "__platform": "macos",
+  "__category": "Users and Login",
+  "__order": 40,
+  "__multiple": false,
+  "__channels": [
+    "user"
+  ],
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "moduleName"
+  ],
+  "properties": {
+    "idleTime": {
+      "title": "Idle time",
+      "description": "The number of seconds of inactivity before the screen saver activates (0 = Never activate).",
+      "type": "integer",
+      "property_order": 1002
+    },
+    "moduleName": {
+      "title": "Module name",
+      "description": "The name of the screen saver module.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "modulePath": {
+      "title": "Module path",
+      "description": "A full path to the screen saver module to use.",
+      "type": "string",
+      "property_order": 1001
+    }
+  }
+}

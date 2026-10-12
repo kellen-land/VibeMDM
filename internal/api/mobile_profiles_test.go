@@ -3,26 +3,31 @@ package api
 import (
 	"net/http/httptest"
 	"testing"
+
+	"github.com/vibemdm/vibemdm/internal/model"
+	"github.com/vibemdm/vibemdm/internal/schema"
 )
 
-func TestRedactMobileValues(t *testing.T) {
-	v := map[string]any{"SSID_STR": "School", "Password": "pw", "IKEv2": map[string]any{"SharedSecret": "s", "RemoteAddress": "vpn.example"},
-		"List": []any{map[string]any{"AuthPassword": "x"}}}
-	out := redactValues(v, false).(map[string]any)
+func TestRedactPayloads(t *testing.T) {
+	v := map[string]any{"SSID_STR": "School", "Password": "pw", "EAPClientConfiguration": map[string]any{"UserPassword": "s", "UserName": "u"}}
+	ps := []model.PayloadValues{{Type: "com.apple.wifi.managed", Values: v},
+		{Type: "com.apple.security.pkcs12", Values: map[string]any{"PayloadContent": "MIIF…", "PayloadCertificateFileName": "a.p12"}},
+		{Type: "com.apple.vpn.managed", Values: map[string]any{"IKEv2": map[string]any{"SharedSecret": "s", "RemoteAddress": "vpn.example"}}}}
+	redactPayloads(schema.PlatformIOS, ps)
+	out := ps[0].Values
 	if out["Password"] != "[redacted]" || out["SSID_STR"] != "School" {
 		t.Fatalf("top level: %v", out)
 	}
-	if ik := out["IKEv2"].(map[string]any); ik["SharedSecret"] != "[redacted]" || ik["RemoteAddress"] != "vpn.example" {
-		t.Fatalf("nested: %v", ik)
+	if e := out["EAPClientConfiguration"].(map[string]any); e["UserPassword"] != "[redacted]" || e["UserName"] != "u" {
+		t.Fatalf("nested: %v", e)
 	}
-	if l := out["List"].([]any)[0].(map[string]any); l["AuthPassword"] != "[redacted]" {
-		t.Fatalf("in arrays: %v", l)
+	if ik := ps[2].Values["IKEv2"].(map[string]any); ik["SharedSecret"] != "[redacted]" || ik["RemoteAddress"] != "vpn.example" {
+		t.Fatalf("vpn: %v", ik)
 	}
 	if v["Password"] != "pw" {
 		t.Fatal("the original values must not be modified")
 	}
-	id := redactValues(map[string]any{"PayloadContent": "MIIF…", "PayloadCertificateFileName": "a.p12"}, true).(map[string]any)
-	if id["PayloadContent"] != "[redacted]" || id["PayloadCertificateFileName"] != "a.p12" {
+	if id := ps[1].Values; id["PayloadContent"] != "[redacted]" || id["PayloadCertificateFileName"] != "a.p12" {
 		t.Fatalf("identity: %v", id)
 	}
 }

@@ -1,0 +1,57 @@
+{
+  "title": "Subscribed Calendars",
+  "description": "Subscribes to a read-only calendar.",
+  "__id": "com.apple.subscribedcalendar.account",
+  "__payloadtype": "com.apple.subscribedcalendar.account",
+  "__platform": "ios",
+  "__category": "Accounts",
+  "__order": 70,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "SubCalAccountHostName"
+  ],
+  "properties": {
+    "SubCalAccountDescription": {
+      "title": "Description",
+      "description": "The description of the account.",
+      "type": "string",
+      "property_order": 1000
+    },
+    "SubCalAccountHostName": {
+      "title": "Sub cal account host name",
+      "description": "The server's address.",
+      "type": "string",
+      "property_order": 1001
+    },
+    "SubCalAccountPassword": {
+      "title": "Password",
+      "description": "The user's password.",
+      "type": "string",
+      "property_order": 1003,
+      "x-secret": true
+    },
+    "SubCalAccountUseSSL": {
+      "title": "Use SSL",
+      "description": "If true, the system enables SSL.",
+      "type": "boolean",
+      "default": false,
+      "property_order": 1004
+    },
+    "SubCalAccountUsername": {
+      "title": "Username",
+      "description": "The user's user name.",
+      "type": "string",
+      "property_order": 1002
+    },
+    "VPNUUID": {
+      "title": "VPNUUID",
+      "description": "The VPNUUID of the per-app VPN the account uses for network communication.",
+      "type": "string",
+      "property_order": 1005
+    }
+  }
+}

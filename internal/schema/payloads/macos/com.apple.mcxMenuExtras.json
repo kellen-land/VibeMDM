@@ -1,0 +1,191 @@
+{
+  "title": "Restrictions: Menu bar items",
+  "description": "Allows or hides menu bar extras.",
+  "__id": "com.apple.mcxMenuExtras",
+  "__payloadtype": "com.apple.mcxMenuExtras",
+  "__platform": "macos",
+  "__category": "Restrictions",
+  "__order": 50,
+  "__multiple": false,
+  "__channels": [
+    "device",
+    "user"
+  ],
+  "__jamf": "Restrictions → Functionality",
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "properties": {
+    "AirPort.menu": {
+      "title": "Air port menu",
+      "description": "If true, enables the AirPort menu extra.",
+      "type": "boolean",
+      "property_order": 1002
+    },
+    "Battery.menu": {
+      "title": "Battery menu",
+      "description": "If true, enables the Battery menu extra.",
+      "type": "boolean",
+      "property_order": 1003
+    },
+    "Bluetooth.menu": {
+      "title": "Bluetooth menu",
+      "description": "If true, enables the Bluetooth menu extra.",
+      "type": "boolean",
+      "property_order": 1004
+    },
+    "CPU.menu": {
+      "title": "CPU menu",
+      "description": "If true, enables the CPU menu extra.",
+      "type": "boolean",
+      "property_order": 1005
+    },
+    "Clock.menu": {
+      "title": "Clock menu",
+      "description": "If true, enables the Clock menu extra.",
+      "type": "boolean",
+      "property_order": 1006
+    },
+    "Displays.menu": {
+      "title": "Displays menu",
+      "description": "If true, enables the Displays menu extra.",
+      "type": "boolean",
+      "property_order": 1007
+    },
+    "Eject.menu": {
+      "title": "Eject menu",
+      "description": "If true, enables the Eject menu extra.",
+      "type": "boolean",
+      "property_order": 1008
+    },
+    "Fax.menu": {
+      "title": "Fax menu",
+      "description": "If true, enables the Fax menu extra.",
+      "type": "boolean",
+      "property_order": 1009
+    },
+    "HomeSync.menu": {
+      "title": "Home sync menu",
+      "description": "If true, enables the HomeSync menu extra.",
+      "type": "boolean",
+      "property_order": 1010
+    },
+    "Ink.menu": {
+      "title": "Ink menu",
+      "description": "If true, enables the Ink menu extra.",
+      "type": "boolean",
+      "property_order": 1012
+    },
+    "IrDA.menu": {
+      "title": "Ir DA menu",
+      "description": "If true, enables the IrDA menu extra.",
+      "type": "boolean",
+      "property_order": 1013
+    },
+    "PCCard.menu": {
+      "title": "PC card menu",
+      "description": "If true, enables the PCCard menu extra.",
+      "type": "boolean",
+      "property_order": 1014
+    },
+    "PPP.menu": {
+      "title": "PPP menu",
+      "description": "If true, enables the PPP menu extra.",
+      "type": "boolean",
+      "property_order": 1015
+    },
+    "PPPoE.menu": {
+      "title": "PP po e menu",
+      "description": "If true, enables the PPPoE menu extra.",
+      "type": "boolean",
+      "property_order": 1016
+    },
+    "RemoteDesktop.menu": {
+      "title": "Remote desktop menu",
+      "description": "If true, enables the Remote Desktop menu extra.",
+      "type": "boolean",
+      "property_order": 1017
+    },
+    "Script Menu.menu": {
+      "title": "Script menu menu",
+      "description": "If true, enables the Script menu extra.",
+      "type": "boolean",
+      "property_order": 1018
+    },
+    "Spaces.menu": {
+      "title": "Spaces menu",
+      "description": "If true, enables the Spaces menu extra.",
+      "type": "boolean",
+      "property_order": 1019
+    },
+    "Sync.menu": {
+      "title": "Sync menu",
+      "description": "If true, enables the Sync menu extra.",
+      "type": "boolean",
+      "property_order": 1020
+    },
+    "TextInput.menu": {
+      "title": "Text input menu",
+      "description": "If true, enables the Text Input menu extra.",
+      "type": "boolean",
+      "property_order": 1021
+    },
+    "TimeMachine.menu": {
+      "title": "Time machine menu",
+      "description": "If true, enables the TimeMachine menu extra.",
+      "type": "boolean",
+      "property_order": 1022
+    },
+    "UniversalAccess.menu": {
+      "title": "Universal access menu",
+      "description": "If true, enables the Universal Access menu extra.",
+      "type": "boolean",
+      "property_order": 1023
+    },
+    "User.menu": {
+      "title": "User menu",
+      "description": "If true, enables the User menu extra.",
+      "type": "boolean",
+      "property_order": 1024
+    },
+    "VPN.menu": {
+      "title": "VPN menu",
+      "description": "If true, enables the VPN menu extra.",
+      "type": "boolean",
+      "property_order": 1025
+    },
+    "Volume.menu": {
+      "title": "Volume menu",
+      "description": "If true, enables the Volume menu extra.",
+      "type": "boolean",
+      "property_order": 1026
+    },
+    "WWAN.menu": {
+      "title": "WWAN menu",
+      "description": "If true, enables the WWAN menu extra.",
+      "type": "boolean",
+      "property_order": 1027
+    },
+    "delaySeconds": {
+      "title": "Delay seconds",
+      "description": "The number of seconds to delay after login before adding or removing menu extras. If the delay is too short, the menu extras don't appear, or disappear from the menu bar.",
+      "type": "number",
+      "default": 2.5,
+      "property_order": 1000
+    },
+    "iChat.menu": {
+      "title": "I chat menu",
+      "description": "If true, enables the iChat menu extra.",
+      "type": "boolean",
+      "property_order": 1011
+    },
+    "maxWaitSeconds": {
+      "title": "Max wait seconds",
+      "description": "The maximum wait, in seconds, for all menu extras to be added or removed.",
+      "type": "number",
+      "default": 20,
+      "property_order": 1001
+    }
+  }
+}

@@ -496,6 +496,8 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("GET /api/v1/policy-logs", h.allPolicyLogs)
 	r("GET /api/v1/policy-logs/{id}", h.getPolicyLog)
 
+	r("GET /api/v1/profile-payloads", h.listPayloadEditors)
+	r("POST /api/v1/profiles/preview", h.previewProfile)
 	r("GET /api/v1/profiles", h.listProfiles)
 	r("POST /api/v1/profiles", h.createProfile)
 	r("GET /api/v1/profiles/{id}", h.getProfile)

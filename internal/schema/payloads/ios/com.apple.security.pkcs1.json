@@ -1,0 +1,32 @@
+{
+  "title": "Certificate",
+  "description": "Installs a CA or server certificate (DER or PEM) so the device trusts servers that use it.",
+  "__id": "com.apple.security.pkcs1",
+  "__payloadtype": "com.apple.security.pkcs1",
+  "__platform": "ios",
+  "__category": "Certificates",
+  "__order": 10,
+  "__multiple": true,
+  "options": {
+    "remove_empty_properties": true
+  },
+  "type": "object",
+  "required": [
+    "PayloadContent"
+  ],
+  "properties": {
+    "PayloadCertificateFileName": {
+      "title": "File name",
+      "description": "Name of the certificate file.",
+      "type": "string",
+      "property_order": 2
+    },
+    "PayloadContent": {
+      "title": "Certificate",
+      "description": "DER or PEM file (.cer, .crt, .pem).",
+      "type": "string",
+      "format": "data",
+      "property_order": 3
+    }
+  }
+}
