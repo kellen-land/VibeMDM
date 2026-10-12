@@ -77,7 +77,7 @@ export function ProfilesPage() {
               </Link>
             )}
             {isAdmin && (
-              <Link to="/profiles/new">
+              <Link to="/profiles/new" data-shortcut="new">
                 <Button variant="primary" icon={<Plus />}>
                   New profile
                 </Button>
@@ -100,7 +100,7 @@ export function ProfilesPage() {
           emptyDescription={q ? undefined : 'Upload a .mobileconfig to manage settings on your computers.'}
           emptyAction={
             isAdmin && !q ? (
-              <Link to="/profiles/new">
+              <Link to="/profiles/new" data-shortcut="new">
                 <Button variant="primary" size="sm" icon={<Plus />}>
                   New profile
                 </Button>

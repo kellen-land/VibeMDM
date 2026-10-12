@@ -220,4 +220,55 @@ The server runs a one-minute housekeeping ticker. Approximate schedules:
 | **UDID** | Device identifier. On Macs it is the hardware UUID |
 | **XCreds** | Twocanoes' open-source login window that signs in with a cloud identity provider (OIDC) |
 
+## 1.7 Working in the console
+
+Every object (policies, configuration profiles, scripts, groups, searches, extension attributes, Mac Apps, baselines,
+update plans, …) is created, edited and deleted the same way, as in Jamf Pro:
+
+- **Opening an object shows it read-only.** The bar at the bottom right holds **History** (who changed it, from the
+  audit log; administrators only), **Clone**, **Delete**, object-specific actions such as **Run now**, **Done** (back
+  to the list) and **Edit**.
+- **Edit** unlocks the whole object, every tab included. The bar then shows **Cancel** and **Save**. There is one
+  **Save** for the whole object; it keeps you on the object and returns to view mode. **Cancel** puts back the saved
+  values (it asks first when you changed something).
+- **New** on a list page opens an empty object in edit mode; **Save** creates it, **Cancel** returns to the list.
+- **Delete** asks for a second click (**Delete** again) in the same bar.
+- **Clone** opens a new, unsaved copy named "Copy of …"; nothing exists until you save it.
+- Leaving a page (or closing the tab) with unsaved changes asks whether to discard them.
+- Settings pages work the same way (Edit, then one Save for the page). A device record is edited per section, as in
+  Jamf: **Edit** on the *User and Location* or *Extension Attributes* card, then **Save** or **Cancel** on that card.
+- Small forms in dialogs (users, webhooks, network segments, …) keep **Cancel** and **Save** at the bottom of the
+  dialog.
+
+Viewers see objects read-only and get no Edit, Delete or Clone.
+
+### Keyboard shortcuts
+
+The console uses Jamf Pro's shortcuts. The modifier is **Control** on a Mac (so Command-C, -V and -S keep their usual
+meaning; Command-S also saves) and **Alt** on Windows and Linux. Press **?** for the list, or choose
+**Keyboard shortcuts** in the account menu.
+
+| Shortcut (Mac / Windows) | Action |
+| --- | --- |
+| ⌃N / Alt+N | New (on a list page) |
+| ⌃E / Alt+E | Edit |
+| ⌃S / Alt+S (and ⌘S on a Mac) | Save |
+| ⌃C / Alt+C | Cancel |
+| ⌃D / Alt+D | Delete (press again to confirm) |
+| ⌃⇧N / Alt+Shift+N | Clone |
+| ⌃H / Alt+H | History |
+| ⌃L / Alt+L | Logs (an object's Logs tab) |
+| ⌃V / Alt+V | View (a group's members, a search's results) |
+| ⌃B / Alt+B | Back (Done in view mode) |
+| ⌃1 / Alt+1 | Dashboard |
+| ⌃2 / Alt+2 | Computers |
+| ⌃3 / Alt+3 | Mobile Devices |
+| ⌃5 / Alt+5 | Settings |
+| ⌃9 / Alt+9 | Health (Jamf's Notifications) |
+| ⌃⇧L / Alt+Shift+L | Server logs |
+
+In a dialog the shortcuts act on the dialog (⌃S saves it, Esc closes it). While the cursor is in a text field only
+Save works, so the field's own Control-key editing (⌃E end of line, ⌃D delete, … on a Mac) is left alone. Jamf's ⌃4
+(Users) has no counterpart: VibeMDM keeps no separate user records.
+
 Next: [Chapter 2 — Installation](02-installation.md).

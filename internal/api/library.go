@@ -237,6 +237,7 @@ func (h *Handler) updatePackage(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "package")
 		return
 	}
+	h.st.Audit(r.Context(), actor(r), "package.update", "package", out.ID, map[string]any{"name": out.Name})
 	writeJSON(w, 200, out)
 }
 
@@ -316,6 +317,7 @@ func (h *Handler) updateEA(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "extension attribute")
 		return
 	}
+	h.st.Audit(r.Context(), actor(r), "ea.update", "extension_attribute", out.ID, map[string]any{"name": out.Name})
 	writeJSON(w, 200, out)
 }
 
@@ -324,6 +326,7 @@ func (h *Handler) deleteEA(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "extension attribute")
 		return
 	}
+	h.st.Audit(r.Context(), actor(r), "ea.delete", "extension_attribute", r.PathValue("id"), nil)
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 

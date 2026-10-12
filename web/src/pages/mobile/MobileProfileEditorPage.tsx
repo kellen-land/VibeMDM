@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Download, RefreshCw, Save, Trash2, Upload } from 'lucide-react'
+import { Download, RefreshCw, Upload } from 'lucide-react'
 import { qk, useInvalidate, useMobilePayloads, useMobileProfile, useMobileProfileDeployments } from '../../api/queries'
 import { api, ApiError, errorMessage, saveText } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
@@ -22,7 +22,6 @@ import { Input, Textarea } from '../../components/ui/Input'
 import { Alert } from '../../components/ui/Alert'
 import { Tabs } from '../../components/ui/Tabs'
 import { Table } from '../../components/ui/Table'
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { RelativeTime } from '../../components/ui/RelativeTime'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/Toast'
@@ -30,12 +29,21 @@ import { CodeEditor } from '../../components/CodeEditor'
 import { PayloadEditor, VariablesHint, type PayloadSelection } from '../../components/profiles/PayloadEditor'
 import { pruneValues } from '../../components/schema/schema'
 import { MobileScopeEditor } from '../../components/pickers/MobileScopeEditor'
+import { useCloneSource, useEditMode } from '../../components/editor/useEditMode'
+import { ObjectBar } from '../../components/editor/ObjectBar'
+import { clonePayloads, type ProfileClone } from '../profiles/PayloadProfileEditorPage'
 
 type Tab = 'options' | 'scope' | 'deployments'
 
 const crumbs = [{ label: 'Mobile Devices', to: '/mobile-devices' }, { label: 'Configuration Profiles', to: '/mobile-profiles' }]
 
 export function MobileProfileEditorPage() {
+  const { id } = useParams()
+  // Keyed so going to another profile (or a clone) starts with fresh state.
+  return <MobileProfileEditor key={id ?? 'new'} />
+}
+
+function MobileProfileEditor() {
   const { id } = useParams()
   const isNew = !id || id === 'new'
   const [params] = useSearchParams()
@@ -45,25 +53,24 @@ export function MobileProfileEditorPage() {
   const invalidate = useInvalidate()
   const profile = useMobileProfile(isNew ? undefined : id)
   const catalog = useMobilePayloads()
-  const ro = !isAdmin
+  const clone = useCloneSource<ProfileClone>()
+  const fromClone = isNew ? clone : undefined
 
   const [tab, setTab] = useState<Tab>('options')
   const [selected, setSelected] = useState<PayloadSelection>('general')
-  const [name, setName] = useState('')
-  const [category, setCategory] = useState('')
-  const [description, setDescription] = useState('')
+  const [name, setName] = useState(fromClone?.name ?? '')
+  const [category, setCategory] = useState(fromClone?.category ?? '')
+  const [description, setDescription] = useState(fromClone?.description ?? '')
   const [scope, setScope] = useState<MobileScope>(emptyMobileScope())
-  const [payloads, setPayloads] = useState<MobilePayloadValues[]>([])
+  const [payloads, setPayloads] = useState<MobilePayloadValues[]>(fromClone?.payloads ?? [])
   /** Uploaded-profile mode: the XML is edited directly instead of payload editors. */
-  const [uploaded, setUploaded] = useState(isNew && params.get('upload') === '1')
+  const [uploaded, setUploaded] = useState(isNew && !fromClone && params.get('upload') === '1')
   const [xml, setXml] = useState('')
   const [errors, setErrors] = useState<MobilePayloadErrors[]>([])
   const [saving, setSaving] = useState(false)
-  const [del, setDel] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const seed = profile.data ? `${profile.data.id}|${profile.data.updated_at}` : ''
-  useEffect(() => {
+  const load = useCallback(() => {
     const p = profile.data
     if (!p) return
     setName(p.name)
@@ -73,14 +80,21 @@ export function MobileProfileEditorPage() {
     setPayloads(p.payloads ?? [])
     setUploaded(p.payloads === null)
     setXml(p.payload ?? '')
+    setErrors([])
+  }, [profile.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: { name, category, description, scope, payloads, xml }, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed])
+  }, [load])
+  const ro = ed.readOnly
 
   const save = async () => {
     if (!uploaded && !name.trim()) {
       setSelected('general')
+      setTab('options')
       toast.error('Enter a profile name')
-      return
+      return false
     }
     setSaving(true)
     setErrors([])
@@ -92,11 +106,16 @@ export function MobileProfileEditorPage() {
       await invalidate(qk.mobileProfiles, qk.mobileProfile(out.id), qk.mobileProfileDeployments(out.id))
       toast.success(isNew ? 'Profile created' : 'Profile saved', 'Devices in scope receive it at their next check-in.')
       if (isNew) navigate(`/mobile-profiles/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       const pe = e instanceof ApiError ? ((e.body as { payload_errors?: MobilePayloadErrors[] } | undefined)?.payload_errors ?? []) : []
       setErrors(pe)
-      if (pe.length) setSelected(pe[0].index)
+      if (pe.length) {
+        setTab('options')
+        setSelected(pe[0].index)
+      }
       toast.error('Save failed', pe.length ? 'Some values are invalid; they are marked in the form.' : errorMessage(e))
+      return false
     } finally {
       setSaving(false)
     }
@@ -129,20 +148,6 @@ export function MobileProfileEditorPage() {
         crumbs={[...crumbs, { label: title }]}
         title={title}
         meta={!isNew && <span className="font-mono text-xs text-ink-faint">{profile.data!.identifier}</span>}
-        actions={
-          isAdmin && (
-            <>
-              {!isNew && (
-                <Button variant="ghost" icon={<Trash2 />} onClick={() => setDel(true)}>
-                  Delete
-                </Button>
-              )}
-              <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                {isNew ? 'Create profile' : 'Save'}
-              </Button>
-            </>
-          )
-        }
       />
       <Tabs
         className="mb-5"
@@ -224,7 +229,22 @@ export function MobileProfileEditorPage() {
 
       {tab === 'deployments' && !isNew && id && <Deployments profileId={id} />}
 
-      <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={doDelete} destructive title={`Delete "${name}"?`} description="The profile is removed from every device that has it, then deleted." confirmLabel="Delete profile" />
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/mobile-profiles"
+        noun="profile"
+        name={profile.data?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="It is removed from every device that has it, then deleted."
+        onClone={
+          // Uploaded XML can't be cloned; payload-built profiles can.
+          uploaded ? undefined : () => navigate('/mobile-profiles/new', { state: { clone: { name: `Copy of ${name}`, category, description, payloads: clonePayloads(payloads) } satisfies ProfileClone } })
+        }
+        historyId={id}
+      />
     </>
   )
 }

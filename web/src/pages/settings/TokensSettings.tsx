@@ -151,10 +151,10 @@ function CreateTokenDialog({ open, onClose, onCreated }: { open: boolean; onClos
           </Field>
         </FormGrid>
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} data-shortcut="cancel">
             Cancel
           </Button>
-          <Button type="submit" variant="primary" loading={busy}>
+          <Button type="submit" variant="primary" loading={busy} data-shortcut="save">
             Create token
           </Button>
         </div>

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Bluetooth, Eraser, KeyRound, Lock, MapPin, Pencil, Power, RefreshCw, RotateCcw, Siren, Trash2, Volume2 } from 'lucide-react'
+import { Bluetooth, Eraser, KeyRound, Lock, MapPin, Pencil, Power, RefreshCw, RotateCcw, Siren, Volume2 } from 'lucide-react'
 import { qk, useInvalidate } from '../../api/queries'
 import { api, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
@@ -32,7 +32,7 @@ function Row({ icon, title, description, children, needsSupervision, supervised 
 }
 
 /** Remote commands for an iPhone or iPad, one row each. */
-export function MobileActions({ d, onDelete }: { d: MobileDeviceDetail; onDelete: () => void }) {
+export function MobileActions({ d }: { d: MobileDeviceDetail }) {
   const { isAdmin } = useAuth()
   const toast = useToast()
   const invalidate = useInvalidate()
@@ -174,11 +174,6 @@ export function MobileActions({ d, onDelete }: { d: MobileDeviceDetail; onDelete
                 </Button>
               </Row>
             )}
-            <Row icon={<Trash2 />} title="Delete record" description="Removes the record from VibeMDM only; the device stays enrolled." supervised={supervised}>
-              <Button size="sm" variant="ghost" onClick={onDelete}>
-                Delete
-              </Button>
-            </Row>
           </div>
         </details>
       </CardBody>
@@ -235,12 +230,13 @@ export function MobileActions({ d, onDelete }: { d: MobileDeviceDetail; onDelete
         title="Device settings"
         footer={
           <>
-            <Button variant="ghost" onClick={close}>
+            <Button variant="ghost" onClick={close} data-shortcut="cancel">
               Cancel
             </Button>
             <Button
               variant="primary"
               loading={busy}
+              data-shortcut="save"
               onClick={() =>
                 send({ action: 'settings', settings: [setting.item === 'TimeZone' ? { item: 'TimeZone', time_zone: setting.time_zone } : { item: setting.item, enabled: setting.enabled }] }, 'Setting sent')
               }

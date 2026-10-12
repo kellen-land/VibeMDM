@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight, ExternalLink, FileKey2, Globe, Save, ShieldCheck, X } from 'lucide-react'
+import { ChevronRight, ExternalLink, FileKey2, Globe, ShieldCheck, X } from 'lucide-react'
 import { qk, useCustomSchema, useInvalidate, useXCreds } from '../../api/queries'
 import { api, errorMessage, fieldErrors } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import { emptyScope, normalizeScope, type SchemaFieldError, type SchemaValues, type Scope, type XCredsSaveRequest, type XCredsView } from '../../api/types'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { Card, CardBody, CardFooter, CardHeader } from '../../components/ui/Card'
+import { Card, CardBody, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Badge, StatusBadge } from '../../components/ui/Badge'
 import { Checkbox, Toggle } from '../../components/ui/Checkbox'
@@ -20,6 +20,8 @@ import { SchemaForm } from '../../components/schema/SchemaForm'
 import { ProfileXmlPanel, useLivePreview } from '../../components/schema/ProfileXmlPanel'
 import { errorsAt, fileToBase64, pruneValues } from '../../components/schema/schema'
 import { cn } from '../../lib/cn'
+import { useEditMode } from '../../components/editor/useEditMode'
+import { ObjectBar } from '../../components/editor/ObjectBar'
 
 const XCREDS_SCHEMA = 'builtin:com.twocanoes.xcreds'
 
@@ -82,18 +84,23 @@ export function XCredsPage() {
   const [saveErrors, setSaveErrors] = useState<SchemaFieldError[]>([])
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const seeded = useRef(false)
-  const ro = !isAdmin
 
-  // The GET polls for app status; seed the form once so edits aren't overwritten.
-  useEffect(() => {
-    if (!q.data || seeded.current) return
-    seeded.current = true
+  // The GET polls for app status; it only refreshes the form while viewing, so edits aren't overwritten.
+  const load = useCallback(() => {
+    if (!q.data) return
     setF(toForm(q.data))
     const d = detectProvider(String(q.data.values?.discoveryURL ?? ''))
     setProvider(d.provider)
     setDetail(d.detail)
+    setSaveError(null)
+    setSaveErrors([])
   }, [q.data])
+  const ed = useEditMode({ isNew: false, canEdit: isAdmin, snapshot: f, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
+  const ro = ed.readOnly
 
   const previewValues = f.license ? { ...f.values, LicenseFile: f.license } : f.values
   const preview = useLivePreview(XCREDS_SCHEMA, 'XCreds cloud login', previewValues, !!schema.data && advanced)
@@ -133,12 +140,14 @@ export function XCredsPage() {
       setSaveErrors([])
       await invalidate(qk.xcreds, qk.profiles, qk.apps)
       toast.success('XCreds settings saved', out.enabled ? 'Macs in scope get the settings profile and the app at their next check-in.' : 'XCreds is off; its profile is removed from every Mac.')
+      return true
     } catch (e) {
       const fe = fieldErrors(e)
       setSaveErrors(fe)
       setSaveError(errorMessage(e))
       if (fe.some((x) => !['discoveryURL', 'clientID', 'clientSecret'].includes(x.path))) setAdvanced(true)
       toast.error('Save failed', errorMessage(e))
+      return false
     } finally {
       setSaving(false)
     }
@@ -147,11 +156,6 @@ export function XCredsPage() {
   if (q.isPending) return <LoadingBlock />
   if (q.error || !q.data) return <Alert tone="critical">{q.error ? errorMessage(q.error) : 'XCreds settings unavailable'}</Alert>
   const v = q.data
-  const saveButton = isAdmin ? (
-    <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-      Save
-    </Button>
-  ) : null
   const fieldErr = (k: string) => errorsAt(errors, k)[0]
 
   return (
@@ -173,7 +177,6 @@ export function XCredsPage() {
             )}
           </>
         }
-        actions={saveButton}
       />
       <div className="flex flex-col gap-6">
         <Alert tone="warning" title="Test on a lab Mac first — XCreds replaces the login window.">
@@ -290,7 +293,6 @@ export function XCredsPage() {
             </div>
             <AppStatus v={v} />
           </CardBody>
-          {isAdmin && <CardFooter>{saveButton}</CardFooter>}
         </Card>
 
         <Card>
@@ -317,6 +319,7 @@ export function XCredsPage() {
 
         {advanced && schema.data && <ProfileXmlPanel preview={preview} />}
       </div>
+      <ObjectBar ed={ed} isNew={false} listPath="/identity/xcreds" noun="XCreds settings" saving={saving} onSave={save} historyId="xcreds" noDone />
     </>
   )
 }

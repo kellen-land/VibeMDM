@@ -125,12 +125,14 @@ export function App() {
         <Route path="/mobile-devices/:id" element={<MobileDeviceDetailPage />} />
         <Route path="/mobile-devices/:id/:tab" element={<MobileDeviceDetailPage />} />
         <Route path="/mobile-groups" element={<MobileGroupsPage />} />
+        <Route path="/mobile-groups/new" element={<MobileGroupEditorPage />} />
         <Route path="/mobile-groups/:id" element={<MobileGroupEditorPage />} />
         <Route path="/mobile-searches" element={<MobileSearchesPage />} />
         <Route path="/mobile-enrollment" element={<MobileEnrollmentPage />} />
         <Route path="/mobile-profiles" element={<MobileProfilesPage />} />
         <Route path="/mobile-profiles/new" element={<MobileProfileEditorPage />} />
         <Route path="/mobile-profiles/:id" element={<MobileProfileEditorPage />} />
+        <Route path="/mobile-searches/new" element={<MobileSearchEditorPage />} />
         <Route path="/mobile-searches/:id" element={<MobileSearchEditorPage />} />
         <Route path="/updates" element={<SoftwareUpdatesPage />} />
         <Route path="/updates/plans/new" element={<UpdatePlanEditorPage />} />

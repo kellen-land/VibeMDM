@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Download, Play, Save, Trash2 } from 'lucide-react'
+import { Download, Play } from 'lucide-react'
 import { qk, useAdvancedSearch, useAdvancedSearchRun, useCriteriaFields, useInvalidate, useSearchFields } from '../api/queries'
 import { api, downloadFile, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -16,9 +16,10 @@ import { Table } from '../components/ui/Table'
 import { Alert } from '../components/ui/Alert'
 import { Badge } from '../components/ui/Badge'
 import { LoadingBlock } from '../components/ui/Spinner'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { RelativeTime } from '../components/ui/RelativeTime'
 import { useToast } from '../components/ui/Toast'
+import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
+import { ObjectBar } from '../components/editor/ObjectBar'
 import { CriteriaBuilder, describeCriteria } from '../components/pickers/CriteriaBuilder'
 import { defaultDisplayFields, renderComputerField } from '../lib/computerFields'
 
@@ -38,25 +39,39 @@ export function SearchEditorPage() {
   const tab = (sp.get('tab') as Tab) || 'settings'
   const setTab = (t: Tab) => setSp(t === 'settings' ? {} : { tab: t }, { replace: true })
 
-  const [name, setName] = useState('')
-  const [criteria, setCriteria] = useState<Criterion[]>([])
-  const [displayFields, setDisplayFields] = useState<string[]>(defaultDisplayFields)
+  const clone = useCloneSource<Pick<AdvancedSearch, 'name' | 'criteria' | 'display_fields'>>()
+  const [name, setName] = useState(() => (isNew && clone ? clone.name : ''))
+  const [criteria, setCriteria] = useState<Criterion[]>(() => (isNew && clone ? clone.criteria ?? [] : []))
+  const [displayFields, setDisplayFields] = useState<string[]>(() => (isNew && clone?.display_fields?.length ? clone.display_fields : defaultDisplayFields))
   const [saving, setSaving] = useState(false)
-  const [del, setDel] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (search.data) {
       setName(search.data.name)
       setCriteria(search.data.criteria ?? [])
       setDisplayFields(search.data.display_fields?.length ? search.data.display_fields : defaultDisplayFields)
     }
   }, [search.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: { name, criteria, displayFields }, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
+  // Clone onto the same route (/x/:id → /x/new keeps this page mounted): take the copy.
+  useEffect(() => {
+    if (isNew && clone) {
+      setName(clone.name)
+      setCriteria(clone.criteria ?? [])
+      setDisplayFields(clone.display_fields?.length ? clone.display_fields : defaultDisplayFields)
+    }
+  }, [isNew, clone])
 
   const save = async () => {
     if (!name.trim()) {
+      setTab('settings')
       toast.error('Name is required')
-      return
+      return false
     }
     setSaving(true)
     try {
@@ -65,8 +80,10 @@ export function SearchEditorPage() {
       await invalidate(qk.searches, qk.search(out.id), ['advanced-search', out.id])
       toast.success(isNew ? 'Search created' : 'Search saved')
       if (isNew) navigate(`/searches/${out.id}?tab=results`, { replace: true })
+      return true
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
+      return false
     } finally {
       setSaving(false)
     }
@@ -94,8 +111,7 @@ export function SearchEditorPage() {
 
   if (!isNew && search.isPending) return <LoadingBlock />
   if (!isNew && search.error) return <Alert tone="critical">{errorMessage(search.error)}</Alert>
-  const ro = !isAdmin
-  const dirty = !!search.data && (name !== search.data.name || JSON.stringify(criteria) !== JSON.stringify(search.data.criteria ?? []) || JSON.stringify(displayFields) !== JSON.stringify(search.data.display_fields?.length ? search.data.display_fields : defaultDisplayFields))
+  const ro = ed.readOnly
 
   return (
     <>
@@ -112,29 +128,8 @@ export function SearchEditorPage() {
             </>
           ) : undefined
         }
-        actions={
-          <>
-            {!isNew && (
-              <Button icon={<Download />} loading={exporting} onClick={exportCsv} title="Download the saved search results as CSV">
-                Export CSV
-              </Button>
-            )}
-            {isAdmin && (
-              <>
-                {!isNew && (
-                  <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDel(true)}>
-                    Delete
-                  </Button>
-                )}
-                <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                  {isNew ? 'Create search' : 'Save changes'}
-                </Button>
-              </>
-            )}
-          </>
-        }
       />
-      {!isNew && <Tabs className="mb-5" value={tab} onChange={setTab} items={[{ key: 'settings', label: 'Criteria & columns' }, { key: 'results', label: 'Results', icon: <Play /> }]} />}
+      {!isNew && <Tabs className="mb-5" value={tab} onChange={setTab} items={[{ key: 'settings', label: 'Criteria & columns' }, { key: 'results', label: 'Results', icon: <Play />, shortcut: 'view' }]} />}
 
       {(tab === 'settings' || isNew) && (
         <div className="flex flex-col gap-6">
@@ -201,9 +196,28 @@ export function SearchEditorPage() {
         </div>
       )}
 
-      {tab === 'results' && !isNew && id && <ResultsTab searchId={id} dirty={dirty} fallbackFields={displayFields} />}
+      {tab === 'results' && !isNew && id && <ResultsTab searchId={id} dirty={ed.dirty} fallbackFields={displayFields} />}
 
-      <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={doDelete} destructive title={`Delete "${name}"?`} description="Only the saved search is removed." confirmLabel="Delete search" />
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/searches"
+        noun="search"
+        name={search.data?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="Only the saved search is removed."
+        onClone={() => navigate('/searches/new', { state: { clone: { name: `Copy of ${name}`, criteria, display_fields: displayFields } } })}
+        historyId={id}
+        extras={
+          !isNew && (
+            <Button variant="ghost" icon={<Download />} loading={exporting} onClick={exportCsv} title="Download the saved search results as CSV">
+              Export CSV
+            </Button>
+          )
+        }
+      />
     </>
   )
 }

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Play, Save, Trash2 } from 'lucide-react'
+import { Play } from 'lucide-react'
 import { qk, useInvalidate, useScript } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -12,12 +12,13 @@ import { Field, FormGrid } from '../components/ui/Field'
 import { Input, Select, Textarea } from '../components/ui/Input'
 import { Alert } from '../components/ui/Alert'
 import { LoadingBlock } from '../components/ui/Spinner'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Modal } from '../components/ui/Modal'
 import { RelativeTime } from '../components/ui/RelativeTime'
 import { useToast } from '../components/ui/Toast'
 import { CodeEditor } from '../components/CodeEditor'
 import { TargetPicker, emptyTargets, type Targets } from '../components/pickers/TargetPicker'
+import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
+import { ObjectBar } from '../components/editor/ObjectBar'
 
 const defaultScript = `#!/bin/bash
 # $1 = mount point, $2 = computer name, $3 = username
@@ -35,20 +36,25 @@ export function ScriptEditorPage() {
   const toast = useToast()
   const invalidate = useInvalidate()
   const script = useScript(isNew ? undefined : id)
+  const clone = useCloneSource<Script>()
+  const init = isNew ? clone : undefined
 
-  const [name, setName] = useState('')
-  const [category, setCategory] = useState('')
-  const [info, setInfo] = useState('')
-  const [notes, setNotes] = useState('')
-  const [priority, setPriority] = useState<ScriptPriority>('after')
-  const [labels, setLabels] = useState<string[]>(Array(8).fill(''))
-  const [contents, setContents] = useState(defaultScript)
-  const [osReq, setOsReq] = useState('')
+  const [name, setName] = useState(init?.name ?? '')
+  const [category, setCategory] = useState(init?.category ?? '')
+  const [info, setInfo] = useState(init?.info ?? '')
+  const [notes, setNotes] = useState(init?.notes ?? '')
+  const [priority, setPriority] = useState<ScriptPriority>(init?.priority ?? 'after')
+  const [labels, setLabels] = useState<string[]>(() => {
+    const l = [...(init?.parameter_labels ?? [])]
+    while (l.length < 8) l.push('')
+    return l.slice(0, 8)
+  })
+  const [contents, setContents] = useState(init?.contents ?? defaultScript)
+  const [osReq, setOsReq] = useState(init?.os_requirements ?? '')
   const [saving, setSaving] = useState(false)
-  const [del, setDel] = useState(false)
   const [runOpen, setRunOpen] = useState(false)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (script.data) {
       setName(script.data.name)
       setCategory(script.data.category)
@@ -62,11 +68,16 @@ export function ScriptEditorPage() {
       setOsReq(script.data.os_requirements)
     }
   }, [script.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: { name, category, info, notes, priority, labels, contents, osReq }, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
 
   const save = async () => {
     if (!name.trim()) {
       toast.error('Name is required')
-      return
+      return false
     }
     setSaving(true)
     try {
@@ -75,8 +86,10 @@ export function ScriptEditorPage() {
       await invalidate(qk.scripts, qk.script(out.id), qk.dashboard)
       toast.success(isNew ? 'Script created' : 'Script saved')
       if (isNew) navigate(`/scripts/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
+      return false
     } finally {
       setSaving(false)
     }
@@ -95,7 +108,7 @@ export function ScriptEditorPage() {
 
   if (!isNew && script.isPending) return <LoadingBlock />
   if (!isNew && script.error) return <Alert tone="critical">{errorMessage(script.error)}</Alert>
-  const ro = !isAdmin
+  const ro = ed.readOnly
 
   return (
     <>
@@ -108,25 +121,6 @@ export function ScriptEditorPage() {
               Updated <RelativeTime value={script.data.updated_at} />
             </span>
           ) : undefined
-        }
-        actions={
-          isAdmin && (
-            <>
-              {!isNew && (
-                <>
-                  <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDel(true)}>
-                    Delete
-                  </Button>
-                  <Button icon={<Play />} onClick={() => setRunOpen(true)}>
-                    Run on computers
-                  </Button>
-                </>
-              )}
-              <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                {isNew ? 'Create script' : 'Save changes'}
-              </Button>
-            </>
-          )
         }
       />
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
@@ -174,7 +168,27 @@ export function ScriptEditorPage() {
           </CardBody>
         </Card>
       </div>
-      <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={doDelete} destructive title={`Delete "${name}"?`} description="Policies that include this script will no longer run it." confirmLabel="Delete script" />
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/scripts"
+        noun="script"
+        name={script.data?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="Policies that include this script will no longer run it."
+        onClone={() => navigate('/scripts/new', { state: { clone: { ...script.data, name: `Copy of ${name}`, category, info, notes, priority, parameter_labels: labels, contents, os_requirements: osReq, id: '' } } })}
+        historyId={id}
+        extras={
+          !isNew &&
+          isAdmin && (
+            <Button variant="ghost" icon={<Play />} onClick={() => setRunOpen(true)}>
+              Run on computers
+            </Button>
+          )
+        }
+      />
       {!isNew && script.data && <RunScriptOnComputersDialog open={runOpen} onClose={() => setRunOpen(false)} script={script.data} />}
     </>
   )
@@ -211,10 +225,10 @@ export function RunScriptOnComputersDialog({ open, onClose, script }: { open: bo
       size="lg"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} data-shortcut="cancel">
             Cancel
           </Button>
-          <Button variant="primary" loading={busy} disabled={targets.computer_ids.length + targets.group_ids.length === 0} onClick={run}>
+          <Button variant="primary" loading={busy} data-shortcut="save" disabled={targets.computer_ids.length + targets.group_ids.length === 0} onClick={run}>
             Run script
           </Button>
         </>

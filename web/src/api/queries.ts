@@ -404,7 +404,7 @@ export function useAPITokens(enabled = true) {
   return useQuery({ queryKey: qk.apiTokens, queryFn: () => api.get<ListResponse<APIToken>>('/api/v1/api-tokens'), enabled })
 }
 
-export function useAudit(p: { limit?: number; offset?: number }, enabled = true) {
+export function useAudit(p: { limit?: number; offset?: number; target_id?: string }, enabled = true) {
   return useQuery({ queryKey: qk.audit(p), queryFn: () => api.get<ListResponse<AuditEntry>>('/api/v1/audit', { query: p }), enabled, placeholderData: (prev) => prev })
 }
 

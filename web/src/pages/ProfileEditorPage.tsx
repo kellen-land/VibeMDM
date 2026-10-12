@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Download, FileCode2, RefreshCw, Save, Trash2, Upload, X } from 'lucide-react'
+import { Download, FileCode2, RefreshCw, Trash2, Upload, X } from 'lucide-react'
 import { qk, useCustomSchema, useInvalidate, useProfile, useProfileDeployments } from '../api/queries'
 import { api, errorMessage, saveText } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
-import { emptyScope, normalizeScope, type ConfigProfile, type ProfileDeployment, type Scope } from '../api/types'
+import { emptyScope, normalizeScope, type ConfigProfile, type ProfileDeployment, type SchemaValues, type Scope } from '../api/types'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -25,6 +25,9 @@ import { DeploymentCounts } from './ProfilesPage'
 import { managedProfiles, schemaIdFromSource } from '../components/schema/schema'
 import { Link } from 'react-router-dom'
 import { PayloadProfileEditorPage } from './profiles/PayloadProfileEditorPage'
+import type { SchemaProfileClone } from './profiles/SchemaProfileEditorPage'
+import { useEditMode } from '../components/editor/useEditMode'
+import { ObjectBar } from '../components/editor/ObjectBar'
 
 type Tab = 'general' | 'scope' | 'deployments'
 
@@ -58,7 +61,8 @@ export function ProfileEditorPage() {
   const profile = useProfile(isNew ? undefined : id)
   if (!isNew && profile.isPending) return <LoadingBlock />
   const editor = isNew ? sp.get('upload') !== '1' : Array.isArray(profile.data?.payloads)
-  return editor ? <PayloadProfileEditorPage /> : <UploadedProfileEditorPage />
+  // Keyed so going from one profile to another (or to a clone) starts with fresh state.
+  return editor ? <PayloadProfileEditorPage key={id ?? 'new'} /> : <UploadedProfileEditorPage key={id ?? 'new'} />
 }
 
 function UploadedProfileEditorPage() {
@@ -78,11 +82,10 @@ function UploadedProfileEditorPage() {
   const [payload, setPayload] = useState('')
   const [scope, setScope] = useState<Scope>(emptyScope())
   const [saving, setSaving] = useState(false)
-  const [del, setDel] = useState(false)
   const tab = (sp.get('tab') as Tab) || 'general'
   const setTab = (t: Tab) => setSp(t === 'general' ? {} : { tab: t }, { replace: true })
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (profile.data) {
       setName(profile.data.name)
       setDescription(profile.data.description)
@@ -91,6 +94,11 @@ function UploadedProfileEditorPage() {
       setScope(normalizeScope(profile.data.scope))
     }
   }, [profile.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: { name, description, category, payload, scope }, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
 
   const schemaId = schemaIdFromSource(profile.data?.schema_source)
   const schemaInfo = useCustomSchema(schemaId)
@@ -109,8 +117,14 @@ function UploadedProfileEditorPage() {
 
   const save = async () => {
     if (isNew && !payload.trim()) {
+      setTab('general')
       toast.error('A profile payload (.mobileconfig) is required')
-      return
+      return false
+    }
+    if (payload.trim() !== '' && !payloadLooksValid) {
+      setTab('general')
+      toast.error('This does not look like a Configuration profile', 'The top-level PayloadType must be Configuration and a PayloadIdentifier is required.')
+      return false
     }
     setSaving(true)
     try {
@@ -119,8 +133,10 @@ function UploadedProfileEditorPage() {
       await invalidate(qk.profiles, qk.profile(out.id), qk.profileDeployments(out.id), qk.dashboard)
       toast.success(isNew ? 'Profile created' : 'Profile saved', 'Deployment to scoped computers has been queued.')
       if (isNew) navigate(`/profiles/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
+      return false
     } finally {
       setSaving(false)
     }
@@ -139,7 +155,7 @@ function UploadedProfileEditorPage() {
 
   if (!isNew && profile.isPending) return <LoadingBlock />
   if (!isNew && profile.error) return <Alert tone="critical">{errorMessage(profile.error)}</Alert>
-  const ro = !isAdmin
+  const ro = ed.readOnly
   const p = profile.data
   const managed = p ? managedProfiles[p.identifier] : undefined
   const fromSchema = !!p?.schema_source
@@ -161,24 +177,11 @@ function UploadedProfileEditorPage() {
           ) : undefined
         }
         actions={
-          (isAdmin || fromSchema) && (
-            <>
-              {fromSchema && p && (
-                <Link to={managed ? managed.to : `/profiles/${p.id}/schema`}>
-                  <Button icon={<FileCode2 />}>{managed ? `Open ${managed.label.split(' → ')[1]}` : isAdmin ? 'Edit with form' : 'View form'}</Button>
-                </Link>
-              )}
-              {isAdmin && !isNew && (
-                <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDel(true)}>
-                  Delete
-                </Button>
-              )}
-              {isAdmin && (
-                <Button variant="primary" icon={<Save />} loading={saving} onClick={save} disabled={!payloadLooksValid && payload.trim() !== ''}>
-                  {isNew ? 'Create profile' : 'Save changes'}
-                </Button>
-              )}
-            </>
+          fromSchema &&
+          p && (
+            <Link to={managed ? managed.to : `/profiles/${p.id}/schema`}>
+              <Button icon={<FileCode2 />}>{managed ? `Open ${managed.label.split(' → ')[1]}` : 'Open form'}</Button>
+            </Link>
           )
         }
       />
@@ -190,7 +193,7 @@ function UploadedProfileEditorPage() {
             <Alert tone="info" title={managed ? `Managed by ${managed.label}` : `Built from schema: ${schemaName}`}>
               {managed
                 ? 'This profile is generated from its own settings page. Change it there; editing the XML here would detach it from that page.'
-                : 'Use “Edit with form” to change its settings. You can still edit the XML below, but saving XML changes detaches the profile from the form.'}
+                : 'Use “Open form” to change its settings. You can still edit the XML below, but saving XML changes detaches the profile from the form.'}
             </Alert>
           )}
           <Card>
@@ -284,7 +287,27 @@ function UploadedProfileEditorPage() {
 
       {tab === 'deployments' && !isNew && id && <DeploymentsTab profileId={id} />}
 
-      <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={doDelete} destructive title={`Delete "${name}"?`} description="The profile is removed from every computer that has it installed, then deleted." confirmLabel="Delete profile" />
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/profiles"
+        noun="profile"
+        name={p?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="It is removed from every computer that has it installed, then deleted."
+        onClone={
+          // Uploaded XML can't be cloned; a profile built from a schema clones through its form.
+          fromSchema && !managed && schemaId && p
+            ? () =>
+                navigate(`/profiles/custom-settings/${encodeURIComponent(schemaId)}/new`, {
+                  state: { clone: { name: `Copy of ${p.name}`, description: p.description, category: p.category, values: (p.schema_values as SchemaValues | null) ?? {} } satisfies SchemaProfileClone },
+                })
+            : undefined
+        }
+        historyId={id}
+      />
     </>
   )
 }

@@ -37,7 +37,7 @@ export function MobileProfilesPage() {
                   Upload
                 </Button>
               </Link>
-              <Link to="/mobile-profiles/new">
+              <Link to="/mobile-profiles/new" data-shortcut="new">
                 <Button variant="primary" icon={<Plus />}>
                   New profile
                 </Button>
@@ -62,7 +62,7 @@ export function MobileProfilesPage() {
           emptyDescription={q ? undefined : 'Build one from payloads such as Wi-Fi, Restrictions or Home Screen Layout.'}
           emptyAction={
             isAdmin && !q ? (
-              <Link to="/mobile-profiles/new">
+              <Link to="/mobile-profiles/new" data-shortcut="new">
                 <Button variant="primary" size="sm" icon={<Plus />}>
                   New profile
                 </Button>

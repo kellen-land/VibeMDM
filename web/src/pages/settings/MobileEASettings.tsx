@@ -111,10 +111,10 @@ export function MobileEASettings() {
         title={draft?.id ? 'Edit attribute' : 'New attribute'}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setDraft(null)}>
+            <Button variant="ghost" onClick={() => setDraft(null)} data-shortcut="cancel">
               Cancel
             </Button>
-            <Button variant="primary" loading={saving} onClick={save} disabled={!draft?.name.trim()}>
+            <Button variant="primary" loading={saving} onClick={save} disabled={!draft?.name.trim()} data-shortcut="save">
               Save
             </Button>
           </>

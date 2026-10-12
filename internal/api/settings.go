@@ -716,7 +716,7 @@ func (h *Handler) deleteAPIToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listAudit(w http.ResponseWriter, r *http.Request) {
-	items, total, err := h.st.ListAudit(r.Context(), qInt(r, "limit", 100), qInt(r, "offset", 0))
+	items, total, err := h.st.ListAudit(r.Context(), qInt(r, "limit", 100), qInt(r, "offset", 0), r.URL.Query().Get("target_id"))
 	if err != nil {
 		h.fail(w, err, "audit")
 		return

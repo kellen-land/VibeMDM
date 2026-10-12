@@ -1,22 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Save, Trash2 } from 'lucide-react'
 import { qk, useAppLabels, useCustomLabel, useInvalidate } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { emptyInstallomatorOptions, type CustomLabel, type InstallomatorOptions } from '../api/types'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
 import { Field, FormGrid, FormSection } from '../components/ui/Field'
 import { Input, Select, Textarea } from '../components/ui/Input'
 import { Alert } from '../components/ui/Alert'
 import { LoadingBlock } from '../components/ui/Spinner'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { useToast } from '../components/ui/Toast'
 import { ChipInput } from '../components/pickers/ChipInput'
 import { InstallomatorCommandPreview, InstallomatorOptionsEditor } from '../components/installomator/Installomator'
 import { InstallomatorFooter } from './AppsPage'
+import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
+import { ObjectBar } from '../components/editor/ObjectBar'
 
 type Form = Omit<CustomLabel, 'id' | 'created_at' | 'updated_at' | 'blocking_processes'> & { blocking_processes: string[] }
 
@@ -54,13 +53,13 @@ export function CustomLabelEditorPage() {
   const invalidate = useInvalidate()
   const label = useCustomLabel(isNew ? undefined : id)
   const labels = useAppLabels()
-  const [f, setF] = useState<Form>(blank())
+  const clone = useCloneSource<Form>()
+  const [f, setF] = useState<Form>(() => (isNew && clone ? { ...blank(), ...clone, blocking_processes: clone.blocking_processes ?? [] } : blank()))
   const [previewOpts, setPreviewOpts] = useState<InstallomatorOptions>(emptyInstallomatorOptions())
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [del, setDel] = useState(false)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (label.data) {
       const { id: _i, created_at: _c, updated_at: _u, ...rest } = label.data
       void _i
@@ -69,6 +68,11 @@ export function CustomLabelEditorPage() {
       setF({ ...blank(), ...rest, blocking_processes: rest.blocking_processes ?? [] })
     }
   }, [label.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: f, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
 
   const set = (patch: Partial<Form>) => setF((cur) => ({ ...cur, ...patch }))
 
@@ -81,9 +85,11 @@ export function CustomLabelEditorPage() {
       await invalidate(qk.customLabels, qk.customLabel(out.id), qk.appLabels)
       toast.success(isNew ? 'Custom label created' : 'Custom label saved', `Use it as custom:${out.key}.`)
       if (isNew) navigate(`/apps/custom-labels/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       setSaveError(errorMessage(e))
       toast.error('Save failed', 'See the errors above the form.')
+      return false
     } finally {
       setSaving(false)
     }
@@ -96,7 +102,6 @@ export function CustomLabelEditorPage() {
       await invalidate(qk.customLabels, qk.appLabels)
       navigate('/apps/custom-labels')
     } catch (e) {
-      setDel(false)
       setSaveError(errorMessage(e))
       toast.error('Delete failed', errorMessage(e))
     }
@@ -104,7 +109,7 @@ export function CustomLabelEditorPage() {
 
   if (!isNew && label.isPending) return <LoadingBlock />
   if (!isNew && label.error) return <Alert tone="critical">{errorMessage(label.error)}</Alert>
-  const ro = !isAdmin
+  const ro = ed.readOnly
   const types = labels.data?.choices?.type ?? []
   const hasInput = !!(f.key || f.name || f.download_url || f.type || f.expected_team_id)
 
@@ -114,20 +119,6 @@ export function CustomLabelEditorPage() {
         crumbs={[{ label: 'Mac Apps', to: '/apps' }, { label: 'Custom Labels', to: '/apps/custom-labels' }, { label: isNew ? 'New' : label.data?.name ?? '' }]}
         title={isNew ? 'New custom label' : label.data?.name}
         meta={!isNew && label.data ? <span className="font-mono text-xs text-ink-muted">custom:{label.data.key}</span> : undefined}
-        actions={
-          isAdmin && (
-            <>
-              {!isNew && (
-                <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDel(true)}>
-                  Delete
-                </Button>
-              )}
-              <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                {isNew ? 'Create label' : 'Save changes'}
-              </Button>
-            </>
-          )
-        }
       />
       {saveError && (
         <Alert tone="critical" title="The label could not be saved" className="mb-5">
@@ -195,14 +186,18 @@ export function CustomLabelEditorPage() {
           <InstallomatorFooter />
         </div>
       </div>
-      <ConfirmDialog
-        open={del}
-        onClose={() => setDel(false)}
-        onConfirm={doDelete}
-        destructive
-        title={`Delete custom:${f.key}?`}
-        description="Labels still used by a Mac App or a policy can't be deleted; remove them there first."
-        confirmLabel="Delete label"
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/apps/custom-labels"
+        noun="custom label"
+        name={label.data ? `custom:${label.data.key}` : undefined}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="Labels still used by a Mac App or a policy can't be deleted; remove them there first."
+        onClone={() => navigate('/apps/custom-labels/new', { state: { clone: { ...f, key: `${f.key}-copy` } } })}
+        historyId={id}
       />
     </>
   )

@@ -35,12 +35,16 @@ import {
   Users,
   X,
   type LucideIcon,
+  Keyboard,
 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext'
 import { useTheme } from '../../theme/ThemeContext'
 import { cn } from '../../lib/cn'
 import { Badge } from '../ui/Badge'
 import { Dropdown } from '../ui/Dropdown'
+import { ShortcutHandler, ShortcutHelp } from '../editor/Shortcuts'
+import { pageKey } from '../../lib/pageKey'
+import { EditGuardProvider } from '../editor/EditGuard'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
 import { useToast } from '../ui/Toast'
 import { errorMessage } from '../../api/client'
@@ -159,6 +163,7 @@ export function AppShell() {
   const { user, status, logout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [pwOpen, setPwOpen] = useState(false)
+  const [keysOpen, setKeysOpen] = useState(false)
   const loc = useLocation()
   const navigate = useNavigate()
   const toast = useToast()
@@ -273,6 +278,7 @@ export function AppShell() {
           }
           items={[
             { label: 'Change password', icon: <KeyRound />, onSelect: () => setPwOpen(true) },
+            { label: 'Keyboard shortcuts', icon: <Keyboard />, onSelect: () => setKeysOpen(true) },
             { separator: true, label: '' },
             { label: 'Sign out', icon: <LogOut />, onSelect: doLogout },
           ]}
@@ -303,10 +309,15 @@ export function AppShell() {
           <ThemeToggle className="ml-auto" />
         </header>
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-7 max-w-[1440px] w-full mx-auto">
-          <Outlet />
+          {/* Keyed by page: every object page (including /x/new after /x/1, or a Clone) starts fresh. */}
+          <EditGuardProvider>
+            <Outlet key={pageKey(loc.pathname)} />
+          </EditGuardProvider>
         </main>
       </div>
       <ChangePasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} />
+      <ShortcutHandler />
+      <ShortcutHelp open={keysOpen} onClose={() => setKeysOpen(false)} />
     </div>
   )
 }

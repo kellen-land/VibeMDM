@@ -59,7 +59,7 @@ export function CustomLabelsPage() {
         description="Custom Installomator labels for apps the shipped labels don't cover. Reference one as custom:<key> in the catalog or in a policy."
         actions={
           isAdmin && (
-            <Link to="/apps/custom-labels/new">
+            <Link to="/apps/custom-labels/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 New custom label
               </Button>

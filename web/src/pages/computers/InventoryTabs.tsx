@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Pencil, Save, X } from 'lucide-react'
 import type { ComputerApp, ComputerDetail, ComputerEdit, ComputerProfile, EAValue, LocalUser, ProfileDeployment } from '../../api/types'
 import { api, errorMessage } from '../../api/client'
 import { qk, useBuildings, useDepartments, useExtensionAttributes, useInvalidate } from '../../api/queries'
 import { useAuth } from '../../auth/AuthContext'
-import { CardBody, CardHeader } from '../../components/ui/Card'
+import { CardBody, CardFooter, CardHeader } from '../../components/ui/Card'
 import { DescriptionList, KeyValueTable } from '../../components/ui/DescriptionList'
 import { Button } from '../../components/ui/Button'
 import { Field, FormGrid } from '../../components/ui/Field'
@@ -18,6 +18,8 @@ import { useToast } from '../../components/ui/Toast'
 import { FileVaultPanel } from './FileVaultPanel'
 import { LapsPanel } from './LapsPanel'
 import { absoluteTime, dash, formatDuration, formatMB } from '../../lib/format'
+import { useEditMode } from '../../components/editor/useEditMode'
+import { shortcutHint } from '../../lib/shortcuts'
 
 const editableFields: { key: keyof ComputerEdit; label: string; textarea?: boolean; list?: 'building' | 'department' }[] = [
   { key: 'name', label: 'Computer name' },
@@ -38,9 +40,20 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
   const { isAdmin } = useAuth()
   const toast = useToast()
   const invalidate = useInvalidate()
-  const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<ComputerEdit>({})
   const [saving, setSaving] = useState(false)
+  // User and location is edited as one category, as in Jamf Pro: Edit, then Cancel or Save.
+  const load = useCallback(() => {
+    const f: ComputerEdit = {}
+    for (const e of editableFields) f[e.key] = c[e.key] ?? ''
+    setForm(f)
+  }, [c])
+  const ed = useEditMode({ isNew: false, canEdit: isAdmin, snapshot: form, reset: load })
+  const editing = ed.editing
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
   const buildings = useBuildings({ enabled: editing })
   const departments = useDepartments({ enabled: editing })
   /** Options from Settings → Buildings and networks, always including the computer's current value so nothing is lost. */
@@ -49,12 +62,6 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
     if (current && !names.includes(current)) names.unshift(current)
     return [{ value: '', label: '— None —' }, ...names.map((n) => ({ value: n, label: n }))]
   }
-  useEffect(() => {
-    const f: ComputerEdit = {}
-    for (const e of editableFields) f[e.key] = c[e.key] ?? ''
-    setForm(f)
-  }, [c])
-
   const save = async () => {
     setSaving(true)
     try {
@@ -65,7 +72,7 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
         await invalidate(qk.computer(c.id), ['computers'])
         toast.success('Computer updated')
       }
-      setEditing(false)
+      ed.finishEdit()
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
     } finally {
@@ -78,23 +85,6 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
       <CardHeader
         title="Identity"
         description="Device identifiers reported by MDM and the agent."
-        actions={
-          isAdmin &&
-          (editing ? (
-            <>
-              <Button size="sm" variant="ghost" icon={<X />} onClick={() => setEditing(false)}>
-                Cancel
-              </Button>
-              <Button size="sm" variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                Save
-              </Button>
-            </>
-          ) : (
-            <Button size="sm" icon={<Pencil />} onClick={() => setEditing(true)}>
-              Edit
-            </Button>
-          ))
-        }
       />
       <CardBody>
         <DescriptionList
@@ -129,7 +119,19 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
           ]}
         />
       </CardBody>
-      <CardHeader title="User and location" description="Editable fields for asset tracking." className="border-t border-line" />
+      <CardHeader
+        title="User and location"
+        description="Editable fields for asset tracking."
+        className="border-t border-line"
+        actions={
+          isAdmin &&
+          !editing && (
+            <Button size="sm" icon={<Pencil />} onClick={ed.startEdit} data-shortcut="edit" title={shortcutHint('edit', 'Edit')}>
+              Edit
+            </Button>
+          )
+        }
+      />
       <CardBody>
         {editing ? (
           <FormGrid cols={3}>
@@ -149,6 +151,17 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
           <DescriptionList cols={3} items={editableFields.map((e) => ({ label: e.label, value: e.textarea ? <span className="whitespace-pre-wrap">{c[e.key]}</span> : c[e.key], span: e.textarea }))} />
         )}
       </CardBody>
+      {editing && (
+        <CardFooter>
+          <Button icon={<X />} onClick={ed.cancelEdit} data-shortcut="cancel" title={shortcutHint('cancel', 'Cancel')}>
+            Cancel
+          </Button>
+          <Button variant="primary" icon={<Save />} loading={saving} onClick={save} data-shortcut="save" title={shortcutHint('save', 'Save')}>
+            Save
+          </Button>
+        </CardFooter>
+      )}
+      {ed.guard}
     </>
   )
 }
@@ -350,9 +363,9 @@ export function EATab({ c }: { c: ComputerDetail }) {
   const toast = useToast()
   const invalidate = useInvalidate()
   const byId = useMemo(() => new Map((eas.data?.items ?? []).map((e) => [e.id, e])), [eas.data])
-  const [editing, setEditing] = useState<string | null>(null)
-  const [val, setVal] = useState('')
+  const [vals, setVals] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+  const editable = (eaId: string) => byId.get(eaId)?.input_type === 'text'
 
   // Show every defined EA, even if the computer has no value yet.
   const rows: EAValue[] = useMemo(() => {
@@ -366,14 +379,27 @@ export function EATab({ c }: { c: ComputerDetail }) {
     return out
   }, [c.extension_attributes, eas.data])
 
-  const save = async (eaId: string) => {
+  // Text values are edited as one category, as in Jamf Pro: Edit, then Cancel or Save.
+  const load = useCallback(() => setVals(Object.fromEntries(rows.map((v) => [v.ea_id, v.value]))), [rows])
+  const ed = useEditMode({ isNew: false, canEdit: isAdmin, snapshot: vals, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
+
+  const save = async () => {
+    const changed = rows.filter((v) => editable(v.ea_id) && (vals[v.ea_id] ?? '') !== v.value)
     setSaving(true)
     try {
-      await api.post(`/api/v1/computers/${c.id}/ea-values/${eaId}`, { value: val })
-      await invalidate(qk.computer(c.id))
-      toast.success('Value saved')
-      setEditing(null)
+      for (const v of changed) await api.post(`/api/v1/computers/${c.id}/ea-values/${v.ea_id}`, { value: vals[v.ea_id] ?? '' })
+      if (changed.length > 0) {
+        await invalidate(qk.computer(c.id))
+        toast.success(changed.length === 1 ? 'Value saved' : 'Values saved')
+      }
+      ed.finishEdit()
     } catch (e) {
+      // Values saved before the failure are kept; reload them so the page shows what the server has.
+      await invalidate(qk.computer(c.id))
       toast.error('Save failed', errorMessage(e))
     } finally {
       setSaving(false)
@@ -382,7 +408,19 @@ export function EATab({ c }: { c: ComputerDetail }) {
 
   return (
     <>
-      <CardHeader title="Extension attributes" description="Custom inventory fields. Script-based values are collected by the agent; text values can be set here." />
+      <CardHeader
+        title="Extension attributes"
+        description="Custom inventory fields. Script-based values are collected by the agent; text values can be set here."
+        actions={
+          isAdmin &&
+          !ed.editing &&
+          rows.some((v) => editable(v.ea_id)) && (
+            <Button size="sm" icon={<Pencil />} onClick={ed.startEdit} data-shortcut="edit" title={shortcutHint('edit', 'Edit')}>
+              Edit
+            </Button>
+          )
+        }
+      />
       <Table<EAValue>
         rows={rows}
         loading={eas.isPending}
@@ -413,42 +451,32 @@ export function EATab({ c }: { c: ComputerDetail }) {
             key: 'value',
             header: 'Value',
             render: (v) =>
-              editing === v.ea_id ? (
-                <span className="flex items-center gap-2">
-                  <Input value={val} onChange={(e) => setVal(e.target.value)} className="h-8 w-64" autoFocus type={v.data_type === 'integer' ? 'number' : v.data_type === 'date' ? 'date' : 'text'} />
-                  <Button size="xs" variant="primary" loading={saving} onClick={() => save(v.ea_id)}>
-                    Save
-                  </Button>
-                  <Button size="xs" variant="ghost" onClick={() => setEditing(null)}>
-                    Cancel
-                  </Button>
-                </span>
+              ed.editing && editable(v.ea_id) ? (
+                <Input
+                  value={vals[v.ea_id] ?? ''}
+                  onChange={(e) => setVals((cur) => ({ ...cur, [v.ea_id]: e.target.value }))}
+                  className="h-8 w-64"
+                  aria-label={v.name}
+                  type={v.data_type === 'integer' ? 'number' : v.data_type === 'date' ? 'date' : 'text'}
+                />
               ) : (
                 <span className={v.value ? 'font-mono text-xs' : 'text-ink-faint'}>{v.value || '—'}</span>
               ),
           },
           { key: 'updated', header: 'Updated', render: (v) => <RelativeTime value={v.updated_at || null} emptyLabel="—" className="text-ink-muted" /> },
-          {
-            key: 'actions',
-            header: '',
-            align: 'right',
-            render: (v) =>
-              isAdmin && byId.get(v.ea_id)?.input_type === 'text' && editing !== v.ea_id ? (
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  icon={<Pencil />}
-                  onClick={() => {
-                    setEditing(v.ea_id)
-                    setVal(v.value)
-                  }}
-                >
-                  Edit
-                </Button>
-              ) : null,
-          },
         ]}
       />
+      {ed.editing && (
+        <CardFooter>
+          <Button icon={<X />} onClick={ed.cancelEdit} data-shortcut="cancel" title={shortcutHint('cancel', 'Cancel')}>
+            Cancel
+          </Button>
+          <Button variant="primary" icon={<Save />} loading={saving} onClick={save} data-shortcut="save" title={shortcutHint('save', 'Save')}>
+            Save
+          </Button>
+        </CardFooter>
+      )}
+      {ed.guard}
     </>
   )
 }

@@ -419,12 +419,14 @@ func (s *Store) Audit(ctx context.Context, actor, action, targetType, targetID s
 }
 
 // ListAudit returns recent audit entries.
-func (s *Store) ListAudit(ctx context.Context, limit, offset int) ([]model.AuditEntry, int, error) {
+func (s *Store) ListAudit(ctx context.Context, limit, offset int, targetID string) ([]model.AuditEntry, int, error) {
+	// targetID ("" for all) limits the log to one object's history.
 	var total int
-	if err := s.DB.QueryRowContext(ctx, `SELECT count(*) FROM audit_log`).Scan(&total); err != nil {
+	if err := s.DB.QueryRowContext(ctx, `SELECT count(*) FROM audit_log WHERE $1 = '' OR target_id = $1`, targetID).Scan(&total); err != nil {
 		return nil, 0, err
 	}
-	rows, err := s.DB.QueryContext(ctx, `SELECT id, at, actor, action, target_type, target_id, details FROM audit_log ORDER BY at DESC LIMIT $1 OFFSET $2`, limit, offset)
+	rows, err := s.DB.QueryContext(ctx, `SELECT id, at, actor, action, target_type, target_id, details FROM audit_log WHERE $3 = '' OR target_id = $3
+		ORDER BY at DESC LIMIT $1 OFFSET $2`, limit, offset, targetID)
 	if err != nil {
 		return nil, 0, err
 	}

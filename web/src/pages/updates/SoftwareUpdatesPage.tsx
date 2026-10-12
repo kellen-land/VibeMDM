@@ -52,7 +52,7 @@ export function SoftwareUpdatesPage() {
         actions={
           isAdmin &&
           active !== 'super' && (
-            <Link to="/updates/plans/new">
+            <Link to="/updates/plans/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 New plan
               </Button>
@@ -307,7 +307,7 @@ function PlansTab() {
           emptyDescription="Create an enforcement plan to require a macOS version by a deadline, or a settings plan to control update behavior."
           emptyAction={
             isAdmin ? (
-              <Link to="/updates/plans/new">
+              <Link to="/updates/plans/new" data-shortcut="new">
                 <Button variant="primary" size="sm" icon={<Plus />}>
                   New plan
                 </Button>

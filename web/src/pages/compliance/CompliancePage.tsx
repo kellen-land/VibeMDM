@@ -30,7 +30,7 @@ export function CompliancePage() {
         actions={
           isAdmin &&
           rows.length > 0 && (
-            <Link to="/compliance/new">
+            <Link to="/compliance/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 New baseline
               </Button>
@@ -130,7 +130,7 @@ function EmptyIntro({ isAdmin, release }: { isAdmin: boolean; release?: string }
         </ul>
         <div className="mt-6">
           {isAdmin ? (
-            <Link to="/compliance/new">
+            <Link to="/compliance/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 Create a baseline
               </Button>

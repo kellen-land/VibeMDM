@@ -233,10 +233,10 @@ function UploadDialog({ open, onClose }: { open: boolean; onClose: () => void })
           </div>
         )}
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={close}>
+          <Button variant="ghost" onClick={close} data-shortcut="cancel">
             {uploading ? 'Cancel upload' : 'Cancel'}
           </Button>
-          <Button type="submit" variant="primary" disabled={!file} loading={uploading}>
+          <Button type="submit" variant="primary" disabled={!file} loading={uploading} data-shortcut="save">
             Upload
           </Button>
         </div>
@@ -288,10 +288,10 @@ function EditDialog({ pkg, onClose }: { pkg: Package; onClose: () => void }) {
           </Field>
         </FormGrid>
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} data-shortcut="cancel">
             Cancel
           </Button>
-          <Button type="submit" variant="primary" loading={busy}>
+          <Button type="submit" variant="primary" loading={busy} data-shortcut="save">
             Save
           </Button>
         </div>

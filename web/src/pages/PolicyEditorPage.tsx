@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, Eraser, Play, Plus, Save, Terminal, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Eraser, Play, Plus, Terminal, Trash2 } from 'lucide-react'
 import { qk, useAppLabels, useApps, useInvalidate, usePackages, usePolicy, usePolicyLogs, useScripts } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -15,7 +15,6 @@ import { Tabs } from '../components/ui/Tabs'
 import { Alert } from '../components/ui/Alert'
 import { Badge } from '../components/ui/Badge'
 import { LoadingBlock } from '../components/ui/Spinner'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Modal } from '../components/ui/Modal'
 import { Pagination } from '../components/ui/Pagination'
 import { useToast } from '../components/ui/Toast'
@@ -31,6 +30,8 @@ import { LabelCombobox, allLabels } from '../components/pickers/LabelCombobox'
 import { InstallomatorCommandPreview, InstallomatorOptionsEditor } from '../components/installomator/Installomator'
 import { InstallomatorFooter } from './AppsPage'
 import { LocalAccountsSection, accountProblem } from './policies/LocalAccountsSection'
+import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
+import { ObjectBar } from '../components/editor/ObjectBar'
 
 type Tab = 'general' | 'scope' | 'scripts' | 'packages' | 'apps' | 'accounts' | 'files' | 'maintenance' | 'restart' | 'interaction' | 'selfservice' | 'logs'
 
@@ -64,33 +65,39 @@ export function PolicyEditorPage() {
   const toast = useToast()
   const invalidate = useInvalidate()
   const policy = usePolicy(isNew ? undefined : id)
-  const [p, setP] = useState<Policy>(blank())
+  const clone = useCloneSource<Policy>()
+  const [p, setP] = useState<Policy>(() => (isNew && clone ? clone : blank()))
   const [saving, setSaving] = useState(false)
-  const [del, setDel] = useState(false)
   const [runOpen, setRunOpen] = useState(false)
   const tab = (sp.get('tab') as Tab) || 'general'
   const setTab = (t: Tab) => setSp(t === 'general' ? {} : { tab: t }, { replace: true })
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (policy.data) {
       const { status: _s, ...rest } = policy.data
       void _s
       setP({ ...blank(), ...rest, scripts: rest.scripts ?? [], packages: rest.packages ?? [], accounts: rest.accounts ?? [], apps: (rest.apps ?? []).map((a) => ({ ...a, options: { ...emptyInstallomatorOptions(), ...a.options } })), scope: normalizeScope(rest.scope) })
     }
   }, [policy.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: p, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
 
   const set = (patch: Partial<Policy>) => setP((cur) => ({ ...cur, ...patch }))
 
   const save = async () => {
     if (!p.name.trim()) {
+      setTab('general')
       toast.error('Name is required')
-      return
+      return false
     }
     const problem = accountProblem(p.accounts ?? [])
     if (problem) {
       setTab('accounts')
       toast.error('Check Local Accounts', problem)
-      return
+      return false
     }
     setSaving(true)
     try {
@@ -99,8 +106,10 @@ export function PolicyEditorPage() {
       await invalidate(qk.policies, qk.policy(out.id), qk.dashboard)
       toast.success(isNew ? 'Policy created' : 'Policy saved', 'Scoped agents were asked to check in.')
       if (isNew) navigate(`/policies/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
+      return false
     } finally {
       setSaving(false)
     }
@@ -119,10 +128,10 @@ export function PolicyEditorPage() {
 
   if (!isNew && policy.isPending) return <LoadingBlock />
   if (!isNew && policy.error) return <Alert tone="critical">{errorMessage(policy.error)}</Alert>
-  const ro = !isAdmin
+  const ro = ed.readOnly
   const st = policy.data?.status ?? {}
 
-  const tabs: { key: Tab; label: string; count?: number }[] = [
+  const tabs: { key: Tab; label: string; count?: number; shortcut?: string }[] = [
     { key: 'general', label: 'General' },
     { key: 'scope', label: 'Scope' },
     { key: 'scripts', label: 'Scripts', count: p.scripts?.length },
@@ -135,7 +144,7 @@ export function PolicyEditorPage() {
     { key: 'interaction', label: 'User Interaction' },
     { key: 'selfservice', label: 'Self Service' },
   ]
-  if (!isNew) tabs.push({ key: 'logs', label: 'Logs' })
+  if (!isNew) tabs.push({ key: 'logs', label: 'Logs', shortcut: 'logs' })
 
   return (
     <>
@@ -153,25 +162,6 @@ export function PolicyEditorPage() {
               </span>
             </>
           ) : undefined
-        }
-        actions={
-          isAdmin && (
-            <>
-              {!isNew && (
-                <>
-                  <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDel(true)}>
-                    Delete
-                  </Button>
-                  <Button icon={<Play />} onClick={() => setRunOpen(true)}>
-                    Run now
-                  </Button>
-                </>
-              )}
-              <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                {isNew ? 'Create policy' : 'Save changes'}
-              </Button>
-            </>
-          )
         }
       />
       <Tabs className="mb-5" value={tab} onChange={setTab} items={tabs} />
@@ -306,7 +296,26 @@ export function PolicyEditorPage() {
 
       {tab === 'logs' && !isNew && id && <PolicyLogsTab policyId={id} />}
 
-      <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={doDelete} destructive title={`Delete "${p.name}"?`} description="The policy and its logs are removed." confirmLabel="Delete policy" />
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/policies"
+        noun="policy"
+        name={policy.data?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="The policy and its logs are removed."
+        onClone={() => navigate('/policies/new', { state: { clone: { ...p, id: '', name: `Copy of ${p.name}`, enabled: false } } })}
+        historyId={id}
+        extras={
+          !isNew && (
+            <Button variant="ghost" icon={<Play />} onClick={() => setRunOpen(true)}>
+              Run now
+            </Button>
+          )
+        }
+      />
       {!isNew && id && <RunPolicyDialog open={runOpen} onClose={() => setRunOpen(false)} policyId={id} policyName={p.name} />}
     </>
   )

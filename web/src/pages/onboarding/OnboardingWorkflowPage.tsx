@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, Ban, ChevronDown, CircleOff, Laptop, LogOut, Play, Plus, Power, RotateCcw, Save, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Ban, ChevronDown, CircleOff, Laptop, LogOut, Play, Plus, Power, RotateCcw, X } from 'lucide-react'
 import { qk, useApps, useInvalidate, useOnboardingRuns, useOnboardingWorkflow, useOnboardingWorkflows } from '../../api/queries'
 import { api, ApiError, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import type { OnboardingConfig, OnboardingField, OnboardingFinalAction, OnboardingStep, OnboardingStepType, OnboardingWorkflow } from '../../api/types'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { Card, CardBody, CardFooter, CardHeader } from '../../components/ui/Card'
+import { Card, CardBody, CardHeader } from '../../components/ui/Card'
 import { Button, IconButton } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Checkbox, Toggle } from '../../components/ui/Checkbox'
@@ -16,7 +16,6 @@ import { Alert } from '../../components/ui/Alert'
 import { Tabs } from '../../components/ui/Tabs'
 import { Dropdown } from '../../components/ui/Dropdown'
 import { LoadingBlock } from '../../components/ui/Spinner'
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { ScopeEditor, ScopeSummary } from '../../components/pickers/ScopeEditor'
 import { ChipInput } from '../../components/pickers/ChipInput'
@@ -36,6 +35,8 @@ import {
 } from '../../components/onboarding/onboarding'
 import { ErrorList } from '../updates/SoftwareUpdatesPage'
 import { cn } from '../../lib/cn'
+import { useCloneSource, useEditMode } from '../../components/editor/useEditMode'
+import { ObjectBar } from '../../components/editor/ObjectBar'
 
 type TabKey = 'workflow' | 'runs'
 
@@ -49,21 +50,30 @@ export function OnboardingWorkflowPage() {
   const wf = useOnboardingWorkflow(isNew ? undefined : id)
   const list = useOnboardingWorkflows()
   const fieldKeys = list.data?.field_keys
-  const [f, setF] = useState<OnboardingWorkflow>(emptyWorkflow)
+  const clone = useCloneSource<OnboardingWorkflow>()
+  const [f, setF] = useState<OnboardingWorkflow>(() => (isNew && clone ? normalizeWorkflow(clone) : emptyWorkflow()))
   const [errors, setErrors] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [delOpen, setDelOpen] = useState(false)
   const [runOpen, setRunOpen] = useState(false)
-  const readOnly = !isAdmin
-  const active: TabKey = !isNew && tab === 'runs' ? 'runs' : 'workflow'
-  const setTab = (k: TabKey) => navigate(`/onboarding/${id}${k === 'runs' ? '/runs' : ''}`, { replace: true })
+  // The tab is part of the URL, but changing the URL would end edit mode (and ask about unsaved
+  // changes), so while editing the tab only changes here.
+  const [tabState, setTabState] = useState<TabKey>(tab === 'runs' ? 'runs' : 'workflow')
+  useEffect(() => setTabState(tab === 'runs' ? 'runs' : 'workflow'), [tab])
+  const active: TabKey = !isNew && tabState === 'runs' ? 'runs' : 'workflow'
+  const setTab = (k: TabKey) => {
+    setTabState(k)
+    if (!ed.editing) navigate(`/onboarding/${id}${k === 'runs' ? '/runs' : ''}`, { replace: true })
+  }
 
-  // Re-seed only when the server copy changes (not on every focus refetch).
-  const seed = wf.data ? `${wf.data.id}|${wf.data.updated_at}` : ''
-  useEffect(() => {
+  const load = useCallback(() => {
     if (wf.data) setF(normalizeWorkflow(wf.data))
+  }, [wf.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: f, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed])
+  }, [load])
+  const readOnly = ed.readOnly
 
   const set = (patch: Partial<OnboardingWorkflow>) => setF((cur) => ({ ...cur, ...patch }))
   const setC = (patch: Partial<OnboardingConfig>) => setF((cur) => ({ ...cur, config: { ...cur.config, ...patch } }))
@@ -72,8 +82,9 @@ export function OnboardingWorkflowPage() {
     const local = validateWorkflow(f)
     if (local.length) {
       setErrors(local.join('\n'))
+      if (active !== 'workflow') setTab('workflow')
       window.scrollTo({ top: 0, behavior: 'smooth' })
-      return
+      return false
     }
     setErrors(null)
     setSaving(true)
@@ -91,12 +102,15 @@ export function OnboardingWorkflowPage() {
       const out = isNew ? await api.post<OnboardingWorkflow>('/api/v1/onboarding/workflows', body) : await api.put<OnboardingWorkflow>(`/api/v1/onboarding/workflows/${id}`, body)
       await invalidate(qk.onboarding)
       toast.success(isNew ? 'Workflow created' : 'Workflow saved')
-      navigate(`/onboarding/${out.id}`)
+      if (isNew) navigate(`/onboarding/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       const msg = errorMessage(e)
       setErrors(msg)
       window.scrollTo({ top: 0, behavior: 'smooth' })
+      if (active !== 'workflow') setTab('workflow')
       toast.error('Save failed', e instanceof ApiError && e.status === 400 ? 'See the problems listed above the form.' : msg)
+      return false
     } finally {
       setSaving(false)
     }
@@ -108,19 +122,15 @@ export function OnboardingWorkflowPage() {
       await invalidate(qk.onboarding)
       toast.success('Workflow deleted')
       navigate('/onboarding')
+      return true
     } catch (e) {
       toast.error('Delete failed', errorMessage(e))
+      return false
     }
   }
 
   if (!isNew && wf.isPending) return <LoadingBlock />
   if (!isNew && (wf.error || !wf.data)) return <Alert tone="critical">{wf.error ? errorMessage(wf.error) : 'Workflow not found'}</Alert>
-
-  const saveButton = (
-    <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-      {isNew ? 'Create workflow' : 'Save changes'}
-    </Button>
-  )
 
   return (
     <>
@@ -140,26 +150,9 @@ export function OnboardingWorkflowPage() {
             </>
           )
         }
-        actions={
-          isAdmin && (
-            <>
-              {!isNew && (
-                <>
-                  <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDelOpen(true)}>
-                    Delete
-                  </Button>
-                  <Button icon={<Play />} onClick={() => setRunOpen(true)}>
-                    Run on computers…
-                  </Button>
-                </>
-              )}
-              {active === 'workflow' && saveButton}
-            </>
-          )
-        }
       />
 
-      {!isNew && <Tabs<TabKey> items={[{ key: 'workflow', label: 'Workflow' }, { key: 'runs', label: 'Runs' }]} value={active} onChange={setTab} className="mb-5" />}
+      {!isNew && <Tabs<TabKey> items={[{ key: 'workflow', label: 'Workflow' }, { key: 'runs', label: 'Runs', shortcut: 'logs' }]} value={active} onChange={setTab} className="mb-5" />}
 
       {active === 'runs' && !isNew ? (
         <RunsTab workflowId={id!} fieldKeys={fieldKeys} canRun={isAdmin} onRun={() => setRunOpen(true)} />
@@ -196,20 +189,32 @@ export function OnboardingWorkflowPage() {
           <FieldsCard c={f.config} setC={setC} readOnly={readOnly} fieldKeys={fieldKeys} />
           <NameTemplateCard c={f.config} setC={setC} readOnly={readOnly} />
           <StepsCard c={f.config} setC={setC} readOnly={readOnly} />
-          <FinishCard c={f.config} setC={setC} readOnly={readOnly} saveButton={isAdmin ? saveButton : undefined} />
+          <FinishCard c={f.config} setC={setC} readOnly={readOnly} />
         </div>
       )}
 
-      {!isNew && wf.data && <RunOnComputersDialog open={runOpen} onClose={() => setRunOpen(false)} workflow={wf.data} />}
-      <ConfirmDialog
-        open={delOpen}
-        onClose={() => setDelOpen(false)}
-        onConfirm={doDelete}
-        destructive
-        title={`Delete “${wf.data?.name}”?`}
-        description="The workflow and its run history are removed. Macs that are mid-run finish what they have started."
-        confirmLabel="Delete workflow"
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/onboarding"
+        noun="workflow"
+        name={wf.data?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="The workflow and its run history are removed. Macs that are mid-run finish what they have started."
+        onClone={() => navigate('/onboarding/new', { state: { clone: { ...f, id: '', name: `Copy of ${f.name}`, enabled: false } } })}
+        historyId={id}
+        extras={
+          !isNew &&
+          isAdmin && (
+            <Button variant="ghost" icon={<Play />} onClick={() => setRunOpen(true)}>
+              Run on computers…
+            </Button>
+          )
+        }
       />
+      {!isNew && wf.data && <RunOnComputersDialog open={runOpen} onClose={() => setRunOpen(false)} workflow={wf.data} />}
     </>
   )
 }
@@ -623,7 +628,7 @@ const finalActions: { value: OnboardingFinalAction; label: string; icon: ReactNo
   { value: 'shutdown', label: 'Shut down', icon: <Power />, text: 'Shut the Mac down, for example when it is being handed over later.' },
 ]
 
-function FinishCard({ c, setC, readOnly, saveButton }: ConfigProps & { saveButton?: ReactNode }) {
+function FinishCard({ c, setC, readOnly }: ConfigProps) {
   const current = c.final_action || 'none'
   return (
     <Card>
@@ -664,7 +669,6 @@ function FinishCard({ c, setC, readOnly, saveButton }: ConfigProps & { saveButto
           <Textarea value={c.final_message} onChange={(e) => setC({ final_message: e.target.value })} rows={3} placeholder="All set! Your Mac will restart in a moment." disabled={readOnly} />
         </Field>
       </CardBody>
-      {saveButton && <CardFooter>{saveButton}</CardFooter>}
     </Card>
   )
 }

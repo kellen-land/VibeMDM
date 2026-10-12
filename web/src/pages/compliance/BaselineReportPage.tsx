@@ -13,12 +13,10 @@ import {
   Laptop,
   ListX,
   MinusCircle,
-  Pencil,
   Play,
   ScanLine,
   ShieldCheck,
   Target,
-  Trash2,
   TrendingDown,
   Wrench,
   X,
@@ -40,6 +38,8 @@ import { LoadingBlock, Spinner } from '../../components/ui/Spinner'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { RelativeTime } from '../../components/ui/RelativeTime'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { ObjectBar } from '../../components/editor/ObjectBar'
+import { useEditMode } from '../../components/editor/useEditMode'
 import { useToast } from '../../components/ui/Toast'
 import { ScopeSummary } from '../../components/pickers/ScopeEditor'
 import { BarHeadline, SegmentBar } from '../../components/charts/ComplianceBar'
@@ -82,7 +82,6 @@ export function BaselineReportPage() {
   const q = useComplianceReport(id)
   const [busy, setBusy] = useState<string | null>(null)
   const [confirmRemediate, setConfirmRemediate] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [fleetFilter, setFleetFilter] = useState<FleetKey | ''>('')
 
   const tabParam = sp.get('tab')
@@ -115,6 +114,7 @@ export function BaselineReportPage() {
     setBusy(null)
   }
 
+  const ed = useEditMode({ isNew: false, canEdit: false, snapshot: null, reset: () => {} })
   const doDelete = async () => {
     try {
       await api.del(`/api/v1/compliance/baselines/${id}`)
@@ -180,12 +180,6 @@ export function BaselineReportPage() {
             </a>
             {isAdmin && (
               <>
-                <IconButton label="Delete baseline" variant="ghost" size="md" onClick={() => setConfirmDelete(true)}>
-                  <Trash2 />
-                </IconButton>
-                <Link to={`/compliance/${id}/edit`}>
-                  <Button icon={<Pencil />}>Edit</Button>
-                </Link>
                 <Button icon={<Wrench />} onClick={() => setConfirmRemediate(true)} disabled={!b.enabled}>
                   Scan &amp; remediate
                 </Button>
@@ -247,19 +241,18 @@ export function BaselineReportPage() {
         description="Each Mac runs the checks, then mSCP's fix script for every failing rule that has one, as root, and checks again. Settings change without asking the user. Rules that can only be enforced by a profile stay failing."
         confirmLabel="Scan & remediate"
       />
-      <ConfirmDialog
-        open={confirmDelete}
-        onClose={() => setConfirmDelete(false)}
-        onConfirm={doDelete}
-        destructive
-        title={`Delete “${b.name}”?`}
-        description={
-          <>
-            All scan results and history for this baseline are removed.
-            {b.deploy_profile || b.profile_id ? <> The configuration profile &ldquo;Compliance: {b.name}&rdquo; is withdrawn from every Mac.</> : null}
-          </>
-        }
-        confirmLabel="Delete baseline"
+      <ObjectBar
+        ed={ed}
+        isNew={false}
+        listPath="/compliance"
+        noun="baseline"
+        name={b.name}
+        onSave={async () => true}
+        onEdit={() => navigate(`/compliance/${id}/edit`)}
+        onDelete={doDelete}
+        deleteDescription={`All scan results and history for this baseline are removed${b.deploy_profile ? ', and its configuration profile is removed from Macs' : ''}.`}
+        onClone={() => navigate('/compliance/new', { state: { clone: { ...b, id: '', name: `Copy of ${b.name}`, enabled: false } } })}
+        historyId={id}
       />
     </>
   )
