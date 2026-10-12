@@ -11,6 +11,7 @@
 # runtime data
 /data/
 /deploy/data/
+/deploy/assets/
 /deploy/.env
 .env
 *.pem

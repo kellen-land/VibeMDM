@@ -65,6 +65,7 @@ type AgentPackageStep struct {
 // AgentAppStep is an Installomator run inside a policy. Args are built and
 // shell-quoted by the server; the agent passes them to Installomator verbatim.
 type AgentAppStep struct {
+	AppID string   `json:"app_id,omitempty"` // catalog app, when the step uses one
 	Name  string   `json:"name"`
 	Label string   `json:"label"`
 	Args  []string `json:"args"`
@@ -143,6 +144,8 @@ type SelfServiceItem struct {
 	Featured    bool   `json:"featured"`
 	// AppName is the app an item installs (Mac apps), used to show its icon and whether it is installed.
 	AppName string `json:"app_name,omitempty"`
+	// IconVersion identifies the Mac App's uploaded icon (GET /agent/v1/app-icons/{id}); "" when none.
+	IconVersion string `json:"icon_version,omitempty"`
 }
 
 // AgentSelfService configures the Self Service app on the Mac (sent with each check-in).

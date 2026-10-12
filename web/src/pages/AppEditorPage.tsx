@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Save, Trash2 } from 'lucide-react'
+import { Save, Trash2, Upload } from 'lucide-react'
 import { qk, useApp, useAppLabels, useAppLogs, useInvalidate } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -22,6 +22,7 @@ import { ScopeEditor } from '../components/pickers/ScopeEditor'
 import { LabelCombobox, allLabels } from '../components/pickers/LabelCombobox'
 import { InstallomatorCommandPreview, InstallomatorOptionsEditor } from '../components/installomator/Installomator'
 import { AppInstallLogTable } from '../components/activity/AppInstallLogTable'
+import { AppIcon } from '../components/apps/AppIcon'
 import { InstallomatorFooter, updateBehaviorLabels } from './AppsPage'
 
 type Tab = 'general' | 'scope' | 'selfservice' | 'logs'
@@ -223,6 +224,13 @@ export function AppEditorPage() {
             {a.deployment !== 'self_service' && (
               <Toggle checked={a.self_service.enabled} onChange={(v) => set({ self_service: { ...a.self_service, enabled: v } })} disabled={ro} label="Also show in Self Service" />
             )}
+            <FormSection title="Icon" description="Shown in Self Service and in the notification when the install finishes.">
+              {isNew || !id ? (
+                <p className="text-sm text-ink-muted">Add the app first, then upload its icon here.</p>
+              ) : (
+                <IconUpload appId={id} version={app.data?.icon_version} disabled={ro} />
+              )}
+            </FormSection>
             <FormSection title="Listing">
               <FormGrid cols={2}>
                 <Field label="Display name">
@@ -250,6 +258,65 @@ export function AppEditorPage() {
 
       <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={doDelete} destructive title={`Remove "${a.name}" from the catalog?`} description="Computers that already have the app keep it." confirmLabel="Remove app" />
     </>
+  )
+}
+
+/** Uploads or removes the app's icon right away (independent of Save, so unsaved edits stay). */
+function IconUpload({ appId, version, disabled }: { appId: string; version?: string; disabled: boolean }) {
+  const toast = useToast()
+  const invalidate = useInvalidate()
+  const input = useRef<HTMLInputElement>(null)
+  const [v, setV] = useState(version)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => setV(version), [version])
+
+  const upload = async (f: File | undefined) => {
+    if (!f) return
+    setBusy(true)
+    try {
+      const out = await api.put<MacApp>(`/api/v1/apps/${appId}/icon`, f)
+      setV(out.icon_version)
+      await invalidate(qk.apps)
+      toast.success('Icon uploaded', 'Self Service shows it the next time it is opened.')
+    } catch (e) {
+      toast.error('Upload failed', errorMessage(e))
+    } finally {
+      setBusy(false)
+      if (input.current) input.current.value = ''
+    }
+  }
+  const remove = async () => {
+    try {
+      await api.del(`/api/v1/apps/${appId}/icon`)
+      setV(undefined)
+      await invalidate(qk.apps)
+    } catch (e) {
+      toast.error('Remove failed', errorMessage(e))
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-4">
+      <div className="grid size-16 place-items-center rounded-xl border border-line bg-surface-sunken">
+        <AppIcon appId={appId} version={v} className={v ? 'size-14' : 'size-6'} />
+      </div>
+      {!disabled && (
+        <div className="flex flex-col items-start gap-1.5">
+          <div className="flex items-center gap-2">
+            <Button size="sm" icon={<Upload />} loading={busy} onClick={() => input.current?.click()}>
+              {v ? 'Replace icon' : 'Upload icon'}
+            </Button>
+            {v && (
+              <Button size="sm" variant="ghost" onClick={remove}>
+                Remove
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-ink-muted">PNG, JPEG or .icns, square works best. Saved immediately.</p>
+          <input ref={input} type="file" accept=".png,.jpg,.jpeg,.icns,image/png,image/jpeg" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
+        </div>
+      )}
+    </div>
   )
 }
 

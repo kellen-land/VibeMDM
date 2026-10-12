@@ -29,6 +29,8 @@ import (
 
 	"github.com/vibemdm/vibemdm/internal/agentapi"
 	"github.com/vibemdm/vibemdm/internal/api"
+	"github.com/vibemdm/vibemdm/internal/appicons"
+	"github.com/vibemdm/vibemdm/internal/assets"
 	"github.com/vibemdm/vibemdm/internal/auth"
 	"github.com/vibemdm/vibemdm/internal/commands"
 	"github.com/vibemdm/vibemdm/internal/compliance"
@@ -118,8 +120,17 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 		return nil, err
 	}
 	settings, _ := st.GetSettings(ctx)
-	for _, d := range []string{"packages", "tmp"} {
-		os.MkdirAll(filepath.Join(cfg.DataDir, d), 0o755)
+	os.MkdirAll(filepath.Join(cfg.DataDir, "tmp"), 0o755)
+	if err := assets.Prepare(cfg.DataDir, cfg.AssetsDir, logger.With("component", "assets")); err != nil {
+		return nil, err
+	}
+	// Icons of deleted Mac Apps (or interrupted uploads) are removed.
+	if apps, err := st.ListMacApps(ctx); err == nil {
+		ids := map[string]bool{}
+		for _, a := range apps {
+			ids[a.ID] = true
+		}
+		appicons.Dir{Path: filepath.Join(cfg.AssetsDir, assets.AppIcons)}.Prune(func(id string) bool { return ids[id] })
 	}
 
 	// SCEP CA
@@ -179,7 +190,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 		nanomdmsvc.WithGetToken(nanomdmsvc.NewTokenMux()),
 		nanomdmsvc.WithDeclarativeManagement(ddmsvc.New(st, logger.With("component", "ddm"))),
 	)
-	agentInstaller := agentinstall.New(st, commander, cfg.DataDir, logger.With("component", "agentinstall"))
+	agentInstaller := agentinstall.New(st, commander, cfg.AssetsDir, logger.With("component", "agentinstall"))
 	agentInstaller.Register(s.mux)
 	var mdmService service.CheckinAndCommandService = mdmsvc.New(st, core, commander, hooks, logger.With("component", "mdm")).WithEscrow(escrowID).WithAgentInstall(agentInstaller)
 	mdmService = certauth.New(mdmService, mdmStorage, certauth.WithLogger(nlog.With("service", "certauth")))
@@ -207,7 +218,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	agentInstaller.Wake = notifier.Notify
 	shellHub := shell.NewHub()
 	engine := policy.New(st, logger.With("component", "policy"))
-	agentHandler := agentapi.New(st, engine, notifier, shellHub, hooks, cfg.DataDir, cfg.AgentDir, cfg.Version, s.enrollmentProfile, logger.With("component", "agent"))
+	agentHandler := agentapi.New(st, engine, notifier, shellHub, hooks, cfg.DataDir, cfg.AssetsDir, cfg.AgentDir, cfg.Version, s.enrollmentProfile, logger.With("component", "agent"))
 	s.compliance = compliance.NewService(st, notifier.Notify, logger.With("component", "compliance"))
 	agentHandler.WithCompliance(s.compliance)
 	s.superSvc = superwf.New(st, notifier.Notify, logger.With("component", "super"))

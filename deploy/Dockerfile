@@ -29,8 +29,8 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 # ---- runtime ----
 FROM alpine:3.21
 RUN apk add --no-cache ca-certificates tzdata && \
-    addgroup -S vibemdm && adduser -S -G vibemdm -h /app vibemdm && \
-    mkdir -p /data && chown vibemdm:vibemdm /data
+    addgroup -S -g 101 vibemdm && adduser -S -u 100 -G vibemdm -h /app vibemdm && \
+    mkdir -p /data /assets && chown vibemdm:vibemdm /data /assets
 COPY --from=build /out/vibemdm /app/vibemdm
 COPY --from=build /out/vibemdm-sim /app/vibemdm-sim
 COPY --from=build /out/agents /app/agents

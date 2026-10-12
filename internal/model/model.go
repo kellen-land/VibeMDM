@@ -652,7 +652,9 @@ type MacApp struct {
 	UpdateBehavior string `json:"update_behavior"` // install_once | keep_updated
 	// Deployment: "automatic" installs on every Mac in scope; "self_service" only offers it in
 	// Self Service to Macs in scope (keep_updated then updates it where it is installed).
-	Deployment  string               `json:"deployment"`
+	Deployment string `json:"deployment"`
+	// IconVersion identifies the uploaded icon ("" when there is none; GET /api/v1/apps/{id}/icon).
+	IconVersion string               `json:"icon_version,omitempty"`
 	Options     InstallomatorOptions `json:"options"`
 	Enabled     bool                 `json:"enabled"`
 	Scope       Scope                `json:"scope"`

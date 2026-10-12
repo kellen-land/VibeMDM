@@ -400,6 +400,9 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("PUT /api/v1/apps/{id}", h.updateApp)
 	r("DELETE /api/v1/apps/{id}", h.deleteApp)
 	r("GET /api/v1/apps/{id}/logs", h.appLogs)
+	r("GET /api/v1/apps/{id}/icon", h.getAppIcon)
+	adm("PUT /api/v1/apps/{id}/icon", h.putAppIcon)
+	adm("DELETE /api/v1/apps/{id}/icon", h.deleteAppIcon)
 
 	adm("GET /api/v1/webhooks", h.listWebhooks)
 	adm("POST /api/v1/webhooks", h.createWebhook)

@@ -70,7 +70,8 @@ VibeMDM is an independent implementation. It contains no Jamf code or assets.
 | --- | --- | --- |
 | `vibemdm` | The server: NanoMDM core, SCEP CA, enrollment profile generator, DDM server, agent API, admin API, MCP server, embedded console | `cmd/vibemdm`, `internal/*` |
 | PostgreSQL | All state: NanoMDM's tables (`devices`, `enrollments`, `commands`, `command_results`, `enrollment_queue`, `push_certs`, …) and VibeMDM's (`computers`, `policies`, `config_profiles`, `health_findings`, `compliance_*`, …) | `internal/db/migrations` |
-| `/data` volume | Uploaded packages, log archives, `initial-admin-password`, temporary files | Docker volume `vibemdm-data` |
+| `/assets` folder | Uploaded packages, the agent package, Mac App icons | Host folder bind mount (`VIBEMDM_ASSETS_PATH`) |
+| `/data` volume | Log archives, diagnostics, `initial-admin-password`, temporary files | Docker volume `vibemdm-data` |
 | Reverse proxy (yours) | TLS termination, for example Nginx Proxy Manager with a Let's Encrypt certificate | Outside the compose stack; forwards to host port `13031` |
 | `vibemdm-agent` | Static Go binary for macOS (arm64 and amd64) | `/usr/local/bin/vibemdm-agent` on the Mac |
 | `vibemdm-sim` | A fake-Mac simulator that performs real SCEP and MDM enrollment and acts as an agent | `cmd/vibemdm-sim` |

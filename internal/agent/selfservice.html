@@ -111,8 +111,11 @@ function hue(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) %
 function iconHTML(it, cls) {
   const letter = esc((it.name || '?').trim().charAt(0).toUpperCase());
   const tile = `<div class="icon tile ${cls||''}" style="background:hsl(${hue(it.name)},45%,48%)">${letter}</div>`;
-  if (!it.app_name || !it.installed) return tile;
-  return `<img class="icon ${cls||''}" src="/api/icon?app=${encodeURIComponent(it.app_name)}" onerror="this.outerHTML=this.dataset.tile" data-tile='${tile.replace(/'/g,'&#39;')}'>`;
+  let src = '';
+  if (it.icon_version) src = `/api/icon?id=${encodeURIComponent(it.id)}&v=${encodeURIComponent(it.icon_version)}`;
+  else if (it.app_name && it.installed) src = `/api/icon?app=${encodeURIComponent(it.app_name)}`;
+  if (!src) return tile;
+  return `<img class="icon ${cls||''}" src="${src}" onerror="this.outerHTML=this.dataset.tile" data-tile='${tile.replace(/'/g,'&#39;')}'>`;
 }
 function buttonLabel(it) {
   const j = jobs[it.kind + ':' + it.id];

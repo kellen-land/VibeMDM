@@ -85,6 +85,7 @@ func (h *Handler) registerParity(mux *http.ServeMux) {
 	mux.Handle("PUT /agent/v1/diagnostics/{id}", a(h.uploadDiagnostics))
 	mux.Handle("POST /agent/v1/diagnostics/{id}/failed", a(h.diagnosticsFailed))
 	mux.Handle("GET /agent/v1/selfservice", a(h.selfServiceList))
+	mux.Handle("GET /agent/v1/app-icons/{id}", a(h.appIcon))
 	mux.Handle("POST /agent/v1/selfservice/run", a(h.selfServiceRun))
 }
 
@@ -197,6 +198,7 @@ func (h *Handler) restrictedEvent(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) selfServiceList(w http.ResponseWriter, r *http.Request) {
 	comp := computerFrom(r.Context())
 	cache := store.NewMembershipCache()
+	icons := h.icons.Versions()
 	items := []model.SelfServiceItem{}
 	policies, err := h.st.ListPolicies(r.Context())
 	if err != nil {
@@ -233,7 +235,8 @@ func (h *Handler) selfServiceList(w http.ResponseWriter, r *http.Request) {
 				name = a.Name
 			}
 			items = append(items, model.SelfServiceItem{Kind: "app", ID: a.ID, Name: name, Description: firstNonEmptyStr(a.SelfService.Description, a.Description),
-				ButtonText: a.SelfService.ButtonText, Category: firstNonEmptyStr(a.SelfService.Category, a.Category), Featured: a.SelfService.Featured, AppName: a.Name})
+				ButtonText: a.SelfService.ButtonText, Category: firstNonEmptyStr(a.SelfService.Category, a.Category), Featured: a.SelfService.Featured, AppName: a.Name,
+				IconVersion: icons[a.ID]})
 		}
 	}
 	writeJSON(w, 200, map[string]any{"items": items, "org_name": func() string { s, _ := h.st.GetSettings(r.Context()); return s.OrgName }()})
@@ -386,4 +389,16 @@ func sanitizeName(s string) string {
 // selfServiceConfig is the Self Service app configuration sent to agents.
 func selfServiceConfig(s model.Settings) *model.AgentSelfService {
 	return &model.AgentSelfService{Enabled: !s.SelfServiceAppDisabled, AppName: selfservice.AppName(s.SelfServiceAppName, s.OrgName), OrgName: s.OrgName, Accent: s.SelfServiceAccentColor, Welcome: s.SelfServiceWelcome}
+}
+
+// appIcon serves a Mac App's uploaded icon to agents (Self Service and notifications).
+func (h *Handler) appIcon(w http.ResponseWriter, r *http.Request) {
+	b, v, err := h.icons.Read(r.PathValue("id"))
+	if err != nil {
+		writeErr(w, 404, "no icon")
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("X-Icon-Version", v)
+	w.Write(b)
 }

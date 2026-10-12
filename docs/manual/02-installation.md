@@ -23,13 +23,36 @@ the at-rest encryption key and its rotation, backups and upgrades.
 
 ## 2.2 Deploy with Docker Compose
 
-The compose file (`deploy/docker-compose.yml`) defines two services. TLS is not part of the stack: a reverse
+The compose file (`deploy/docker-compose.yml`) defines three services. TLS is not part of the stack: a reverse
 proxy you already run (this chapter uses Nginx Proxy Manager) terminates HTTPS and forwards to VibeMDM over HTTP.
 
 | Service | Image | Notes |
 | --- | --- | --- |
 | `db` | `postgres:17-alpine` | Database `vibemdm`, user `vibemdm`, volume `db-data`, health-checked with `pg_isready` |
-| `vibemdm` | `${VIBEMDM_IMAGE:-vibemdm/vibemdm:latest}`, built from `deploy/Dockerfile` | Waits for a healthy `db`; volume `vibemdm-data` at `/data`; publishes host port `13031` to container port `8080` |
+| `assets-init` | `alpine:3.21` | Runs once at each start: `chown -R 100:101 /assets`, so the assets folder belongs to the user VibeMDM runs as (uid 100, gid 101), then exits |
+| `vibemdm` | `${VIBEMDM_IMAGE:-vibemdm/vibemdm:latest}`, built from `deploy/Dockerfile` | Waits for a healthy `db` and for `assets-init`; volume `vibemdm-data` at `/data`; host folder `${VIBEMDM_ASSETS_PATH:-./assets}` at `/assets`; publishes host port `13031` to container port `8080` |
+
+### Storage
+
+| Where | Mounted at | Holds |
+| --- | --- | --- |
+| Host folder `VIBEMDM_ASSETS_PATH` (bind mount, default `deploy/assets`) | `/assets` | `packages/` (uploaded installers), `agent-package/` (the signed agent package), `app-icons/` (Mac App icons, `<app id>-<version>.png`) |
+| Named volume `vibemdm-data` | `/data` | Log archives, diagnostics bundles, `initial-admin-password`, temporary files |
+| Named volume `db-data` | `/var/lib/postgresql/data` | The database |
+
+The assets are what admins upload and Macs download, often gigabytes of packages, so they live in a host folder you
+can browse, back up and put on bigger storage. On Unraid, for example, set
+`VIBEMDM_ASSETS_PATH=/mnt/user/appdata/vibemdm/assets` in `.env`. Keep the database on a named volume (or a local disk
+path): PostgreSQL is not reliable on network or FUSE shares such as Unraid's `/mnt/user`.
+
+**Upgrading from a version without the assets folder:** packages and the agent package used to live in the
+`vibemdm-data` volume. On the first start with `VIBEMDM_ASSETS_DIR` set, the server moves them into the assets
+folder and logs `Moved files to the assets directory` with the count. A file already present in the assets folder
+is left alone. Nothing else changes: package records in the database refer to file names, not paths.
+
+If the server stops at start-up with `the assets directory /assets is not writable by this process (uid 100)`, the
+folder belongs to someone else: let `assets-init` run (`docker compose up -d` starts it), or run
+`chown -R 100:101 <folder>` on the host.
 
 The `13031:8080` mapping publishes plain HTTP on **every** host interface. Only the proxy should reach it: block
 13031 from the internet with the host firewall (or your router), or put the proxy on the same Docker network and
@@ -158,7 +181,9 @@ in `docker-compose.yml` does not reach the server; add it there if you need it.
 | `VIBEMDM_DATABASE_URL` | none (required) | yes (built from `POSTGRES_PASSWORD`) | PostgreSQL DSN, e.g. `postgres://vibemdm:secret@db:5432/vibemdm?sslmode=disable`. The server exits with code 2 if it is missing |
 | `VIBEMDM_SERVER_URL` | empty | yes (required by compose) | Public base URL, e.g. `https://mdm.example.com`. Trailing `/` is trimmed. Copied into Settings → General on first boot only; after that the stored setting wins |
 | `VIBEMDM_LISTEN` | `:8080` | set in the image | Listen address inside the container |
-| `VIBEMDM_DATA_DIR` | `/data` | set in the image | Packages, log archives, `initial-admin-password`, temp files |
+| `VIBEMDM_DATA_DIR` | `/data` | set in the image | Log archives, diagnostics, `initial-admin-password`, temp files (and the assets when `VIBEMDM_ASSETS_DIR` is not set) |
+| `VIBEMDM_ASSETS_DIR` | the data directory | yes (`/assets`) | Uploaded packages, the agent package and Mac App icons. Must be writable; files from the data directory are moved here on first start |
+| `VIBEMDM_ASSETS_PATH` | `./assets` | compose only | Host folder bind-mounted at `/assets` (relative to `deploy/`) |
 | `VIBEMDM_AGENT_DIR` | `/app/agents` | set in the image | Prebuilt agent binaries `vibemdm-agent-darwin-arm64` and `-amd64` |
 | `VIBEMDM_ADMIN_PASSWORD` | empty | yes | Password for the bootstrap `admin` user, used **only when no users exist**. Empty generates one. Must be 12+ characters and not a placeholder (`change-me-please`, `changeme`, `admin`, `password`, `vibemdm`, `adminadmin`, …) or start-up fails |
 | `VIBEMDM_ENCRYPTION_KEY` | empty | yes | Passphrase (16+ characters) for AES-256-GCM encryption of private keys and FileVault recovery keys at rest. See [§2.6](#26-the-encryption-key) |
@@ -310,7 +335,8 @@ A complete backup has three parts:
 | Part | Contains | How |
 | --- | --- | --- |
 | PostgreSQL | All configuration, inventory, the CA, APNs certificate, escrowed keys (sealed), logs | `pg_dump` |
-| `/data` volume | Uploaded packages, log archives | Volume tar |
+| Assets folder (`VIBEMDM_ASSETS_PATH`) | Uploaded packages, the agent package, Mac App icons | Copy the folder (any file backup tool) |
+| `/data` volume | Log archives, diagnostics | Volume tar |
 | `VIBEMDM_ENCRYPTION_KEY` (and `.env`) | The key to every sealed secret | Store in a password manager or vault, **not** next to the dumps |
 
 The TLS certificate lives in your reverse proxy; back it up there (Nginx Proxy Manager keeps it in its own `data` and `letsencrypt` volumes).
@@ -325,6 +351,9 @@ docker compose exec -T db pg_dump -U vibemdm -d vibemdm -Fc > vibemdm-$(date +%F
 # 2. Data volume (the volume name is <project>_vibemdm-data; check with `docker volume ls`)
 docker run --rm -v deploy_vibemdm-data:/data:ro -v "$PWD":/backup alpine \
   tar czf /backup/vibemdm-data-$(date +%F).tgz -C /data .
+
+# 3. Assets folder (a plain host folder; this is the default ./assets)
+tar czf vibemdm-assets-$(date +%F).tgz -C assets .
 ```
 
 ### Restore
@@ -333,6 +362,7 @@ docker run --rm -v deploy_vibemdm-data:/data:ro -v "$PWD":/backup alpine \
 docker compose up -d db
 docker compose exec -T db pg_restore -U vibemdm -d vibemdm --clean --if-exists < vibemdm-2026-10-01.dump
 docker run --rm -v deploy_vibemdm-data:/data -v "$PWD":/backup alpine tar xzf /backup/vibemdm-data-2026-10-01.tgz -C /data
+mkdir -p assets && tar xzf vibemdm-assets-2026-10-01.tgz -C assets
 # make sure .env has the same VIBEMDM_ENCRYPTION_KEY as when the dump was taken
 docker compose up -d
 ```

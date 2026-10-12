@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { AppWindow, Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
+import { AppIcon } from '../components/apps/AppIcon'
 import { qk, useApps, useInvalidate } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -138,7 +139,7 @@ export function AppsPage() {
               header: 'App',
               render: (a) => (
                 <span className="flex items-center gap-2.5">
-                  <AppWindow className="size-4 text-ink-faint" />
+                  <AppIcon appId={a.id} version={a.icon_version} />
                   <span>
                     <span className="block font-medium text-ink">{a.name}</span>
                     <span className="block text-xs text-ink-muted">

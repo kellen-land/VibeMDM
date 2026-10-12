@@ -842,6 +842,8 @@ export interface MacApp {
   update_behavior: AppUpdateBehavior
   /** automatic: installed on every Mac in scope. self_service: offered in Self Service only. */
   deployment: AppDeployment
+  /** Version of the uploaded icon (absent: none). Served at /api/v1/apps/{id}/icon. */
+  icon_version?: string
   options: InstallomatorOptions
   enabled: boolean
   scope: Scope
