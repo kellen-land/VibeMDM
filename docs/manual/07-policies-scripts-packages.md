@@ -215,8 +215,10 @@ Self Service+.
 
 **The app.** Every Mac with the agent gets **`/Applications/<org> Self Service.app`** (Settings → Self Service:
 on by default, with the app name, accent colour and welcome text). The agent creates it at enrollment and checks it
-at every check-in: a small bundle with a generated icon in the accent colour whose launcher opens a
-[swiftDialog](https://github.com/swiftDialog/swiftDialog) window showing the local portal. The agent installs
+at every check-in: an AppleScript applet built on the Mac with `osacompile` (macOS refuses a script as an app's main
+executable), with a generated icon in the accent colour, signed ad hoc, whose launcher opens a
+[swiftDialog](https://github.com/swiftDialog/swiftDialog) window showing the local portal. A bundle whose
+permissions or files are damaged is rebuilt at the next check-in. The agent installs
 swiftDialog with Installomator when it is missing (retrying at most every six hours); until then the app opens the
 portal in the browser. Opening the app again brings the open window forward. Renaming the app in the settings
 replaces it; turning Self Service off removes it. An app of the same name that VibeMDM did not create is never

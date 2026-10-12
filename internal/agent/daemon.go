@@ -62,6 +62,9 @@ type localTrigger struct {
 
 // Run executes the daemon until ctx is cancelled.
 func (d *Daemon) Run(ctx context.Context) error {
+	// Root's usual umask, so files written by the agent, its scripts and installers are readable
+	// by everyone unless they ask otherwise (secrets are written with explicit modes).
+	syscall.Umask(0o022)
 	lvl := "info"
 	if d.LogLevel != nil {
 		lvl = LevelName(d.LogLevel.Level())
@@ -258,9 +261,11 @@ func (d *Daemon) serveSocket(ctx context.Context) {
 
 func (d *Daemon) listenTrigger(ctx context.Context, path string, mode os.FileMode, restricted bool) {
 	os.Remove(path)
-	old := syscall.Umask(0o177)
+	// No umask juggling: umask is process-wide, and changing it here raced with every other
+	// file the agent writes (and with the other listener, which could leave it at 0177 for
+	// good). The socket is created with the default mode, which already refuses connections
+	// from non-root users (they need write permission), and gets its final mode right after.
 	ln, err := net.Listen("unix", path)
-	syscall.Umask(old)
 	if err != nil {
 		d.log.Warn("cannot listen on trigger socket", "path", path, "err", err)
 		return

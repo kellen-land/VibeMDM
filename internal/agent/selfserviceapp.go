@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"howett.net/plist"
+
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/selfservice"
 )
@@ -46,7 +48,11 @@ type selfServiceApp struct {
 	statePath string
 	version   string
 	ensureDlg func(ctx context.Context) error
-	log       interface {
+	// compile builds the applet bundle at dest (osacompile); sign ad-hoc signs it (codesign).
+	// macOS only; tests replace them.
+	compile func(ctx context.Context, dest string) error
+	sign    func(ctx context.Context, app string) error
+	log     interface {
 		Info(string, ...any)
 		Warn(string, ...any)
 	}
@@ -123,10 +129,8 @@ func (s *selfServiceApp) reconcile(ctx context.Context) error {
 	}
 	files := selfServiceBundleFiles(c, s.version)
 	hash := bundleHash(files)
-	if st.Path == path && st.Hash == hash {
-		if _, err := os.Stat(filepath.Join(path, "Contents", "Resources", selfServiceMarker)); err == nil {
-			return nil // up to date
-		}
+	if st.Path == path && st.Hash == hash && bundleIntact(path) {
+		return nil // up to date
 	}
 	if st.Path != "" && st.Path != path {
 		removeOurBundle(st.Path) // renamed in the settings
@@ -136,21 +140,20 @@ func (s *selfServiceApp) reconcile(ctx context.Context) error {
 			return fmt.Errorf("%s exists and was not created by VibeMDM; leaving it alone", path)
 		}
 	}
-	tmp := path + ".vibemdm-tmp"
-	os.RemoveAll(tmp)
-	for rel, f := range files {
-		p := filepath.Join(tmp, rel)
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			return err
-		}
-		if err := os.WriteFile(p, f.data, f.mode); err != nil {
-			os.RemoveAll(tmp)
-			return err
-		}
+	// Build in the agent's support folder, then move into /Applications in one step.
+	buildDir := filepath.Join(filepath.Dir(s.statePath), "selfservice-build")
+	os.RemoveAll(buildDir)
+	if err := os.MkdirAll(buildDir, 0o700); err != nil {
+		return err
+	}
+	os.Chmod(buildDir, 0o700)
+	defer os.RemoveAll(buildDir)
+	tmp := filepath.Join(buildDir, c.AppName+".app")
+	if err := s.buildBundle(ctx, tmp, c, files); err != nil {
+		return err
 	}
 	os.RemoveAll(path)
 	if err := os.Rename(tmp, path); err != nil {
-		os.RemoveAll(tmp)
 		return err
 	}
 	// Refresh Finder's icon and name cache for the bundle.
@@ -175,66 +178,26 @@ type bundleFile struct {
 // selfServiceBundleFiles returns the app bundle's files (paths relative to the .app).
 func selfServiceBundleFiles(c model.AgentSelfService, version string) map[string]bundleFile {
 	return map[string]bundleFile{
-		"Contents/Info.plist":                     {[]byte(selfServiceInfoPlist(c, version)), 0o644},
-		"Contents/MacOS/selfservice":              {[]byte(selfServiceLauncher(c)), 0o755},
-		"Contents/Resources/AppIcon.icns":         {selfServiceIcon(c.Accent), 0o644},
-		"Contents/Resources/" + selfServiceMarker: {[]byte("Created by the VibeMDM agent; it is replaced at each check-in.\n"), 0o644},
+		"Contents/Resources/launcher.zsh":         {[]byte(selfServiceLauncher(c)), 0o755},
+		"Contents/Resources/applet.icns":          {selfServiceIcon(c.Accent), 0o644},
+		"Contents/Resources/" + selfServiceMarker: {[]byte("Created by the VibeMDM agent; it is replaced at each check-in.\n" + c.AppName + "\n" + version + "\n"), 0o644},
 	}
 }
 
 func bundleHash(files map[string]bundleFile) string {
 	h := sha256.New()
-	for _, rel := range []string{"Contents/Info.plist", "Contents/MacOS/selfservice", "Contents/Resources/AppIcon.icns"} {
+	for _, rel := range []string{"Contents/Resources/launcher.zsh", "Contents/Resources/applet.icns", "Contents/Resources/" + selfServiceMarker} {
 		h.Write([]byte(rel))
 		h.Write(files[rel].data)
 	}
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func xmlEscape(s string) string {
-	var b bytes.Buffer
-	for _, r := range s {
-		switch r {
-		case '&':
-			b.WriteString("&amp;")
-		case '<':
-			b.WriteString("&lt;")
-		case '>':
-			b.WriteString("&gt;")
-		default:
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
-}
-
-func selfServiceInfoPlist(c model.AgentSelfService, version string) string {
-	v := strings.TrimPrefix(version, "v")
-	return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>CFBundleIdentifier</key><string>` + selfServiceBundleID + `</string>
-	<key>CFBundleName</key><string>` + xmlEscape(c.AppName) + `</string>
-	<key>CFBundleDisplayName</key><string>` + xmlEscape(c.AppName) + `</string>
-	<key>CFBundleExecutable</key><string>selfservice</string>
-	<key>CFBundleIconFile</key><string>AppIcon</string>
-	<key>CFBundlePackageType</key><string>APPL</string>
-	<key>CFBundleShortVersionString</key><string>1.0</string>
-	<key>CFBundleVersion</key><string>` + xmlEscape(v) + `</string>
-	<key>LSMinimumSystemVersion</key><string>12.0</string>
-	<key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
-	<key>NSHighResolutionCapable</key><true/>
-</dict>
-</plist>
-`
-}
-
 // shellQuote quotes s for zsh single quotes.
 func shellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
 
-// selfServiceLauncher is the app's executable: one swiftDialog window per user showing the
-// local portal; the browser when swiftDialog is not installed.
+// selfServiceLauncher is run by the applet (Contents/Resources/launcher.zsh): one swiftDialog
+// window per user showing the local portal; the browser when swiftDialog is not installed.
 func selfServiceLauncher(c model.AgentSelfService) string {
 	url := "http://" + SelfServicePort + "/?embedded=1"
 	return `#!/bin/zsh
@@ -344,4 +307,119 @@ func selfServiceIcon(accentHex string) []byte {
 	binary.Write(&out, binary.BigEndian, uint32(8+body.Len()))
 	out.Write(body.Bytes())
 	return out.Bytes()
+}
+
+// bundleIntact reports whether an installed bundle is ours and usable: the marker exists, the
+// folders are readable by everyone and the applet is executable.
+func bundleIntact(path string) bool {
+	if _, err := os.Stat(filepath.Join(path, "Contents", "Resources", selfServiceMarker)); err != nil {
+		return false
+	}
+	for _, d := range []string{path, filepath.Join(path, "Contents"), filepath.Join(path, "Contents", "MacOS"), filepath.Join(path, "Contents", "Resources")} {
+		if fi, err := os.Stat(d); err != nil || fi.Mode().Perm()&0o555 != 0o555 {
+			return false
+		}
+	}
+	for _, f := range []string{"Contents/MacOS/applet", "Contents/Resources/launcher.zsh"} {
+		if fi, err := os.Stat(filepath.Join(path, f)); err != nil || fi.Mode().Perm()&0o555 != 0o555 {
+			return false
+		}
+	}
+	return true
+}
+
+// buildBundle makes the app at dest: an AppleScript applet (a real Mach-O executable, which
+// macOS requires; a script as the main executable is refused) that runs launcher.zsh in the
+// background, with our icon, name and bundle identifier, explicit modes and an ad-hoc signature.
+func (s *selfServiceApp) buildBundle(ctx context.Context, dest string, c model.AgentSelfService, files map[string]bundleFile) error {
+	compile, sign := s.compile, s.sign
+	if compile == nil {
+		compile = osacompileApplet
+	}
+	if sign == nil {
+		sign = codesignAdHoc
+	}
+	if err := compile(ctx, dest); err != nil {
+		return fmt.Errorf("building the applet: %w", err)
+	}
+	res := filepath.Join(dest, "Contents", "Resources")
+	os.RemoveAll(filepath.Join(res, "Assets.car")) // its icon would win over ours
+	for rel, f := range files {
+		p := filepath.Join(dest, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(p, f.data, f.mode); err != nil {
+			return err
+		}
+	}
+	if err := editInfoPlist(filepath.Join(dest, "Contents", "Info.plist"), c, s.version); err != nil {
+		return err
+	}
+	// Modes are set explicitly: the process umask must not decide whether users can open the app.
+	if err := filepath.Walk(dest, func(p string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		mode := os.FileMode(0o644)
+		rel, _ := filepath.Rel(dest, p)
+		rel = filepath.ToSlash(rel)
+		switch {
+		case fi.IsDir(), rel == "Contents/MacOS/applet", rel == "Contents/Resources/launcher.zsh":
+			mode = 0o755
+		}
+		return os.Chmod(p, mode)
+	}); err != nil {
+		return err
+	}
+	if err := sign(ctx, dest); err != nil {
+		return fmt.Errorf("signing the app: %w", err)
+	}
+	return nil
+}
+
+// appletSource runs the launcher next to the applet and returns at once.
+const appletSource = `do shell script "/bin/zsh " & quoted form of (POSIX path of (path to me) & "Contents/Resources/launcher.zsh") & " >/dev/null 2>&1 &"`
+
+func osacompileApplet(ctx context.Context, dest string) error {
+	out, err := exec.CommandContext(ctx, "/usr/bin/osacompile", "-o", dest, "-e", appletSource).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func codesignAdHoc(ctx context.Context, app string) error {
+	out, err := exec.CommandContext(ctx, "/usr/bin/codesign", "--force", "--deep", "--sign", "-", app).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%v: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// editInfoPlist gives the applet our identity: bundle identifier, name, version, icon, and no
+// Dock icon of its own (the swiftDialog window has one).
+func editInfoPlist(path string, c model.AgentSelfService, version string) error {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var info map[string]any
+	if _, err := plist.Unmarshal(raw, &info); err != nil {
+		return fmt.Errorf("reading the applet's Info.plist: %w", err)
+	}
+	info["CFBundleIdentifier"] = selfServiceBundleID
+	info["CFBundleName"] = c.AppName
+	info["CFBundleDisplayName"] = c.AppName
+	info["CFBundleShortVersionString"] = "1.0"
+	info["CFBundleVersion"] = strings.TrimPrefix(version, "v")
+	info["CFBundleIconFile"] = "applet"
+	delete(info, "CFBundleIconName")
+	info["LSUIElement"] = true
+	info["LSMinimumSystemVersion"] = "12.0"
+	out, err := plist.MarshalIndent(info, plist.XMLFormat, "\t")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, out, 0o644)
 }

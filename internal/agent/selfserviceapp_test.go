@@ -9,14 +9,30 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/vibemdm/vibemdm/internal/model"
 )
 
+// newTestSSApp replaces osacompile and codesign with a fake applet like the one osacompile makes.
 func newTestSSApp(t *testing.T) *selfServiceApp {
 	dir := t.TempDir()
-	return &selfServiceApp{appsDir: filepath.Join(dir, "Applications"), statePath: filepath.Join(dir, "state.json"), version: "v1", log: nopLog{}}
+	return &selfServiceApp{appsDir: filepath.Join(dir, "Applications"), statePath: filepath.Join(dir, "state.json"), version: "v1", log: nopLog{},
+		compile: func(_ context.Context, dest string) error {
+			// Owner-only, as osacompile leaves it under the agent's old 0177 umask (root can still
+			// write there; the test user needs the explicit chmod).
+			for _, d := range []string{dest, filepath.Join(dest, "Contents"), filepath.Join(dest, "Contents", "MacOS"), filepath.Join(dest, "Contents", "Resources")} {
+				os.Mkdir(d, 0o700)
+				os.Chmod(d, 0o700)
+			}
+			os.WriteFile(filepath.Join(dest, "Contents", "MacOS", "applet"), []byte("\xcf\xfa\xed\xfe"), 0o600)
+			os.WriteFile(filepath.Join(dest, "Contents", "Resources", "Assets.car"), []byte("x"), 0o600)
+			return os.WriteFile(filepath.Join(dest, "Contents", "Info.plist"), []byte(`<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict><key>CFBundleExecutable</key><string>applet</string><key>CFBundleIconName</key><string>applet</string><key>CFBundleIdentifier</key><string>com.apple.ScriptEditor.id.x</string></dict></plist>`), 0o600)
+		},
+		sign: func(context.Context, string) error { return nil },
+	}
 }
 
 func TestSelfServiceAppLifecycle(t *testing.T) {
@@ -28,14 +44,21 @@ func TestSelfServiceAppLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	app := filepath.Join(s.appsDir, "Lands School Self Service.app")
-	exe := filepath.Join(app, "Contents", "MacOS", "selfservice")
-	fi, err := os.Stat(exe)
-	if err != nil || fi.Mode().Perm()&0o111 == 0 {
-		t.Fatalf("launcher missing or not executable: %v", err)
+	exe := filepath.Join(app, "Contents", "Resources", "launcher.zsh")
+	for _, f := range []string{exe, filepath.Join(app, "Contents", "MacOS", "applet")} {
+		fi, err := os.Stat(f)
+		if err != nil || fi.Mode().Perm() != 0o755 {
+			t.Fatalf("%s missing or not executable: %v", f, err)
+		}
 	}
 	plist, _ := os.ReadFile(filepath.Join(app, "Contents", "Info.plist"))
-	if !strings.Contains(string(plist), "<string>Lands School Self Service</string>") || !strings.Contains(string(plist), selfServiceBundleID) {
-		t.Fatalf("Info.plist: %s", plist)
+	for _, want := range []string{"<string>Lands School Self Service</string>", selfServiceBundleID, "<key>LSUIElement</key>", "<key>CFBundleExecutable</key>"} {
+		if !strings.Contains(string(plist), want) {
+			t.Fatalf("Info.plist lacks %q: %s", want, plist)
+		}
+	}
+	if strings.Contains(string(plist), "CFBundleIconName") || fileExists(filepath.Join(app, "Contents", "Resources", "Assets.car")) {
+		t.Fatal("the applet's own icon would override ours")
 	}
 	// Unchanged configuration: nothing is rewritten.
 	before, _ := os.Stat(exe)
@@ -105,5 +128,32 @@ func TestSelfServiceLauncherQuoting(t *testing.T) {
 		if out, err := exec.Command(zsh, "-n", f).CombinedOutput(); err != nil {
 			t.Fatalf("zsh syntax: %v %s", err, out)
 		}
+	}
+}
+
+func TestSelfServiceAppModesIgnoreUmask(t *testing.T) {
+	s := newTestSSApp(t)
+	os.MkdirAll(s.appsDir, 0o755)
+	old := syscall.Umask(0o177) // what the agent's socket setup used to leave behind
+	defer syscall.Umask(old)
+	s.cfg = model.AgentSelfService{Enabled: true, OrgName: "Lands"}
+	if err := s.reconcile(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	app := filepath.Join(s.appsDir, "Lands Self Service.app")
+	for rel, want := range map[string]os.FileMode{".": 0o755, "Contents": 0o755, "Contents/MacOS": 0o755, "Contents/MacOS/applet": 0o755,
+		"Contents/Resources/launcher.zsh": 0o755, "Contents/Info.plist": 0o644, "Contents/Resources/applet.icns": 0o644} {
+		fi, err := os.Stat(filepath.Join(app, rel))
+		if err != nil || fi.Mode().Perm() != want {
+			t.Errorf("%s: %v %v, want %v", rel, fi.Mode().Perm(), err, want)
+		}
+	}
+	// A bundle whose modes were damaged is repaired even though its contents are current.
+	os.Chmod(filepath.Join(app, "Contents", "MacOS", "applet"), 0o600)
+	if err := s.reconcile(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if fi, _ := os.Stat(filepath.Join(app, "Contents", "MacOS", "applet")); fi.Mode().Perm() != 0o755 {
+		t.Fatal("damaged launcher not repaired")
 	}
 }
