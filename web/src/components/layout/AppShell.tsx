@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState , useCallback } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Activity,
@@ -36,6 +36,8 @@ import {
   X,
   type LucideIcon,
   Keyboard,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext'
 import { useTheme } from '../../theme/ThemeContext'
@@ -44,6 +46,7 @@ import { Badge } from '../ui/Badge'
 import { Dropdown } from '../ui/Dropdown'
 import { ShortcutHandler, ShortcutHelp } from '../editor/Shortcuts'
 import { pageKey } from '../../lib/pageKey'
+import { hasModifier, modLabel } from '../../lib/shortcuts'
 import { EditGuardProvider } from '../editor/EditGuard'
 import { SaveFeedbackProvider } from '../editor/SaveFeedback'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
@@ -140,6 +143,24 @@ function HealthNavBadge() {
   )
 }
 
+/** The rail shows open findings as a dot on the Health icon. */
+function HealthNavDot() {
+  const q = useHealthSummary()
+  const c = q.data?.counts
+  if (!c || c.critical + c.warning === 0) return null
+  return <span className={cn('absolute left-[26px] top-1.5 size-2 rounded-full ring-2 ring-surface', c.critical ? 'bg-critical' : 'bg-warning')} aria-label={`${c.critical + c.warning} open findings`} />
+}
+
+/** Collapse the sidebar to an icon rail, or expand it again (⌃[ / Alt+[). */
+function RailToggle({ rail, onToggle }: { rail: boolean; onToggle: () => void }) {
+  const label = `${rail ? 'Expand' : 'Collapse'} sidebar (${modLabel}[)`
+  return (
+    <button type="button" onClick={onToggle} aria-label={label} title={label} className="inline-flex size-8 items-center justify-center rounded-md border border-line text-ink-muted hover:bg-line/40 hover:text-ink focus-ring">
+      {rail ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+    </button>
+  )
+}
+
 const prefLabel = { system: 'System', light: 'Light', dark: 'Dark' } as const
 const nextPref = { system: 'light', light: 'dark', dark: 'system' } as const
 
@@ -169,6 +190,36 @@ export function AppShell() {
   const navigate = useNavigate()
   const toast = useToast()
   useEffect(() => setMobileOpen(false), [loc.pathname])
+
+  // Desktop sidebar: full width or a slim icon rail. Remembered per browser.
+  const [rail, setRail] = useState(() => {
+    try {
+      return localStorage.getItem('vibemdm.nav.rail') === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggleRail = useCallback(() => {
+    setRail((r) => {
+      try {
+        localStorage.setItem('vibemdm.nav.rail', r ? '0' : '1')
+      } catch {
+        /* storage unavailable: applies to this visit */
+      }
+      return !r
+    })
+  }, [])
+  // ⌃[ on a Mac, Alt+[ elsewhere (the shortcut modifier), like the other console shortcuts.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === 'BracketLeft' && hasModifier(e) && !e.shiftKey) {
+        e.preventDefault()
+        toggleRail()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [toggleRail])
 
   // Headed groups fold away; the one holding the current page opens itself. Choices persist per browser.
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
@@ -200,13 +251,13 @@ export function AppShell() {
     }
   }
 
-  const sidebar = (
-    <div className="flex h-full flex-col bg-surface">
+  const sidebar = (compact: boolean) => (
+    <div className="flex h-full flex-col overflow-hidden bg-surface">
       <div className="flex items-center gap-2.5 px-4 h-14 border-b border-line">
         <div className="flex size-8 items-center justify-center rounded-md bg-accent-500/15 text-accent-400 ring-1 ring-accent-500/30">
           <FileCode className="size-[18px]" aria-hidden="true" />
         </div>
-        <div className="min-w-0">
+        <div className={cn('min-w-0 whitespace-nowrap transition-opacity duration-200 motion-reduce:transition-none', compact && 'pointer-events-none opacity-0')}>
           <p className="truncate text-[13px] font-semibold text-ink leading-4 tracking-tight">{status?.org_name || 'VibeMDM'}</p>
           <p className="truncate text-[10px] uppercase tracking-[0.12em] text-ink-faint leading-4">Device Management</p>
         </div>
@@ -214,48 +265,76 @@ export function AppShell() {
           <X className="size-5" />
         </button>
       </div>
-      <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
-        {navGroups.map((g, gi) => (
-          <div key={g.heading || `top-${gi}`}>
-            {g.heading && (
-              <button
-                type="button"
-                onClick={() => setOpenGroups((o) => ({ ...o, [g.heading]: !o[g.heading] }))}
-                aria-expanded={!!openGroups[g.heading]}
-                className="flex w-full items-center justify-between rounded px-2 pb-1 micro-label text-ink-faint hover:text-ink-muted focus-ring"
+      <nav className={cn('flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-3', compact ? 'space-y-2' : 'space-y-4')}>
+        {navGroups.map((g, gi) => {
+          // In the rail every group is shown (icons only); folding is for the full sidebar.
+          const open = compact || !g.heading || !!openGroups[g.heading]
+          return (
+            <div key={g.heading || `top-${gi}`}>
+              {g.heading &&
+                (compact ? (
+                  <div className="mx-2 mb-2 h-px bg-line" aria-hidden="true" />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setOpenGroups((o) => ({ ...o, [g.heading]: !o[g.heading] }))}
+                    aria-expanded={open}
+                    className="flex w-full items-center justify-between whitespace-nowrap rounded px-2 pb-1 micro-label text-ink-faint hover:text-ink-muted focus-ring"
+                  >
+                    {g.heading}
+                    <ChevronDown className={cn('size-3.5 transition-transform duration-300 ease-out motion-reduce:transition-none', !open && '-rotate-90')} aria-hidden="true" />
+                  </button>
+                ))}
+              {/* Folds with a height animation (grid rows 0fr ↔ 1fr) and a fade. */}
+              <div
+                className={cn(
+                  'grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+                  open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+                )}
+                inert={!open}
               >
-                {g.heading}
-                <ChevronDown className={cn('size-3.5 transition-transform', !openGroups[g.heading] && '-rotate-90')} aria-hidden="true" />
-              </button>
-            )}
-            <div className={cn('space-y-0.5', g.heading && !openGroups[g.heading] && 'hidden')}>
-              {g.items.map((n) => (
-                <NavLink
-                  key={n.to}
-                  to={n.to}
-                  end={n.end}
-                  className={({ isActive }) =>
-                    cn(
-                      'group relative flex items-center gap-2.5 rounded-md pl-3 pr-2.5 py-[7px] text-[13px] font-medium transition-colors',
-                      isActive ? 'bg-accent-500/12 text-ink' : 'text-ink-muted hover:bg-line/40 hover:text-ink',
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <span className={cn('absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-accent-400 transition-opacity', isActive ? 'opacity-100' : 'opacity-0')} aria-hidden="true" />
-                      <n.icon className={cn('size-4 shrink-0', isActive ? 'text-accent-400' : 'text-ink-faint group-hover:text-ink-muted')} aria-hidden="true" />
-                      <span className="truncate">{n.label}</span>
-                      {n.badge === 'health' && <HealthNavBadge />}
-                    </>
-                  )}
-                </NavLink>
-              ))}
+                <div className="min-h-0 space-y-0.5 overflow-hidden">
+                  {g.items.map((n) => (
+                    <NavLink
+                      key={n.to}
+                      to={n.to}
+                      end={n.end}
+                      title={compact ? n.label : undefined}
+                      aria-label={compact ? n.label : undefined}
+                      className={({ isActive }) =>
+                        cn(
+                          'group relative flex items-center gap-2.5 rounded-md pl-3 pr-2.5 py-[7px] text-[13px] font-medium transition-colors',
+                          isActive ? 'bg-accent-500/12 text-ink' : 'text-ink-muted hover:bg-line/40 hover:text-ink',
+                        )
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <span className={cn('absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-accent-400 transition-opacity', isActive ? 'opacity-100' : 'opacity-0')} aria-hidden="true" />
+                          <n.icon className={cn('size-4 shrink-0', isActive ? 'text-accent-400' : 'text-ink-faint group-hover:text-ink-muted')} aria-hidden="true" />
+                          <span className={cn('truncate whitespace-nowrap transition-[opacity,transform] duration-200 motion-reduce:transition-none', compact && '-translate-x-1 opacity-0')}>{n.label}</span>
+                          {n.badge === 'health' && (compact ? <HealthNavDot /> : <HealthNavBadge />)}
+                        </>
+                      )}
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </nav>
       <div className="border-t border-line p-2.5">
+        {compact ? (
+          <div className="flex flex-col items-center gap-2">
+            <button type="button" onClick={() => setPwOpen(true)} className="flex size-8 items-center justify-center rounded-md bg-line text-[11px] font-semibold uppercase text-ink hover:ring-1 hover:ring-line-strong focus-ring" title={`${user?.display_name || user?.username} · change password`}>
+              {(user?.display_name || user?.username || '?').slice(0, 2)}
+            </button>
+            <ThemeToggle />
+            <RailToggle rail onToggle={toggleRail} />
+          </div>
+        ) : (
+        <>
         <Dropdown
           align="up"
           className="w-full"
@@ -284,24 +363,41 @@ export function AppShell() {
             { label: 'Sign out', icon: <LogOut />, onSelect: doLogout },
           ]}
         />
-        <div className="mt-2 flex items-center justify-between px-1">
-          <span className="text-[10px] text-ink-faint tabular-nums">{status?.version ? `v${status.version}` : ''}</span>
+        <div className="mt-2 flex items-center justify-between gap-1.5 px-1">
+          <span className="mr-auto whitespace-nowrap text-[10px] text-ink-faint tabular-nums">{status?.version ? `v${status.version}` : ''}</span>
           <ThemeToggle />
+          {!mobileOpen && <RailToggle rail={false} onToggle={toggleRail} />}
         </div>
+        </>
+        )}
       </div>
     </div>
   )
 
   return (
     <div className="flex min-h-full">
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-60 flex-col border-r border-line z-30">{sidebar}</aside>
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-64 border-r border-line shadow-2xl">{sidebar}</aside>
-        </div>
-      )}
-      <div className="flex min-w-0 flex-1 flex-col lg:pl-60">
+      <aside
+        className={cn(
+          'hidden lg:flex fixed inset-y-0 left-0 flex-col border-r border-line z-30 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+          rail ? 'w-[60px]' : 'w-60',
+        )}
+      >
+        {sidebar(rail)}
+      </aside>
+      {/* Phone drawer: slides in over a fading backdrop. */}
+      <div className={cn('fixed inset-0 z-40 lg:hidden', !mobileOpen && 'pointer-events-none')} aria-hidden={!mobileOpen}>
+        <div className={cn('absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 motion-reduce:transition-none', mobileOpen ? 'opacity-100' : 'opacity-0')} onClick={() => setMobileOpen(false)} />
+        <aside
+          className={cn(
+            'absolute inset-y-0 left-0 w-64 border-r border-line shadow-2xl transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+            mobileOpen ? 'translate-x-0' : '-translate-x-full',
+          )}
+          inert={!mobileOpen}
+        >
+          {sidebar(false)}
+        </aside>
+      </div>
+      <div className={cn('flex min-w-0 flex-1 flex-col transition-[padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none', rail ? 'lg:pl-[60px]' : 'lg:pl-60')}>
         <header className="sticky top-0 z-20 flex h-13 items-center gap-3 border-b border-line bg-surface/90 backdrop-blur px-4 py-2.5 lg:hidden">
           <button type="button" onClick={() => setMobileOpen(true)} className="text-ink-muted" aria-label="Open menu">
             <Menu className="size-5" />
