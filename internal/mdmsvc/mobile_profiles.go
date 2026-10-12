@@ -5,11 +5,12 @@ import (
 
 	"github.com/vibemdm/vibemdm/internal/commands"
 	"github.com/vibemdm/vibemdm/internal/model"
+	"github.com/vibemdm/vibemdm/internal/profilevars"
 )
 
 // InstallMobileProfile queues an InstallProfile for an iPhone or iPad and records the deployment.
 func (c *Commander) InstallMobileProfile(ctx context.Context, d *model.MobileDevice, prof *model.MobileConfigProfile, createdBy string) error {
-	cmd, err := commands.InstallProfile([]byte(prof.Payload))
+	cmd, err := commands.InstallProfile([]byte(profilevars.Expand(prof.Payload, profilevars.ForMobileDevice(d))))
 	if err != nil {
 		return err
 	}

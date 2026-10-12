@@ -16,6 +16,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/ddm"
 	"github.com/vibemdm/vibemdm/internal/inspector"
 	"github.com/vibemdm/vibemdm/internal/model"
+	"github.com/vibemdm/vibemdm/internal/profilevars"
 	"github.com/vibemdm/vibemdm/internal/store"
 )
 
@@ -148,7 +149,7 @@ func (c *Commander) RequestInventory(ctx context.Context, comp *model.Computer, 
 
 // InstallProfile queues an InstallProfile and records the deployment.
 func (c *Commander) InstallProfile(ctx context.Context, comp *model.Computer, prof *model.ConfigProfile, createdBy string) error {
-	cmd, err := commands.InstallProfile([]byte(prof.Payload))
+	cmd, err := commands.InstallProfile([]byte(profilevars.Expand(prof.Payload, profilevars.ForComputer(comp))))
 	if err != nil {
 		return err
 	}
