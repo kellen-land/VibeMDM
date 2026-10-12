@@ -42,7 +42,11 @@ Public https URL devices use (e.g. https://mdm.example.com).
 Listen address (default :8080).
 .TP
 .B VIBEMDM_DATA_DIR
-Data directory for packages, archives and diagnostics (default /data).
+Data directory for log archives and diagnostics (default /data).
+.TP
+.B VIBEMDM_ASSETS_DIR
+Directory for uploaded packages, the agent package and Mac App icons (default: the data directory).
+Files an older version kept in the data directory are moved here at start-up.
 .TP
 .B VIBEMDM_AGENT_DIR
 Directory with prebuilt agent binaries (default /app/agents).

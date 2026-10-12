@@ -55,6 +55,22 @@ root with `/bin/zsh <script> <args…>`, passing the arguments as argv, without 
 The Health check **Failing app installs** opens when an app's latest run failed on at least 3 Macs and on at least
 half of the Macs it ran on in the last 7 days, which usually means a broken label or a vendor change.
 
+### Icons
+
+Each app can have an icon (**Mac Apps → app → Self Service → Icon**, or `PUT /api/v1/apps/{id}/icon` with the file
+as the request body; `DELETE` removes it). Upload a PNG, JPEG or `.icns` file of up to 4 MB. VibeMDM decodes it and
+stores a fresh PNG of at most 256 × 256 pixels, so nothing but the pixels survives (no metadata, no scripts in SVGs:
+SVG is not accepted). The icon is saved straight away, separately from **Save changes**.
+
+Icons are files in the assets folder (`app-icons/<app id>-<version>.png`, see [§2.2](02-installation.md#storage)). The version
+is the start of the PNG's SHA-256, so a replaced icon gets a new name and every cache notices. Removing an app
+removes its icon, and icons of apps that no longer exist are removed at start-up.
+
+On the Mac, the agent downloads an icon the first time Self Service or a notification needs it and keeps it in
+`/Library/Application Support/VibeMDM/cache/app-icons`. A newer version replaces the old file, and icons of apps that
+Self Service no longer lists are deleted when the list is loaded. Apps without an uploaded icon show the installed
+app's own icon, or a letter tile when the app is not installed.
+
 ## 9.3 Labels
 
 Over a thousand labels ship with Installomator. Each defines the download URL logic, the archive type, the app
@@ -85,6 +101,27 @@ send, for example:
 ```
 googlechrome DEBUG='0' NOTIFY='silent' BLOCKING_PROCESS_ACTION='prompt_user'
 ```
+
+### Notifications
+
+The agent always runs Installomator with `NOTIFY=silent` and posts the notification itself. Installomator's own
+notifications use `osascript`, which macOS shows with Script Editor's icon, and clicking one opens Script Editor.
+
+| Notify | The agent shows |
+| --- | --- |
+| `silent` | Nothing |
+| `success` | "*App* is ready" (or "*App* was updated") after an install or update |
+| `all` | The above, plus "*App* is already up to date" and "*App* could not be installed" |
+
+Installomator's "download in progress" notifications are not shown; Self Service shows progress instead.
+
+The notification is posted with swiftDialog (`dialog --notification`), which installs with Self Service. It shows the
+app's uploaded icon (or the installed app's own icon), and clicking it opens the app that was just installed.
+macOS still shows swiftDialog's small icon as the sender. Without swiftDialog the agent falls back to `osascript`,
+which has Script Editor's icon and click behaviour.
+
+> **Untested on real hardware:** the swiftDialog notification (icon, and the click opening the app through
+> `--button1action file:///Applications/…app`) has not been tried on a Mac yet.
 
 `DEBUG='0'` is always sent. The bundled Installomator script keeps upstream's default of `DEBUG=1`, in which it
 downloads and verifies the app but installs nothing and still exits 0; the agent also adds `DEBUG=0` when an older

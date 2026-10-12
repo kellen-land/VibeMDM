@@ -18,6 +18,8 @@ import (
 
 	"github.com/coder/websocket"
 
+	"github.com/vibemdm/vibemdm/internal/appicons"
+	"github.com/vibemdm/vibemdm/internal/assets"
 	"github.com/vibemdm/vibemdm/internal/auth"
 	"github.com/vibemdm/vibemdm/internal/compliance"
 	"github.com/vibemdm/vibemdm/internal/enroll"
@@ -34,16 +36,18 @@ type EnrollmentProfileFunc func(ctx context.Context) ([]byte, error)
 
 // Handler serves agent endpoints.
 type Handler struct {
-	st       *store.Store
-	engine   *policy.Engine
-	notifier *Notifier
-	log      *slog.Logger
-	dataDir  string
-	agentDir string
-	profile  EnrollmentProfileFunc
-	shellHub *shell.Hub
-	hooks    *webhook.Dispatcher
-	version  string
+	st        *store.Store
+	engine    *policy.Engine
+	notifier  *Notifier
+	log       *slog.Logger
+	dataDir   string
+	icons     appicons.Dir
+	assetsDir string
+	agentDir  string
+	profile   EnrollmentProfileFunc
+	shellHub  *shell.Hub
+	hooks     *webhook.Dispatcher
+	version   string
 
 	compliance *compliance.Service
 	onboarding *onboarding.Service
@@ -65,8 +69,8 @@ func (h *Handler) WithCompliance(svc *compliance.Service) *Handler {
 }
 
 // New creates an agent API handler.
-func New(st *store.Store, engine *policy.Engine, notifier *Notifier, hub *shell.Hub, hooks *webhook.Dispatcher, dataDir, agentDir, version string, profile EnrollmentProfileFunc, logger *slog.Logger) *Handler {
-	return &Handler{st: st, engine: engine, notifier: notifier, shellHub: hub, hooks: hooks, log: logger, dataDir: dataDir, agentDir: agentDir, profile: profile, version: version}
+func New(st *store.Store, engine *policy.Engine, notifier *Notifier, hub *shell.Hub, hooks *webhook.Dispatcher, dataDir, assetsDir, agentDir, version string, profile EnrollmentProfileFunc, logger *slog.Logger) *Handler {
+	return &Handler{st: st, engine: engine, notifier: notifier, shellHub: hub, hooks: hooks, log: logger, dataDir: dataDir, assetsDir: assetsDir, icons: appicons.Dir{Path: filepath.Join(assetsDir, assets.AppIcons)}, agentDir: agentDir, profile: profile, version: version}
 }
 
 type ctxKey struct{}
@@ -520,7 +524,7 @@ func (h *Handler) packageDownload(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 404, "package not found")
 		return
 	}
-	path := filepath.Join(h.dataDir, "packages", filepath.Base(pkg.Filename))
+	path := filepath.Join(h.assetsDir, assets.Packages, filepath.Base(pkg.Filename))
 	if _, err := os.Stat(path); err != nil {
 		writeErr(w, 404, "package file missing on server")
 		return

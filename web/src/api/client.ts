@@ -87,6 +87,9 @@ async function request<T>(method: string, path: string, body?: unknown, opts?: R
   if (body !== undefined) {
     if (body instanceof FormData) {
       init.body = body
+    } else if (body instanceof Blob) {
+      headers['Content-Type'] = body.type || 'application/octet-stream'
+      init.body = body
     } else {
       headers['Content-Type'] = 'application/json'
       init.body = JSON.stringify(body)

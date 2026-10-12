@@ -242,13 +242,30 @@ func (d *Daemon) serveSelfService(ctx context.Context) {
 			Installed bool `json:"installed"`
 		}
 		out := make([]item, 0, len(items))
+		icons := map[string]string{}
 		for _, it := range items {
+			if it.IconVersion != "" {
+				icons[it.ID] = it.IconVersion
+			}
 			out = append(out, item{SelfServiceItem: it, Installed: it.AppName != "" && installedApp(it.AppName) != ""})
 		}
 		sort.SliceStable(out, func(i, j int) bool { return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name) })
+		pruneAppIcons(icons)
 		jsonOut(w, 200, map[string]any{"items": out})
 	})
 	mux.HandleFunc("GET /api/icon", func(w http.ResponseWriter, r *http.Request) {
+		// An icon uploaded in the console (?id=&v=) wins over the installed app's own icon.
+		if id, v := r.URL.Query().Get("id"), r.URL.Query().Get("v"); id != "" {
+			p, err := uploadedAppIcon(r.Context(), d.client, id, v)
+			if err != nil {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", "image/png")
+			w.Header().Set("Cache-Control", "max-age=86400")
+			http.ServeFile(w, r, p)
+			return
+		}
 		app := installedApp(r.URL.Query().Get("app"))
 		if app == "" {
 			http.NotFound(w, r)

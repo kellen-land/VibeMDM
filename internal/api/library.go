@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/vibemdm/vibemdm/internal/assets"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/store"
 )
@@ -147,7 +148,7 @@ func (h *Handler) uploadPackage(w http.ResponseWriter, r *http.Request) {
 	}
 	var pkg model.Package
 	var fileSaved bool
-	dir := filepath.Join(h.cfg.DataDir, "packages")
+	dir := filepath.Join(h.cfg.AssetsDir, assets.Packages)
 	os.MkdirAll(dir, 0o755)
 	for {
 		part, err := mr.NextPart()
@@ -249,7 +250,7 @@ func (h *Handler) deletePackage(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "package")
 		return
 	}
-	os.Remove(filepath.Join(h.cfg.DataDir, "packages", filepath.Base(p.Filename)))
+	os.Remove(filepath.Join(h.cfg.AssetsDir, assets.Packages, filepath.Base(p.Filename)))
 	h.st.Audit(r.Context(), actor(r), "package.delete", "package", p.ID, map[string]any{"name": p.Name})
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
@@ -261,7 +262,7 @@ func (h *Handler) downloadPackage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(p.Filename)))
-	http.ServeFile(w, r, filepath.Join(h.cfg.DataDir, "packages", filepath.Base(p.Filename)))
+	http.ServeFile(w, r, filepath.Join(h.cfg.AssetsDir, assets.Packages, filepath.Base(p.Filename)))
 }
 
 // ---- extension attributes ----

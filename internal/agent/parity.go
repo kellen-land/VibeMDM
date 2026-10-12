@@ -51,7 +51,7 @@ func (e *Executor) InstallApp(ctx context.Context, app model.AgentAppInstall) bo
 	if err != nil {
 		status, logText, exit = "failed", err.Error(), -1
 	} else {
-		r := e.runInstallomator(ctx, script, app.Label, app.Args)
+		r := e.installApp(ctx, script, appRun{AppID: app.AppID, Name: app.Name, Label: app.Label, Args: app.Args})
 		logText, exit = r.Combined, r.ExitCode
 		if r.ExitCode != 0 {
 			status = "failed"
@@ -271,7 +271,7 @@ func (e *Executor) RunAppStep(ctx context.Context, step model.AgentAppStep) Exec
 	if err != nil {
 		return ExecResult{ExitCode: -1, Err: err, Combined: err.Error()}
 	}
-	return e.runInstallomator(ctx, script, step.Label, step.Args)
+	return e.installApp(ctx, script, appRunFromStep(step))
 }
 
 // installomatorArgs makes sure Installomator really installs. The script defaults to DEBUG=1

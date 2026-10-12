@@ -149,7 +149,7 @@ func (e *Engine) Prepare(ctx context.Context, p *model.Policy, trigger string) (
 				e.log.Warn("policy Installomator step skipped", "policy", p.Name, "app", app.Name, "err", err)
 				continue
 			}
-			ap.Apps = append(ap.Apps, model.AgentAppStep{Name: app.Name, Label: app.Label, Args: args})
+			ap.Apps = append(ap.Apps, model.AgentAppStep{AppID: app.ID, Name: app.Name, Label: app.Label, Args: args})
 			continue
 		}
 		args, name, err := e.st.InstallomatorArgs(ctx, pa.Label, pa.Options)

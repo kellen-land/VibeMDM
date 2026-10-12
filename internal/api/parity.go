@@ -4,13 +4,17 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/vibemdm/vibemdm/internal/agentapi"
+	"github.com/vibemdm/vibemdm/internal/appicons"
+	"github.com/vibemdm/vibemdm/internal/assets"
 	"github.com/vibemdm/vibemdm/internal/db"
 	"github.com/vibemdm/vibemdm/internal/installomator"
 	"github.com/vibemdm/vibemdm/internal/model"
@@ -456,7 +460,9 @@ func (h *Handler) listApps(w http.ResponseWriter, r *http.Request) {
 		Status map[string]int `json:"status"`
 	}
 	out := make([]appWithStatus, 0, len(items))
+	icons := h.icons().Versions()
 	for _, a := range items {
+		a.IconVersion = icons[a.ID]
 		st, _ := h.st.AppStatusSummary(r.Context(), a.ID)
 		if st == nil {
 			st = map[string]int{}
@@ -609,7 +615,61 @@ func (h *Handler) getApp(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "app")
 		return
 	}
+	a.IconVersion = h.icons().Version(a.ID)
 	writeJSON(w, 200, a)
+}
+
+func (h *Handler) icons() appicons.Dir {
+	return appicons.Dir{Path: filepath.Join(h.cfg.AssetsDir, assets.AppIcons)}
+}
+
+// getAppIcon serves a Mac App's icon (a PNG VibeMDM re-encoded itself).
+func (h *Handler) getAppIcon(w http.ResponseWriter, r *http.Request) {
+	b, _, err := h.icons().Read(r.PathValue("id"))
+	if err != nil {
+		writeErr(w, 404, "this app has no icon")
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "private, max-age=300")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'")
+	w.Write(b)
+}
+
+// putAppIcon stores an uploaded icon (PNG, JPEG or .icns as the raw request body).
+func (h *Handler) putAppIcon(w http.ResponseWriter, r *http.Request) {
+	a, err := h.st.GetMacApp(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "app")
+		return
+	}
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, appicons.MaxUpload))
+	if err != nil {
+		writeErr(w, 400, "the icon file must be at most 4 MB")
+		return
+	}
+	png, err := appicons.Sanitize(body)
+	if err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	v, err := h.icons().Save(a.ID, png)
+	if err != nil {
+		h.fail(w, err, "icon")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "app.icon_upload", "mac_app", a.ID, map[string]any{"name": a.Name, "version": v})
+	a.IconVersion = v
+	writeJSON(w, 200, a)
+}
+
+func (h *Handler) deleteAppIcon(w http.ResponseWriter, r *http.Request) {
+	if err := h.icons().Delete(r.PathValue("id")); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "app.icon_delete", "mac_app", r.PathValue("id"), nil)
+	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 
 func (h *Handler) validAppLabel(label string) bool {
@@ -699,6 +759,7 @@ func (h *Handler) deleteApp(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "app")
 		return
 	}
+	h.icons().Delete(r.PathValue("id"))
 	h.st.Audit(r.Context(), actor(r), "app.delete", "mac_app", r.PathValue("id"), nil)
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }

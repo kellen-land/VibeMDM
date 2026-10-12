@@ -24,6 +24,7 @@ import (
 	nanoapi "github.com/micromdm/nanomdm/api"
 	"github.com/micromdm/nanomdm/mdm"
 
+	"github.com/vibemdm/vibemdm/internal/assets"
 	"github.com/vibemdm/vibemdm/internal/auth"
 	"github.com/vibemdm/vibemdm/internal/commands"
 	"github.com/vibemdm/vibemdm/internal/model"
@@ -57,12 +58,12 @@ type Service struct {
 	Wake func(computerID string)
 }
 
-// New creates the service. Packages are kept in dataDir/agent-package.
-func New(st *store.Store, cmdr Enqueuer, dataDir string, logger *slog.Logger) *Service {
-	return &Service{st: st, cmdr: cmdr, dataDir: dataDir, log: logger}
+// New creates the service. Packages are kept in assetsDir/agent-package.
+func New(st *store.Store, cmdr Enqueuer, assetsDir string, logger *slog.Logger) *Service {
+	return &Service{st: st, cmdr: cmdr, dataDir: assetsDir, log: logger}
 }
 
-func (s *Service) pkgPath() string { return filepath.Join(s.dataDir, "agent-package", pkgFileName) }
+func (s *Service) pkgPath() string { return filepath.Join(s.dataDir, assets.AgentPackage, pkgFileName) }
 
 // CA returns the package-signing CA, creating it on first use.
 func (s *Service) CA(ctx context.Context) (certPEM, keyPEM string, err error) {

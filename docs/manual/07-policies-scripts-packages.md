@@ -127,7 +127,7 @@ queues a `run_script` task on each Mac. Results appear live in the run dialog an
 **Packages** is VibeMDM's built-in distribution point.
 
 1. **Packages → Upload**: choose a `.pkg`, `.mpkg`, `.dmg` or `.zip` (`POST /api/v1/packages`, multipart field
-   `file`). The server stores it in `/data/packages` and records its size and SHA-256.
+   `file`). The server stores it in the assets folder (`/assets/packages` with the compose file) and records its size and SHA-256.
 2. Add it to a policy's **Packages** list.
 
 How the agent installs a package:

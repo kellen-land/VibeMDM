@@ -16,6 +16,7 @@ type Config struct {
 	DatabaseURL   string
 	ServerURL     string // public base URL, e.g. https://mdm.example.com
 	DataDir       string
+	AssetsDir     string // uploaded and built files Macs download (default: DataDir)
 	AgentDir      string // directory with prebuilt agent binaries
 	AdminPassword string // initial admin password (first boot only)
 	Debug         bool
@@ -57,6 +58,7 @@ func FromEnv(version string) (*Config, error) {
 		ServerURL:     strings.TrimRight(env("VIBEMDM_SERVER_URL", ""), "/"),
 		DataDir:       env("VIBEMDM_DATA_DIR", "/data"),
 		AgentDir:      env("VIBEMDM_AGENT_DIR", "/app/agents"),
+		AssetsDir:     env("VIBEMDM_ASSETS_DIR", ""),
 		AdminPassword: env("VIBEMDM_ADMIN_PASSWORD", ""),
 		Debug:         envBool("VIBEMDM_DEBUG", false),
 		DumpMDM:       envBool("VIBEMDM_DUMP_MDM", false),
@@ -64,6 +66,9 @@ func FromEnv(version string) (*Config, error) {
 		EncryptionKey: env("VIBEMDM_ENCRYPTION_KEY", ""),
 		Version:       version,
 		AllowHTTP:     envBool("VIBEMDM_ALLOW_HTTP", false),
+	}
+	if c.AssetsDir == "" {
+		c.AssetsDir = c.DataDir
 	}
 	for _, p := range strings.Split(env("VIBEMDM_TRUSTED_PROXIES", ""), ",") {
 		if p = strings.TrimSpace(p); p != "" {

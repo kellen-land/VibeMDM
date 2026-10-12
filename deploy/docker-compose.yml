@@ -5,6 +5,12 @@
 #
 # TLS is terminated by your own reverse proxy (for example Nginx Proxy Manager),
 # which forwards to the published port below. See docs/manual/02-installation.md.
+#
+# Storage:
+#   assets   host folder (VIBEMDM_ASSETS_PATH): uploaded packages, the agent package
+#            and Mac App icons; browse and back it up from the host
+#   data     named volume: logs archive, diagnostics bundles, temporary files
+#   db-data  named volume: PostgreSQL (keep the database off network/FUSE shares)
 services:
   db:
     image: postgres:17-alpine
@@ -21,6 +27,14 @@ services:
       timeout: 5s
       retries: 20
 
+  # Gives the assets folder to the user VibeMDM runs as (uid 100, gid 101), so a host
+  # folder Docker created as root is writable. Runs once at each start, then exits.
+  assets-init:
+    image: alpine:3.21
+    command: ["chown", "-R", "100:101", "/assets"]
+    volumes:
+      - ${VIBEMDM_ASSETS_PATH:-./assets}:/assets
+
   vibemdm:
     image: ${VIBEMDM_IMAGE:-vibemdm/vibemdm:latest}
     build:
@@ -32,6 +46,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      assets-init:
+        condition: service_completed_successfully
     environment:
       VIBEMDM_DATABASE_URL: postgres://vibemdm:${POSTGRES_PASSWORD}@db:5432/vibemdm?sslmode=disable
       VIBEMDM_SERVER_URL: ${VIBEMDM_SERVER_URL:?set VIBEMDM_SERVER_URL in .env (https://mdm.example.com)}
@@ -41,8 +57,10 @@ services:
       VIBEMDM_LOG_FORMAT: ${VIBEMDM_LOG_FORMAT:-text}
       VIBEMDM_TRUSTED_PROXIES: ${VIBEMDM_TRUSTED_PROXIES:-172.16.0.0/12}
       VIBEMDM_ALLOW_HTTP: ${VIBEMDM_ALLOW_HTTP:-}
+      VIBEMDM_ASSETS_DIR: /assets
     volumes:
       - vibemdm-data:/data
+      - ${VIBEMDM_ASSETS_PATH:-./assets}:/assets
     ports:
       - "13031:8080"
 

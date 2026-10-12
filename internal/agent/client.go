@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -244,6 +245,30 @@ func (c *Client) SelfServiceRun(ctx context.Context, kind, id string) (*model.Ag
 		return nil, nil, err
 	}
 	return out.Policy, out.App, nil
+}
+
+// AppIcon fetches a Mac App's uploaded icon (PNG) and its version; ErrNoIcon when it has none.
+func (c *Client) AppIcon(ctx context.Context, appID string) ([]byte, string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.BaseURL+"/agent/v1/app-icons/"+url.PathEscape(appID), nil)
+	if err != nil {
+		return nil, "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.Token)
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, "", ErrNoIcon
+	}
+	if resp.StatusCode != 200 {
+		return nil, "", &apiError{Status: resp.StatusCode, Msg: "app icon"}
+	}
+	b, err := io.ReadAll(io.LimitReader(resp.Body, maxCachedIcon+1))
+	return b, resp.Header.Get("X-Icon-Version"), err
 }
 
 // DownloadTo fetches an authenticated path to a local file.
