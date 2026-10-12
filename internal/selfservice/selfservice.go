@@ -8,10 +8,14 @@ import (
 	"unicode"
 )
 
-// DefaultAccent is the accent colour when none is set.
-const DefaultAccent = "#0FB5AE"
-
 var accentRe = regexp.MustCompile(`^#[0-9A-Fa-f]{6}$`)
+
+// DefaultAccent is the Self Service accent when none is set: the console's electric purple
+// (the banner fades to its cyan). LegacyAccent, the earlier teal default, is treated as unset.
+const (
+	DefaultAccent = "#7C3AED"
+	LegacyAccent  = "#0FB5AE"
+)
 
 // ValidAccent reports whether c is a #RRGGBB colour.
 func ValidAccent(c string) bool { return accentRe.MatchString(c) }

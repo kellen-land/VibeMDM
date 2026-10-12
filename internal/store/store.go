@@ -16,6 +16,7 @@ import (
 	"github.com/vibemdm/vibemdm/internal/db"
 	"github.com/vibemdm/vibemdm/internal/model"
 	"github.com/vibemdm/vibemdm/internal/secrets"
+	"github.com/vibemdm/vibemdm/internal/selfservice"
 )
 
 // ErrNotFound is returned when a row does not exist. It wraps fs.ErrNotExist so
@@ -101,8 +102,8 @@ func (s *Store) GetSettings(ctx context.Context) (model.Settings, error) {
 	if v.OrgName == "" {
 		v.OrgName = st.OrgName
 	}
-	if v.SelfServiceAccentColor == "" {
-		v.SelfServiceAccentColor = "#0FB5AE"
+	if v.SelfServiceAccentColor == "" || strings.EqualFold(v.SelfServiceAccentColor, selfservice.LegacyAccent) {
+		v.SelfServiceAccentColor = selfservice.DefaultAccent
 	}
 	if v.InventoryIntervalHours == 0 {
 		v.InventoryIntervalHours = st.InventoryIntervalHours

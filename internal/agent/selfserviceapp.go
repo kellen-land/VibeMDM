@@ -235,8 +235,11 @@ func parseAccent(hexc string) color.RGBA {
 	return color.RGBA{uint8(v >> 16), uint8(v >> 8), uint8(v), 255}
 }
 
-// drawIcon draws the app icon at size×size: a rounded square in the accent colour with a
-// lighter top, and a white shopping bag.
+// iconCyan is the colour the icon fades to (the console's cyan).
+var iconCyan = color.RGBA{0x22, 0xd3, 0xee, 255}
+
+// drawIcon draws the app icon at size×size: a rounded square fading from the accent colour to
+// cyan, and a white shopping bag.
 func drawIcon(size int, accent color.RGBA) *image.RGBA {
 	img := image.NewRGBA(image.Rect(0, 0, size, size))
 	s := float64(size)
@@ -273,12 +276,16 @@ func drawIcon(size int, accent color.RGBA) *image.RGBA {
 			if a == 0 {
 				continue
 			}
-			// Vertical gradient: 18% lighter at the top.
+			// Diagonal fade from the accent (top left) towards the console's cyan (bottom
+			// right), with the top slightly lifted.
 			t := (fy - lo) / (hi - lo)
-			lift := 0.18 * (1 - t)
-			r := float64(accent.R) + (255-float64(accent.R))*lift
-			g := float64(accent.G) + (255-float64(accent.G))*lift
-			b := float64(accent.B) + (255-float64(accent.B))*lift
+			diag := math.Max(0, math.Min(1, ((fx-lo)+(fy-lo))/(2*(hi-lo))))
+			mix := 0.5 * diag * diag
+			r := float64(accent.R) + (float64(iconCyan.R)-float64(accent.R))*mix
+			g := float64(accent.G) + (float64(iconCyan.G)-float64(accent.G))*mix
+			b := float64(accent.B) + (float64(iconCyan.B)-float64(accent.B))*mix
+			lift := 0.14 * (1 - t)
+			r, g, b = r+(255-r)*lift, g+(255-g)*lift, b+(255-b)*lift
 			if w := white(fx, fy); w > 0 {
 				r, g, b = 255, 255, 255
 			}

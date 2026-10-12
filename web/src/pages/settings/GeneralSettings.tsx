@@ -251,7 +251,7 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
               </Field>
               <Field label="Accent colour" hint="Used for the icon, buttons and banner.">
                 <div className="flex items-center gap-2">
-                  <input type="color" value={form.self_service_accent_color || '#0FB5AE'} onChange={(e) => set({ self_service_accent_color: e.target.value.toUpperCase() })} disabled={ro} className="h-9 w-12 cursor-pointer rounded-md border border-line bg-transparent" aria-label="Accent colour" />
+                  <input type="color" value={form.self_service_accent_color || '#7C3AED'} onChange={(e) => set({ self_service_accent_color: e.target.value.toUpperCase() })} disabled={ro} className="h-9 w-12 cursor-pointer rounded-md border border-line bg-transparent" aria-label="Accent colour" />
                   <Input value={form.self_service_accent_color} onChange={(e) => set({ self_service_accent_color: e.target.value })} disabled={ro} mono className="max-w-[9rem]" />
                 </div>
               </Field>

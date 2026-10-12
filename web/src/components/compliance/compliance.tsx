@@ -141,7 +141,7 @@ export function scoreText(score: number | null | undefined, hasData = true): str
   return `${r}%`
 }
 
-/** Percent-passing meter. Teal fill: the number carries meaning, so colour adds no alarm. */
+/** Percent-passing meter. Accent fill: the number carries meaning, so colour adds no alarm. */
 export function ScoreMeter({ score, hasData = true, className, size = 'md', showValue = true }: { score: number; hasData?: boolean; className?: string; size?: 'sm' | 'md' | 'lg'; showValue?: boolean }) {
   const pct = hasData ? Math.max(0, Math.min(100, score)) : 0
   return (

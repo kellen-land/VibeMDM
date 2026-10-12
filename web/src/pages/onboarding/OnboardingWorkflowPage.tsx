@@ -354,7 +354,7 @@ function DialogPreview({ c, fieldKeys }: { c: OnboardingConfig; fieldKeys?: Reco
         })}
       </div>
       <div className="flex justify-end border-t border-line bg-surface-sunken/40 px-5 py-3">
-        <span className="inline-flex h-7 items-center rounded-md bg-accent-500 px-3 text-xs font-semibold text-[#04221f]">Continue</span>
+        <span className="inline-flex h-7 items-center rounded-md bg-accent-500 px-3 text-xs font-semibold text-[#03252d]">Continue</span>
       </div>
     </div>
   )
