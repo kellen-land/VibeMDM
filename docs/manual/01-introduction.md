@@ -250,6 +250,10 @@ update plans, …) is created, edited and deleted the same way, as in Jamf Pro:
 
 Viewers see objects read-only and get no Edit, Delete or Clone.
 
+The sidebar's sections (Computers, Management, …) fold open and closed; the section of the current page opens by
+itself. The button at the bottom of the sidebar (or ⌃[ / Alt+[) collapses it to a slim rail of icons, which shows each
+page's name on hover; the choice is remembered in the browser.
+
 ### Keyboard shortcuts
 
 The console uses Jamf Pro's shortcuts. The modifier is **Control** on a Mac (so Command-C, -V and -S keep their usual
@@ -274,6 +278,7 @@ meaning; Command-S also saves) and **Alt** on Windows and Linux. Press **?** for
 | ⌃5 / Alt+5 | Settings |
 | ⌃9 / Alt+9 | Health (Jamf's Notifications) |
 | ⌃⇧L / Alt+Shift+L | Server logs |
+| ⌃[ / Alt+[ | Collapse the sidebar to icons, or expand it |
 
 In a dialog the shortcuts act on the dialog (⌃S saves it, Esc closes it). While the cursor is in a text field only
 Save works, so the field's own Control-key editing (⌃E end of line, ⌃D delete, … on a Mac) is left alone. Jamf's ⌃4

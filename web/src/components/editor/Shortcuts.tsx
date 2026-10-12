@@ -90,6 +90,7 @@ export function ShortcutHelp({ open, onClose }: { open: boolean; onClose: () => 
           <h3 className="micro-label mb-1">Go to</h3>
           <div className="divide-y divide-line">
             {navKeys.map((n) => row(`${modLabel}${n.shift ? shift : ''}${n.key.toUpperCase()}`, n.label))}
+            {row(`${modLabel}[`, 'Collapse or expand the sidebar')}
             {row('?', 'This list')}
           </div>
         </section>
