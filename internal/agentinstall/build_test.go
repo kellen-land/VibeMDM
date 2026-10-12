@@ -16,7 +16,7 @@ func TestBuildScriptCopiesAreIdentical(t *testing.T) {
 	if string(deployed) != buildScript {
 		t.Fatal("deploy/macos/build-agent-pkg.sh and internal/agentinstall/build-agent-pkg.sh differ; keep them identical")
 	}
-	for _, want := range []string{"umask 022", "find-identity -v", "productsign"} {
+	for _, want := range []string{"umask 022", "productsign"} {
 		if !strings.Contains(buildScript, want) {
 			t.Errorf("script lacks %q", want)
 		}

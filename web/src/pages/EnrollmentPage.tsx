@@ -165,7 +165,7 @@ export function EnrollmentPage() {
             </Card>
           </div>
 
-          <AgentAutoInstallCard isAdmin={isAdmin} serverURL={s.server_url} />
+          <AgentAutoInstallCard isAdmin={isAdmin} />
 
           <Card>
             <CardHeader
