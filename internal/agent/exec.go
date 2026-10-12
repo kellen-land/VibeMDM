@@ -340,15 +340,9 @@ func fileSHA256(path string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// Notify shows a notification to the console user.
+// Notify shows a notification to the console user (see PostNotification).
 func Notify(ctx context.Context, title, message string) {
-	user := ConsoleUser(ctx)
-	if user == "" || message == "" {
-		return
-	}
-	uid := ConsoleUserUID(ctx, user)
-	script := fmt.Sprintf(`display notification %q with title %q`, message, title)
-	exec.CommandContext(ctx, "launchctl", "asuser", fmt.Sprint(uid), "sudo", "-u", user, "osascript", "-e", script).Run()
+	PostNotification(ctx, Notification{Title: title, Message: message})
 }
 
 // Dialog shows a blocking dialog to the console user (best effort, 2 minute timeout).

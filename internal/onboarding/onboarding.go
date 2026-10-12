@@ -128,7 +128,7 @@ func (s *Service) BuildPayload(ctx context.Context, w *model.OnboardingWorkflow,
 			if err != nil {
 				return nil, fmt.Errorf("step %q: %w", st.Title, err)
 			}
-			as.App = &model.AgentAppStep{Name: app.Name, Label: app.Label, Args: args}
+			as.App = &model.AgentAppStep{AppID: app.ID, Name: app.Name, Label: app.Label, Args: args}
 		case "policy":
 			pol, err := s.st.GetPolicy(ctx, st.PolicyID)
 			if err != nil {
