@@ -229,10 +229,10 @@ function WebhookDialog({ hook, events, onClose }: { hook?: Webhook; events: stri
           </div>
         </Field>
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} data-shortcut="cancel">
             Cancel
           </Button>
-          <Button type="submit" variant="primary" loading={busy}>
+          <Button type="submit" variant="primary" loading={busy} data-shortcut="save">
             {hook ? 'Save' : 'Create webhook'}
           </Button>
         </div>

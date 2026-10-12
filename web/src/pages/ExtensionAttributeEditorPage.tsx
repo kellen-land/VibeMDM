@@ -1,21 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Save, Trash2 } from 'lucide-react'
 import { qk, useExtensionAttribute, useInvalidate } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import type { EADataType, EAInputType, ExtensionAttribute } from '../api/types'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
 import { Field, FormGrid } from '../components/ui/Field'
 import { Input, Select, Textarea } from '../components/ui/Input'
 import { Toggle } from '../components/ui/Checkbox'
 import { Alert } from '../components/ui/Alert'
 import { LoadingBlock } from '../components/ui/Spinner'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { useToast } from '../components/ui/Toast'
 import { CodeEditor } from '../components/CodeEditor'
+import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
+import { ObjectBar } from '../components/editor/ObjectBar'
 
 const defaultScript = `#!/bin/bash
 # Print the value between <result></result> tags.
@@ -31,17 +30,18 @@ export function ExtensionAttributeEditorPage() {
   const toast = useToast()
   const invalidate = useInvalidate()
   const ea = useExtensionAttribute(isNew ? undefined : id)
+  const clone = useCloneSource<ExtensionAttribute>()
+  const init = isNew ? clone : undefined
 
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [dataType, setDataType] = useState<EADataType>('string')
-  const [inputType, setInputType] = useState<EAInputType>('script')
-  const [script, setScript] = useState(defaultScript)
-  const [enabled, setEnabled] = useState(true)
+  const [name, setName] = useState(init?.name ?? '')
+  const [description, setDescription] = useState(init?.description ?? '')
+  const [dataType, setDataType] = useState<EADataType>(init?.data_type ?? 'string')
+  const [inputType, setInputType] = useState<EAInputType>(init?.input_type ?? 'script')
+  const [script, setScript] = useState(init?.script || defaultScript)
+  const [enabled, setEnabled] = useState(init?.enabled ?? true)
   const [saving, setSaving] = useState(false)
-  const [del, setDel] = useState(false)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (ea.data) {
       setName(ea.data.name)
       setDescription(ea.data.description)
@@ -51,11 +51,16 @@ export function ExtensionAttributeEditorPage() {
       setEnabled(ea.data.enabled)
     }
   }, [ea.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: { name, description, dataType, inputType, script, enabled }, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
 
   const save = async () => {
     if (!name.trim()) {
       toast.error('Name is required')
-      return
+      return false
     }
     setSaving(true)
     try {
@@ -64,8 +69,10 @@ export function ExtensionAttributeEditorPage() {
       await invalidate(qk.eas, qk.ea(out.id), qk.criteriaFields)
       toast.success(isNew ? 'Extension attribute created' : 'Extension attribute saved')
       if (isNew) navigate(`/extension-attributes/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
+      return false
     } finally {
       setSaving(false)
     }
@@ -84,27 +91,13 @@ export function ExtensionAttributeEditorPage() {
 
   if (!isNew && ea.isPending) return <LoadingBlock />
   if (!isNew && ea.error) return <Alert tone="critical">{errorMessage(ea.error)}</Alert>
-  const ro = !isAdmin
+  const ro = ed.readOnly
 
   return (
     <>
       <PageHeader
         crumbs={[{ label: 'Extension Attributes', to: '/extension-attributes' }, { label: isNew ? 'New attribute' : ea.data?.name ?? '' }]}
         title={isNew ? 'New extension attribute' : ea.data?.name}
-        actions={
-          isAdmin && (
-            <>
-              {!isNew && (
-                <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDel(true)}>
-                  Delete
-                </Button>
-              )}
-              <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                {isNew ? 'Create attribute' : 'Save changes'}
-              </Button>
-            </>
-          )
-        }
       />
       <div className="flex flex-col gap-6">
         <Card>
@@ -146,7 +139,19 @@ export function ExtensionAttributeEditorPage() {
           </Card>
         )}
       </div>
-      <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={doDelete} destructive title={`Delete "${name}"?`} description="Collected values are deleted and smart groups using this attribute will stop matching." confirmLabel="Delete attribute" />
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/extension-attributes"
+        noun="extension attribute"
+        name={ea.data?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="Collected values are deleted and smart groups using this attribute will stop matching."
+        onClone={() => navigate('/extension-attributes/new', { state: { clone: { id: '', name: `Copy of ${name}`, description, data_type: dataType, input_type: inputType, script, enabled } } })}
+        historyId={id}
+      />
     </>
   )
 }

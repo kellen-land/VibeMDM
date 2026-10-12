@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Eye, Save, Trash2 } from 'lucide-react'
+import { Eye } from 'lucide-react'
 import { qk, useCriteriaFields, useGroup, useGroupMembers, useInvalidate } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -16,15 +16,19 @@ import { Table } from '../components/ui/Table'
 import { Alert } from '../components/ui/Alert'
 import { Badge } from '../components/ui/Badge'
 import { LoadingBlock } from '../components/ui/Spinner'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { RelativeTime } from '../components/ui/RelativeTime'
 import { useToast } from '../components/ui/Toast'
+import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
+import { ObjectBar } from '../components/editor/ObjectBar'
 import { CriteriaBuilder, describeCriteria } from '../components/pickers/CriteriaBuilder'
 import { ComputerPicker } from '../components/pickers/ComputerPicker'
 import { ComputerStatusBadges } from './computers/ComputersPage'
 import { latest } from './DashboardPage'
 
 type Tab = 'settings' | 'members'
+
+/** What Clone hands the new group: the group plus a static group's members. */
+type GroupClone = Pick<ComputerGroup, 'name' | 'description' | 'is_smart' | 'criteria'> & { member_ids?: string[] }
 
 export function GroupEditorPage() {
   const { id } = useParams()
@@ -38,35 +42,51 @@ export function GroupEditorPage() {
   const members = useGroupMembers(isNew ? undefined : id)
   const fields = useCriteriaFields()
 
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [isSmart, setIsSmart] = useState(true)
-  const [criteria, setCriteria] = useState<Criterion[]>([])
-  const [memberIds, setMemberIds] = useState<string[]>([])
+  const clone = useCloneSource<GroupClone>()
+  const [name, setName] = useState(() => (isNew && clone ? clone.name : ''))
+  const [description, setDescription] = useState(() => (isNew && clone ? clone.description : ''))
+  const [isSmart, setIsSmart] = useState(() => (isNew && clone ? clone.is_smart : true))
+  const [criteria, setCriteria] = useState<Criterion[]>(() => (isNew && clone ? clone.criteria ?? [] : []))
+  const [memberIds, setMemberIds] = useState<string[]>(() => (isNew && clone ? clone.member_ids ?? [] : []))
   const [dirtyMembers, setDirtyMembers] = useState(false)
   const [saving, setSaving] = useState(false)
   const [preview, setPreview] = useState<GroupPreview | null>(null)
   const [previewing, setPreviewing] = useState(false)
-  const [del, setDel] = useState(false)
   const tab = (sp.get('tab') as Tab) || 'settings'
   const setTab = (t: Tab) => setSp(t === 'settings' ? {} : { tab: t }, { replace: true })
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (group.data) {
       setName(group.data.name)
       setDescription(group.data.description)
       setIsSmart(group.data.is_smart)
       setCriteria(group.data.criteria ?? [])
     }
-  }, [group.data])
+    if (members.data) setMemberIds(members.data.items.map((m) => m.id))
+    setDirtyMembers(false)
+  }, [group.data, members.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: { name, description, isSmart, criteria, memberIds: isSmart ? [] : memberIds }, reset: load })
   useEffect(() => {
-    if (members.data && !dirtyMembers) setMemberIds(members.data.items.map((c) => c.id))
-  }, [members.data, dirtyMembers])
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
+  // Clone onto the same route (/x/:id → /x/new keeps this page mounted): take the copy.
+  useEffect(() => {
+    if (isNew && clone) {
+      setName(clone.name)
+      setDescription(clone.description)
+      setIsSmart(clone.is_smart)
+      setCriteria(clone.criteria ?? [])
+      setMemberIds(clone.member_ids ?? [])
+      setPreview(null)
+    }
+  }, [isNew, clone])
 
   const save = async () => {
     if (!name.trim()) {
+      setTab('settings')
       toast.error('Name is required')
-      return
+      return false
     }
     setSaving(true)
     try {
@@ -81,8 +101,10 @@ export function GroupEditorPage() {
       setDirtyMembers(false)
       toast.success(isNew ? 'Group created' : 'Group saved')
       if (isNew) navigate(`/groups/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
+      return false
     } finally {
       setSaving(false)
     }
@@ -113,7 +135,7 @@ export function GroupEditorPage() {
 
   if (!isNew && group.isPending) return <LoadingBlock />
   if (!isNew && group.error) return <Alert tone="critical">{errorMessage(group.error)}</Alert>
-  const ro = !isAdmin
+  const ro = ed.readOnly
 
   return (
     <>
@@ -131,22 +153,8 @@ export function GroupEditorPage() {
             </>
           ) : undefined
         }
-        actions={
-          isAdmin && (
-            <>
-              {!isNew && (
-                <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDel(true)}>
-                  Delete
-                </Button>
-              )}
-              <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                {isNew ? 'Create group' : 'Save changes'}
-              </Button>
-            </>
-          )
-        }
       />
-      {!isNew && <Tabs className="mb-5" value={tab} onChange={setTab} items={[{ key: 'settings', label: 'Settings' }, { key: 'members', label: 'Members', count: members.data?.total }]} />}
+      {!isNew && <Tabs className="mb-5" value={tab} onChange={setTab} items={[{ key: 'settings', label: 'Settings' }, { key: 'members', label: 'Members', count: members.data?.total, shortcut: 'view' }]} />}
 
       {tab === 'settings' && (
         <div className="flex flex-col gap-6">
@@ -228,7 +236,19 @@ export function GroupEditorPage() {
         </Card>
       )}
 
-      <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={doDelete} destructive title={`Delete "${name}"?`} description="Policies and profiles scoped to this group will no longer target its members." confirmLabel="Delete group" />
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/groups"
+        noun="group"
+        name={group.data?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="Policies and profiles scoped to this group will no longer target its members."
+        onClone={() => navigate('/groups/new', { state: { clone: { name: `Copy of ${name}`, description, is_smart: isSmart, criteria: isSmart ? criteria : [], member_ids: isSmart ? [] : memberIds } satisfies GroupClone } })}
+        historyId={id}
+      />
     </>
   )
 }

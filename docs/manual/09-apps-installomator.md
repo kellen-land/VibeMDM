@@ -60,7 +60,7 @@ half of the Macs it ran on in the last 7 days, which usually means a broken labe
 Each app can have an icon (**Mac Apps → app → Self Service → Icon**, or `PUT /api/v1/apps/{id}/icon` with the file
 as the request body; `DELETE` removes it). Upload a PNG, JPEG or `.icns` file of up to 4 MB. VibeMDM decodes it and
 stores a fresh PNG of at most 256 × 256 pixels, so nothing but the pixels survives (no metadata, no scripts in SVGs:
-SVG is not accepted). The icon is saved straight away, separately from **Save changes**.
+SVG is not accepted). The icon is saved straight away, separately from the app's **Save**.
 
 Icons are files in the assets folder (`app-icons/<app id>-<version>.png`, see [§2.2](02-installation.md#storage)). The version
 is the start of the PNG's SHA-256, so a replaced icon gets a new name and every cache notices. Removing an app

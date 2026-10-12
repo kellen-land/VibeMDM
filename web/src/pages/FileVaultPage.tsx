@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { KeyRound, RefreshCw, Save, ShieldCheck, Wrench } from 'lucide-react'
+import { KeyRound, RefreshCw, ShieldCheck, Wrench } from 'lucide-react'
 import { qk, useFileVault } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -22,6 +22,8 @@ import { SearchInput } from '../components/ui/SearchInput'
 import { useToast } from '../components/ui/Toast'
 import { ScopeEditor, ScopeSummary } from '../components/pickers/ScopeEditor'
 import { shortDate } from '../lib/format'
+import { useEditMode } from '../components/editor/useEditMode'
+import { ObjectBar } from '../components/editor/ObjectBar'
 
 const defaultEnforceOptions = (): FileVaultEnforceOptions => ({ DeferAtLogout: true, DeferDontAskAtLogout: false, MaxBypassAttempts: 0, ShowRecoveryKey: false })
 
@@ -49,17 +51,45 @@ export function FileVaultPage() {
   const [checking, setChecking] = useState(false)
   const [filter, setFilter] = useState('')
   const [view, setView] = useState<'computers' | 'settings'>('computers')
+  const [saving, setSaving] = useState(false)
 
-  /** PUT /filevault returns the refreshed overview; write it straight into the cache. */
-  const update = async (body: FileVaultUpdate, success: string) => {
+  // Settings tab: escrow profile, enforcement profile and auto-remediation edit and save together.
+  const [form, setForm] = useState<FileVaultForm>(() => fileVaultForm(d))
+  const load = useCallback(() => {
+    if (d) setForm(fileVaultForm(d))
+  }, [d])
+  const ed = useEditMode({ isNew: false, canEdit: isAdmin, snapshot: form, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
+
+  /** PUT /filevault with only the parts that changed; it returns the refreshed overview, written straight into the cache. */
+  const save = async () => {
+    if (!d) return false
+    const saved = fileVaultForm(d)
+    const body: FileVaultUpdate = {}
+    if (JSON.stringify(form.escrow) !== JSON.stringify(saved.escrow)) {
+      if (form.escrow.enabled && !d.escrow_certificate) {
+        toast.error('Escrow profile cannot be deployed', 'The escrow identity is not loaded on the server.')
+        return false
+      }
+      body.escrow = form.escrow
+    }
+    if (JSON.stringify(form.enforce) !== JSON.stringify(saved.enforce)) body.enforce = form.enforce
+    if (form.autoRemediate !== saved.autoRemediate) body.auto_remediate = form.autoRemediate
+    if (!body.escrow && !body.enforce && body.auto_remediate === undefined) return true
+    setSaving(true)
     try {
       const r = await api.put<FileVaultOverview>('/api/v1/filevault', body)
       qc.setQueryData(qk.filevault, r)
-      toast.success(success)
-      return r
+      toast.success('FileVault settings saved')
+      return true
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
-      return null
+      return false
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -116,16 +146,16 @@ export function FileVaultPage() {
       <div className="flex flex-col gap-6">
         {view === 'settings' && (
           <>
-        <EscrowProfileCard view={d.escrow_profile} cert={d.escrow_certificate} readOnly={!isAdmin} onSave={(enabled, scope) => update({ escrow: { enabled, scope } }, enabled ? 'Escrow profile saved' : 'Escrow profile turned off')} />
-        <EnforceProfileCard view={d.enforce_profile} readOnly={!isAdmin} onSave={(enabled, scope, options) => update({ enforce: { enabled, scope, options } }, enabled ? 'Enforcement profile saved' : 'Enforcement profile turned off')} />
+        <EscrowProfileCard view={d.escrow_profile} cert={d.escrow_certificate} readOnly={ed.readOnly} value={form.escrow} onChange={(escrow) => setForm((f) => ({ ...f, escrow }))} />
+        <EnforceProfileCard view={d.enforce_profile} readOnly={ed.readOnly} value={form.enforce} onChange={(enforce) => setForm((f) => ({ ...f, enforce }))} />
 
         <Card>
           <CardHeader title="Auto-remediation" actions={d.auto_remediate ? <Badge tone="good" dot>On</Badge> : <Badge>Off</Badge>} />
           <CardBody>
             <Toggle
-              checked={d.auto_remediate}
-              disabled={!isAdmin}
-              onChange={(v) => update({ auto_remediate: v }, v ? 'Auto-remediation turned on' : 'Auto-remediation turned off')}
+              checked={form.autoRemediate}
+              disabled={ed.readOnly}
+              onChange={(v) => setForm((f) => ({ ...f, autoRemediate: v }))}
               label="Automatically remediate missing keys"
               description="Uses Escrow Buddy to generate a new key at the next login for Macs with FileVault on, the escrow profile installed, and no escrowed key (at most once per day)."
             />
@@ -207,8 +237,25 @@ export function FileVaultPage() {
         </Card>
         )}
       </div>
+      {view === 'settings' && isAdmin ? <ObjectBar ed={ed} isNew={false} listPath="/filevault" noun="FileVault settings" saving={saving} onSave={save} noDone /> : ed.guard}
     </>
   )
+}
+
+interface FileVaultForm {
+  escrow: { enabled: boolean; scope: Scope }
+  enforce: { enabled: boolean; scope: Scope; options: FileVaultEnforceOptions }
+  autoRemediate: boolean
+}
+
+/** The editable FileVault settings as the server has them. */
+function fileVaultForm(d: FileVaultOverview | undefined): FileVaultForm {
+  const scopeOf = (v?: BuiltinProfileView) => (v?.profile ? normalizeScope(v.profile.scope) : emptyScope())
+  return {
+    escrow: { enabled: !!d?.escrow_profile.deployed, scope: scopeOf(d?.escrow_profile) },
+    enforce: { enabled: !!d?.enforce_profile.deployed, scope: scopeOf(d?.enforce_profile), options: d?.enforce_profile.options ?? defaultEnforceOptions() },
+    autoRemediate: !!d?.auto_remediate,
+  }
 }
 
 function DeploymentCounts({ status }: { status: Record<string, number> }) {
@@ -225,19 +272,6 @@ function DeploymentCounts({ status }: { status: Record<string, number> }) {
   )
 }
 
-/** Local edit state for a built-in profile, re-seeded only when the server copy changes (not on every poll). */
-function useBuiltinForm(view: BuiltinProfileView) {
-  const seed = `${view.deployed}|${view.profile?.updated_at ?? ''}`
-  const [enabled, setEnabled] = useState(view.deployed)
-  const [scope, setScope] = useState<Scope>(() => (view.profile ? normalizeScope(view.profile.scope) : emptyScope()))
-  useEffect(() => {
-    setEnabled(view.deployed)
-    setScope(view.profile ? normalizeScope(view.profile.scope) : emptyScope())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed])
-  return { enabled, setEnabled, scope, setScope }
-}
-
 function ProfileStateBadge({ view }: { view: BuiltinProfileView }) {
   return view.deployed ? (
     <Badge tone="good" dot>
@@ -252,20 +286,15 @@ function EscrowProfileCard({
   view,
   cert,
   readOnly,
-  onSave,
+  value,
+  onChange,
 }: {
   view: BuiltinProfileView
   cert?: { subject: string; not_after: string }
   readOnly: boolean
-  onSave: (enabled: boolean, scope: Scope) => Promise<unknown>
+  value: FileVaultForm['escrow']
+  onChange: (v: FileVaultForm['escrow']) => void
 }) {
-  const f = useBuiltinForm(view)
-  const [saving, setSaving] = useState(false)
-  const save = async () => {
-    setSaving(true)
-    await onSave(f.enabled, f.scope)
-    setSaving(false)
-  }
   return (
     <Card>
       <CardHeader
@@ -288,45 +317,27 @@ function EscrowProfileCard({
         ) : (
           <Alert tone="warning">The escrow identity is not loaded on the server. The escrow profile cannot be deployed until it is.</Alert>
         )}
-        <Toggle checked={f.enabled} onChange={f.setEnabled} disabled={readOnly} label="Deploy the escrow profile" description="Turning this off keeps the profile record but removes it from every Mac." />
-        {f.enabled && (readOnly ? <ScopeSummary scope={f.scope} /> : <ScopeEditor value={f.scope} onChange={f.setScope} />)}
+        <Toggle checked={value.enabled} onChange={(enabled) => onChange({ ...value, enabled })} disabled={readOnly} label="Deploy the escrow profile" description="Turning this off keeps the profile record but removes it from every Mac." />
+        {value.enabled && (readOnly ? <ScopeSummary scope={value.scope} /> : <ScopeEditor value={value.scope} onChange={(scope) => onChange({ ...value, scope })} />)}
         <div>
           <p className="micro-label mb-1.5">Deployment status</p>
           <DeploymentCounts status={view.status} />
         </div>
       </CardBody>
-      {!readOnly && (
-        <CardFooter>
-          {view.profile && (
-            <Link to={`/profiles/${view.profile.id}`} className="mr-auto text-xs text-ink-muted hover:text-ink hover:underline">
-              View profile
-            </Link>
-          )}
-          <Button variant="primary" icon={<Save />} loading={saving} onClick={save} disabled={!cert && f.enabled}>
-            Save
-          </Button>
+      {view.profile && (
+        <CardFooter className="justify-start">
+          <Link to={`/profiles/${view.profile.id}`} className="text-xs text-ink-muted hover:text-ink hover:underline">
+            View profile
+          </Link>
         </CardFooter>
       )}
     </Card>
   )
 }
 
-function EnforceProfileCard({ view, readOnly, onSave }: { view: BuiltinProfileView; readOnly: boolean; onSave: (enabled: boolean, scope: Scope, options: FileVaultEnforceOptions) => Promise<unknown> }) {
-  const f = useBuiltinForm(view)
-  const [opts, setOpts] = useState<FileVaultEnforceOptions>(() => view.options ?? defaultEnforceOptions())
-  // Re-seed from the deployed profile when it changes on the server (not on every poll).
-  const optsSeed = JSON.stringify(view.options ?? null)
-  useEffect(() => {
-    setOpts(view.options ?? defaultEnforceOptions())
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [optsSeed])
-  const [saving, setSaving] = useState(false)
-  const setOpt = (patch: Partial<FileVaultEnforceOptions>) => setOpts((o) => ({ ...o, ...patch }))
-  const save = async () => {
-    setSaving(true)
-    await onSave(f.enabled, f.scope, opts)
-    setSaving(false)
-  }
+function EnforceProfileCard({ view, readOnly, value, onChange }: { view: BuiltinProfileView; readOnly: boolean; value: FileVaultForm['enforce']; onChange: (v: FileVaultForm['enforce']) => void }) {
+  const opts = value.options
+  const setOpt = (patch: Partial<FileVaultEnforceOptions>) => onChange({ ...value, options: { ...opts, ...patch } })
   return (
     <Card>
       <CardHeader
@@ -340,24 +351,22 @@ function EnforceProfileCard({ view, readOnly, onSave }: { view: BuiltinProfileVi
       />
       <CardBody className="flex flex-col gap-5">
         <p className="text-sm text-ink-muted">Turns FileVault on with a personal recovery key, deferred to the next login, so new keys are escrowed from the start. Scope it together with the escrow profile.</p>
-        <Toggle checked={f.enabled} onChange={f.setEnabled} disabled={readOnly} label="Deploy the enforcement profile" />
-        {f.enabled && (
+        <Toggle checked={value.enabled} onChange={(enabled) => onChange({ ...value, enabled })} disabled={readOnly} label="Deploy the enforcement profile" />
+        {value.enabled && (
           <>
-            {readOnly ? <ScopeSummary scope={f.scope} /> : <ScopeEditor value={f.scope} onChange={f.setScope} />}
-            {!readOnly && (
-              <div className="flex flex-col gap-4 rounded-lg border border-line p-4">
-                <p className="micro-label">Options</p>
-                <p className="-mt-2 text-xs text-ink-muted">{view.options ? 'Loaded from the deployed enforcement profile. Saving replaces it with the values shown here.' : 'No enforcement profile exists yet; these are the defaults it will be created with.'}</p>
-                <FormGrid cols={2}>
-                  <Toggle checked={opts.DeferAtLogout} onChange={(v) => setOpt({ DeferAtLogout: v })} label="Prompt at logout" description="Ask the user to enable FileVault when they log out. When off, FileVault is enabled at the next login without a logout prompt." />
-                  <Toggle checked={opts.DeferDontAskAtLogout} onChange={(v) => setOpt({ DeferDontAskAtLogout: v })} disabled={!opts.DeferAtLogout} label="Don't ask at logout" description="Skip the logout prompt and require FileVault at the next login instead." />
-                  <Toggle checked={opts.ShowRecoveryKey} onChange={(v) => setOpt({ ShowRecoveryKey: v })} label="Show recovery key to the user" description="Display the new personal recovery key when FileVault is enabled." />
-                  <Field label="Maximum bypass attempts" hint="Logins the user may skip before FileVault is required. -1 allows unlimited deferrals; 0 requires it at the next login.">
-                    <Input type="number" min={-1} max={9999} value={opts.MaxBypassAttempts} onChange={(e) => setOpt({ MaxBypassAttempts: Math.max(-1, Math.min(9999, Math.trunc(Number(e.target.value) || 0))) })} className="max-w-32" />
-                  </Field>
-                </FormGrid>
-              </div>
-            )}
+            {readOnly ? <ScopeSummary scope={value.scope} /> : <ScopeEditor value={value.scope} onChange={(scope) => onChange({ ...value, scope })} />}
+            <div className="flex flex-col gap-4 rounded-lg border border-line p-4">
+              <p className="micro-label">Options</p>
+              {!readOnly && <p className="-mt-2 text-xs text-ink-muted">{view.options ? 'Loaded from the deployed enforcement profile. Saving replaces it with the values shown here.' : 'No enforcement profile exists yet; these are the defaults it will be created with.'}</p>}
+              <FormGrid cols={2}>
+                <Toggle checked={opts.DeferAtLogout} onChange={(v) => setOpt({ DeferAtLogout: v })} disabled={readOnly} label="Prompt at logout" description="Ask the user to enable FileVault when they log out. When off, FileVault is enabled at the next login without a logout prompt." />
+                <Toggle checked={opts.DeferDontAskAtLogout} onChange={(v) => setOpt({ DeferDontAskAtLogout: v })} disabled={readOnly || !opts.DeferAtLogout} label="Don't ask at logout" description="Skip the logout prompt and require FileVault at the next login instead." />
+                <Toggle checked={opts.ShowRecoveryKey} onChange={(v) => setOpt({ ShowRecoveryKey: v })} disabled={readOnly} label="Show recovery key to the user" description="Display the new personal recovery key when FileVault is enabled." />
+                <Field label="Maximum bypass attempts" hint="Logins the user may skip before FileVault is required. -1 allows unlimited deferrals; 0 requires it at the next login.">
+                  <Input type="number" min={-1} max={9999} value={opts.MaxBypassAttempts} onChange={(e) => setOpt({ MaxBypassAttempts: Math.max(-1, Math.min(9999, Math.trunc(Number(e.target.value) || 0))) })} disabled={readOnly} className="max-w-32" />
+                </Field>
+              </FormGrid>
+            </div>
           </>
         )}
         <div>
@@ -365,16 +374,11 @@ function EnforceProfileCard({ view, readOnly, onSave }: { view: BuiltinProfileVi
           <DeploymentCounts status={view.status} />
         </div>
       </CardBody>
-      {!readOnly && (
-        <CardFooter>
-          {view.profile && (
-            <Link to={`/profiles/${view.profile.id}`} className="mr-auto text-xs text-ink-muted hover:text-ink hover:underline">
-              View profile
-            </Link>
-          )}
-          <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-            Save
-          </Button>
+      {view.profile && (
+        <CardFooter className="justify-start">
+          <Link to={`/profiles/${view.profile.id}`} className="text-xs text-ink-muted hover:text-ink hover:underline">
+            View profile
+          </Link>
         </CardFooter>
       )}
     </Card>

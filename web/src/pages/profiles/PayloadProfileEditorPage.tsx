@@ -1,28 +1,52 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Save, Trash2 } from 'lucide-react'
 import { qk, useInvalidate, usePayloadEditors, useProfile } from '../../api/queries'
 import { api, ApiError, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import { emptyScope, normalizeScope, type ConfigProfile, type PayloadErrors, type PayloadValues, type Scope } from '../../api/types'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../../components/ui/Card'
-import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Field, FormGrid } from '../../components/ui/Field'
 import { Input, Select, Textarea } from '../../components/ui/Input'
 import { Tabs } from '../../components/ui/Tabs'
 import { Alert } from '../../components/ui/Alert'
 import { LoadingBlock } from '../../components/ui/Spinner'
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { ScopeEditor } from '../../components/pickers/ScopeEditor'
 import { PayloadEditor, VariablesHint, type PayloadSelection } from '../../components/profiles/PayloadEditor'
 import { pruneValues } from '../../components/schema/schema'
 import { DeploymentCounts } from '../ProfilesPage'
 import { DeploymentsTab } from '../ProfileEditorPage'
+import { useCloneSource, useEditMode } from '../../components/editor/useEditMode'
+import { ObjectBar } from '../../components/editor/ObjectBar'
 
 type Tab = 'options' | 'scope' | 'deployments'
+
+/** What Clone carries over to the new profile (scope is left empty so nothing deploys by surprise). */
+export interface ProfileClone {
+  name: string
+  category: string
+  description: string
+  level?: 'device' | 'user'
+  payloads: PayloadValues[]
+}
+
+/**
+ * Copies of payloads for a cloned profile: each gets a fresh PayloadUUID, and values that
+ * pointed at another payload of the profile (a certificate reference, say) follow it.
+ */
+export function clonePayloads(payloads: PayloadValues[]): PayloadValues[] {
+  const map = new Map<string, string>()
+  for (const p of payloads) if (p.uuid) map.set(p.uuid, crypto.randomUUID().toUpperCase())
+  const remap = (v: unknown): unknown => {
+    if (typeof v === 'string') return map.get(v) ?? v
+    if (Array.isArray(v)) return v.map(remap)
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, remap(x)]))
+    return v
+  }
+  return payloads.map((p) => ({ ...p, uuid: p.uuid ? map.get(p.uuid) : undefined, values: remap(p.values) as PayloadValues['values'] }))
+}
 
 /** A Computer Configuration Profile built with Jamf-style payload editors. */
 export function PayloadProfileEditorPage() {
@@ -35,23 +59,22 @@ export function PayloadProfileEditorPage() {
   const invalidate = useInvalidate()
   const profile = useProfile(isNew ? undefined : id)
   const catalog = usePayloadEditors('macos')
-  const ro = !isAdmin
+  const clone = useCloneSource<ProfileClone>()
+  const fromClone = isNew ? clone : undefined
 
   const tab = (sp.get('tab') as Tab) || 'options'
   const setTab = (t: Tab) => setSp(t === 'options' ? {} : { tab: t }, { replace: true })
   const [selected, setSelected] = useState<PayloadSelection>('general')
-  const [name, setName] = useState('')
-  const [category, setCategory] = useState('')
-  const [description, setDescription] = useState('')
-  const [level, setLevel] = useState<'device' | 'user'>('device')
+  const [name, setName] = useState(fromClone?.name ?? '')
+  const [category, setCategory] = useState(fromClone?.category ?? '')
+  const [description, setDescription] = useState(fromClone?.description ?? '')
+  const [level, setLevel] = useState<'device' | 'user'>(fromClone?.level ?? 'device')
   const [scope, setScope] = useState<Scope>(emptyScope())
-  const [payloads, setPayloads] = useState<PayloadValues[]>([])
+  const [payloads, setPayloads] = useState<PayloadValues[]>(fromClone?.payloads ?? [])
   const [errors, setErrors] = useState<PayloadErrors[]>([])
   const [saving, setSaving] = useState(false)
-  const [del, setDel] = useState(false)
 
-  const seed = profile.data ? `${profile.data.id}|${profile.data.updated_at}` : ''
-  useEffect(() => {
+  const load = useCallback(() => {
     const p = profile.data
     if (!p) return
     setName(p.name)
@@ -60,19 +83,26 @@ export function PayloadProfileEditorPage() {
     setLevel(p.level === 'user' ? 'user' : 'device')
     setScope(normalizeScope(p.scope))
     setPayloads(p.payloads ?? [])
+    setErrors([])
+  }, [profile.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: { name, category, description, level, scope, payloads }, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed])
+  }, [load])
+  const ro = ed.readOnly
 
   const save = async () => {
     if (!name.trim()) {
       setSelected('general')
       setTab('options')
       toast.error('Enter a profile name')
-      return
+      return false
     }
     if (payloads.length === 0) {
+      setTab('options')
       toast.error('Add at least one payload')
-      return
+      return false
     }
     setSaving(true)
     setErrors([])
@@ -82,6 +112,7 @@ export function PayloadProfileEditorPage() {
       await invalidate(qk.profiles, qk.profile(out.id), qk.profileDeployments(out.id), qk.dashboard)
       toast.success(isNew ? 'Profile created' : 'Profile saved', 'Computers in scope receive it at their next check-in.')
       if (isNew) navigate(`/profiles/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       const pe = e instanceof ApiError ? ((e.body as { payload_errors?: PayloadErrors[] } | undefined)?.payload_errors ?? []) : []
       setErrors(pe)
@@ -90,6 +121,7 @@ export function PayloadProfileEditorPage() {
         setSelected(pe[0].index)
       }
       toast.error('Save failed', pe.length ? 'Some values are invalid; they are marked in the form.' : errorMessage(e))
+      return false
     } finally {
       setSaving(false)
     }
@@ -121,20 +153,6 @@ export function PayloadProfileEditorPage() {
               <Badge>{p.level === 'user' ? 'User level' : 'Computer level'}</Badge>
               <span className="font-mono text-xs text-ink-muted">{p.identifier}</span>
               <DeploymentCounts status={p.status} />
-            </>
-          )
-        }
-        actions={
-          isAdmin && (
-            <>
-              {!isNew && (
-                <Button variant="ghost" icon={<Trash2 />} onClick={() => setDel(true)}>
-                  Delete
-                </Button>
-              )}
-              <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                {isNew ? 'Create profile' : 'Save changes'}
-              </Button>
             </>
           )
         }
@@ -196,7 +214,19 @@ export function PayloadProfileEditorPage() {
 
       {tab === 'deployments' && !isNew && id && <DeploymentsTab profileId={id} />}
 
-      <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={doDelete} destructive title={`Delete "${name}"?`} description="The profile is removed from every computer that has it installed, then deleted." confirmLabel="Delete profile" />
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/profiles"
+        noun="profile"
+        name={p?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="It is removed from every computer that has it installed, then deleted."
+        onClone={() => navigate('/profiles/new', { state: { clone: { name: `Copy of ${name}`, category, description, level, payloads: clonePayloads(payloads) } satisfies ProfileClone } })}
+        historyId={id}
+      />
     </>
   )
 }

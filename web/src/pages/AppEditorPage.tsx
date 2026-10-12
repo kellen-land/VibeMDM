@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Save, Trash2, Upload } from 'lucide-react'
+import { Upload } from 'lucide-react'
 import { qk, useApp, useAppLabels, useAppLogs, useInvalidate } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -15,7 +15,6 @@ import { Tabs } from '../components/ui/Tabs'
 import { Alert } from '../components/ui/Alert'
 import { Badge } from '../components/ui/Badge'
 import { LoadingBlock } from '../components/ui/Spinner'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Pagination } from '../components/ui/Pagination'
 import { useToast } from '../components/ui/Toast'
 import { ScopeEditor } from '../components/pickers/ScopeEditor'
@@ -24,6 +23,8 @@ import { InstallomatorCommandPreview, InstallomatorOptionsEditor } from '../comp
 import { AppInstallLogTable } from '../components/activity/AppInstallLogTable'
 import { AppIcon } from '../components/apps/AppIcon'
 import { InstallomatorFooter, updateBehaviorLabels } from './AppsPage'
+import { useEditMode } from '../components/editor/useEditMode'
+import { ObjectBar } from '../components/editor/ObjectBar'
 
 type Tab = 'general' | 'scope' | 'selfservice' | 'logs'
 
@@ -55,25 +56,34 @@ export function AppEditorPage() {
   const labels = useAppLabels()
   const [a, setA] = useState<MacApp>(blank())
   const [saving, setSaving] = useState(false)
-  const [del, setDel] = useState(false)
   const tab = (sp.get('tab') as Tab) || 'general'
   const setTab = (t: Tab) => setSp(t === 'general' ? {} : { tab: t }, { replace: true })
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (app.data) setA({ ...blank(), ...app.data, scope: normalizeScope(app.data.scope), options: { ...emptyInstallomatorOptions(), ...app.data.options }, self_service: { ...blank().self_service, ...app.data.self_service } })
   }, [app.data])
+  // The icon is saved on its own (IconUpload), so it is not part of what Save compares or sends.
+  const { icon_version: _iv, ...snapshot } = a
+  void _iv
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
 
   const set = (patch: Partial<MacApp>) => setA((cur) => ({ ...cur, ...patch }))
   const ssOn = a.deployment === 'self_service' || a.self_service.enabled
 
   const save = async () => {
     if (!a.name.trim()) {
+      setTab('general')
       toast.error('Name is required')
-      return
+      return false
     }
     if (!a.label.trim() || (labels.data && !allLabels(labels.data).includes(a.label.trim()))) {
+      setTab('general')
       toast.error('A valid Installomator label is required')
-      return
+      return false
     }
     setSaving(true)
     try {
@@ -82,8 +92,10 @@ export function AppEditorPage() {
       await invalidate(qk.apps, qk.app(out.id))
       toast.success(isNew ? 'App added' : 'App saved', 'Scoped agents were asked to check in.')
       if (isNew) navigate(`/apps/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
+      return false
     } finally {
       setSaving(false)
     }
@@ -101,13 +113,13 @@ export function AppEditorPage() {
 
   if (!isNew && app.isPending) return <LoadingBlock />
   if (!isNew && app.error) return <Alert tone="critical">{errorMessage(app.error)}</Alert>
-  const ro = !isAdmin
-  const tabs: { key: Tab; label: string }[] = [
+  const ro = ed.readOnly
+  const tabs: { key: Tab; label: string; shortcut?: string }[] = [
     { key: 'general', label: 'General' },
     { key: 'scope', label: 'Scope' },
     { key: 'selfservice', label: 'Self Service' },
   ]
-  if (!isNew) tabs.push({ key: 'logs', label: 'Install Logs' })
+  if (!isNew) tabs.push({ key: 'logs', label: 'Install Logs', shortcut: 'logs' })
 
   return (
     <>
@@ -124,20 +136,6 @@ export function AppEditorPage() {
               <Badge tone={a.update_behavior === 'keep_updated' ? 'accent' : 'neutral'}>{updateBehaviorLabels[a.update_behavior]}</Badge>
             </>
           ) : undefined
-        }
-        actions={
-          isAdmin && (
-            <>
-              {!isNew && (
-                <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDel(true)}>
-                  Remove
-                </Button>
-              )}
-              <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                {isNew ? 'Add app' : 'Save changes'}
-              </Button>
-            </>
-          )
         }
       />
       <Tabs className="mb-5" value={tab} onChange={setTab} items={tabs} />
@@ -228,7 +226,7 @@ export function AppEditorPage() {
               {isNew || !id ? (
                 <p className="text-sm text-ink-muted">Add the app first, then upload its icon here.</p>
               ) : (
-                <IconUpload appId={id} version={app.data?.icon_version} disabled={ro} />
+                <IconUpload appId={id} version={app.data?.icon_version} disabled={!isAdmin} />
               )}
             </FormSection>
             <FormSection title="Listing">
@@ -256,12 +254,23 @@ export function AppEditorPage() {
 
       {tab === 'logs' && !isNew && id && <AppLogsTab appId={id} />}
 
-      <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={doDelete} destructive title={`Remove "${a.name}" from the catalog?`} description="Computers that already have the app keep it." confirmLabel="Remove app" />
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/apps"
+        noun="app"
+        name={app.data?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="It is removed from the catalog; computers that already have the app keep it."
+        historyId={id}
+      />
     </>
   )
 }
 
-/** Uploads or removes the app's icon right away (independent of Save, so unsaved edits stay). */
+/** Uploads or removes the app's icon right away (independent of Save and of edit mode, so unsaved edits stay; admins only). */
 function IconUpload({ appId, version, disabled }: { appId: string; version?: string; disabled: boolean }) {
   const toast = useToast()
   const invalidate = useInvalidate()

@@ -80,7 +80,7 @@ export function PoliciesPage() {
         description="Automate scripts, package installs and maintenance on scoped computers."
         actions={
           isAdmin && (
-            <Link to="/policies/new">
+            <Link to="/policies/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 New policy
               </Button>
@@ -102,7 +102,7 @@ export function PoliciesPage() {
           emptyDescription={q ? undefined : 'Create a policy to run scripts or install packages on your computers.'}
           emptyAction={
             isAdmin && !q ? (
-              <Link to="/policies/new">
+              <Link to="/policies/new" data-shortcut="new">
                 <Button variant="primary" size="sm" icon={<Plus />}>
                   New policy
                 </Button>

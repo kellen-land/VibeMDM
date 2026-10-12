@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { RefreshCw, Save } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { qk, useLAPS } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { emptyScope, normalizeScope, type LAPSConfig, type LAPSOverview, type LAPSStatus } from '../api/types'
 import { PageHeader } from '../components/ui/PageHeader'
-import { Card, CardBody, CardFooter, CardHeader } from '../components/ui/Card'
+import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge, type BadgeTone } from '../components/ui/Badge'
 import { Toggle } from '../components/ui/Checkbox'
@@ -20,6 +20,8 @@ import { LoadingBlock } from '../components/ui/Spinner'
 import { useToast } from '../components/ui/Toast'
 import { ScopeEditor, ScopeSummary } from '../components/pickers/ScopeEditor'
 import { LapsRevealButton } from '../components/LapsReveal'
+import { useEditMode } from '../components/editor/useEditMode'
+import { ObjectBar } from '../components/editor/ObjectBar'
 
 const statusLabel: Record<string, { label: string; tone: BadgeTone }> = {
   ok: { label: 'Current', tone: 'good' },
@@ -55,16 +57,31 @@ export function LapsPage() {
   const qc = useQueryClient()
   const q = useLAPS()
   const d = q.data
+  const [f, setF] = useState<LAPSConfig | null>(null)
+  const [saving, setSaving] = useState(false)
 
-  const save = async (cfg: LAPSConfig) => {
+  const load = useCallback(() => {
+    if (d) setF({ ...d.config, scope: normalizeScope(d.config.scope ?? emptyScope()) })
+  }, [d])
+  const ed = useEditMode({ isNew: false, canEdit: isAdmin, snapshot: f, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
+
+  const save = async () => {
+    if (!f) return false
+    setSaving(true)
     try {
-      const r = await api.put<LAPSOverview>('/api/v1/laps', cfg)
+      const r = await api.put<LAPSOverview>('/api/v1/laps', f)
       qc.setQueryData(qk.laps, r)
       toast.success('Saved')
       return true
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
       return false
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -78,8 +95,8 @@ export function LapsPage() {
     }
   }
 
-  if (q.isPending) return <LoadingBlock />
-  if (q.error || !d) return <Alert tone="critical">{q.error ? errorMessage(q.error) : 'Local admin passwords unavailable'}</Alert>
+  if (q.isPending || (d && !f && !q.error)) return <LoadingBlock />
+  if (q.error || !d || !f) return <Alert tone="critical">{q.error ? errorMessage(q.error) : 'Local admin passwords unavailable'}</Alert>
 
   return (
     <>
@@ -128,21 +145,15 @@ export function LapsPage() {
             />
           </Card>
         )}
-        <PolicyCard cfg={d.config} readOnly={!isAdmin} onSave={save} />
+        <PolicyCard f={f} setF={setF} readOnly={ed.readOnly} />
       </div>
+      {isAdmin && <ObjectBar ed={ed} isNew={false} listPath="/laps" noun="local admin password settings" saving={saving} onSave={save} noDone />}
     </>
   )
 }
 
-function PolicyCard({ cfg, readOnly, onSave }: { cfg: LAPSConfig; readOnly: boolean; onSave: (c: LAPSConfig) => Promise<boolean> }) {
-  const seed = JSON.stringify(cfg)
-  const [f, setF] = useState<LAPSConfig>(() => ({ ...cfg, scope: normalizeScope(cfg.scope ?? emptyScope()) }))
-  const [saving, setSaving] = useState(false)
-  useEffect(() => {
-    setF({ ...cfg, scope: normalizeScope(cfg.scope ?? emptyScope()) })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed])
-  const set = (p: Partial<LAPSConfig>) => setF((x) => ({ ...x, ...p }))
+function PolicyCard({ f, setF, readOnly }: { f: LAPSConfig; setF: (u: (x: LAPSConfig | null) => LAPSConfig | null) => void; readOnly: boolean }) {
+  const set = (p: Partial<LAPSConfig>) => setF((x) => (x ? { ...x, ...p } : x))
   const num = (v: string, fallback: number) => (Number.isFinite(parseInt(v, 10)) ? parseInt(v, 10) : fallback)
 
   return (
@@ -200,22 +211,6 @@ function PolicyCard({ cfg, readOnly, onSave }: { cfg: LAPSConfig; readOnly: bool
           </details>
         )}
       </CardBody>
-      {!readOnly && (
-        <CardFooter>
-          <Button
-            variant="primary"
-            icon={<Save />}
-            loading={saving}
-            onClick={async () => {
-              setSaving(true)
-              await onSave(f)
-              setSaving(false)
-            }}
-          >
-            Save
-          </Button>
-        </CardFooter>
-      )}
     </Card>
   )
 }

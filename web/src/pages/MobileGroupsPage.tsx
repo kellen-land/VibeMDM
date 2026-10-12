@@ -44,7 +44,7 @@ export function MobileGroupsPage() {
         description="Smart groups update automatically from inventory criteria; static groups are curated by hand."
         actions={
           isAdmin && (
-            <Link to="/mobile-groups/new">
+            <Link to="/mobile-groups/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 New group
               </Button>
@@ -66,7 +66,7 @@ export function MobileGroupsPage() {
           emptyDescription={q ? undefined : 'Create a smart group to target iPhones and iPads by criteria, or a static group to pick them by hand.'}
           emptyAction={
             isAdmin && !q ? (
-              <Link to="/mobile-groups/new">
+              <Link to="/mobile-groups/new" data-shortcut="new">
                 <Button variant="primary" size="sm" icon={<Plus />}>
                   New group
                 </Button>

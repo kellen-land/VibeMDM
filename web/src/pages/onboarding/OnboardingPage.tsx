@@ -28,7 +28,7 @@ export function OnboardingPage() {
         actions={
           isAdmin &&
           rows.length > 0 && (
-            <Link to="/onboarding/new">
+            <Link to="/onboarding/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 New workflow
               </Button>
@@ -125,7 +125,7 @@ function EmptyIntro({ isAdmin }: { isAdmin: boolean }) {
         </ul>
         <div className="mt-6">
           {isAdmin ? (
-            <Link to="/onboarding/new">
+            <Link to="/onboarding/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 Create a workflow
               </Button>

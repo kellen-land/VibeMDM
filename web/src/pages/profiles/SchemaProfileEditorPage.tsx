@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { FileCode2, Save } from 'lucide-react'
+import { FileCode2 } from 'lucide-react'
 import { qk, schemaPath, useCustomSchema, useInvalidate, useProfile } from '../../api/queries'
 import { api, ApiError, errorMessage, fieldErrors } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import { emptyScope, normalizeScope, type ConfigProfile, type SchemaFieldError, type SchemaValues, type Scope } from '../../api/types'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { Card, CardBody, CardFooter, CardHeader } from '../../components/ui/Card'
+import { Card, CardBody, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Field, FormGrid } from '../../components/ui/Field'
@@ -19,12 +19,28 @@ import { SchemaForm } from '../../components/schema/SchemaForm'
 import { ProfileXmlPanel, useLivePreview } from '../../components/schema/ProfileXmlPanel'
 import { managedProfiles, pruneValues, schemaIdFromSource } from '../../components/schema/schema'
 import { customSettingsCrumb } from './CustomSettingsPage'
+import { useCloneSource, useEditMode } from '../../components/editor/useEditMode'
+import { ObjectBar } from '../../components/editor/ObjectBar'
+
+/** What Clone carries over to a new profile from the same schema (scope is left empty so nothing deploys by surprise). */
+export interface SchemaProfileClone {
+  name: string
+  description: string
+  category: string
+  values: SchemaValues
+}
 
 /**
  * New profile from a schema (/profiles/custom-settings/:schemaId/new) or edit a
  * schema-built profile with the form (/profiles/:id/schema).
  */
 export function SchemaProfileEditorPage() {
+  const { schemaId, id } = useParams()
+  // Keyed so going to another profile (or a clone) starts with fresh state.
+  return <SchemaProfileEditor key={id ? `p:${id}` : `s:${schemaId}`} />
+}
+
+function SchemaProfileEditor() {
   const { schemaId: schemaParam, id: profileId } = useParams()
   const isNew = !profileId
   const navigate = useNavigate()
@@ -35,19 +51,19 @@ export function SchemaProfileEditorPage() {
   const schemaId = isNew ? (schemaParam ?? null) : schemaIdFromSource(profile.data?.schema_source)
   const schema = useCustomSchema(schemaId)
 
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [category, setCategory] = useState('Applications')
+  const clone = useCloneSource<SchemaProfileClone>()
+  const fromClone = isNew ? clone : undefined
+
+  const [name, setName] = useState(fromClone?.name ?? '')
+  const [description, setDescription] = useState(fromClone?.description ?? '')
+  const [category, setCategory] = useState(fromClone?.category || 'Applications')
   const [scope, setScope] = useState<Scope>(emptyScope())
-  const [values, setValues] = useState<SchemaValues>({})
+  const [values, setValues] = useState<SchemaValues>(fromClone?.values ?? {})
   const [saveErrors, setSaveErrors] = useState<SchemaFieldError[]>([])
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const ro = !isAdmin
 
-  // Seed from the profile once per server version, not on every refetch.
-  const seed = profile.data ? `${profile.data.id}|${profile.data.updated_at}` : ''
-  useEffect(() => {
+  const load = useCallback(() => {
     const p = profile.data
     if (!p) return
     setName(p.name)
@@ -55,8 +71,15 @@ export function SchemaProfileEditorPage() {
     setCategory(p.category || 'Applications')
     setScope(normalizeScope(p.scope))
     setValues((p.schema_values as SchemaValues | null) ?? {})
+    setSaveErrors([])
+    setSaveError(null)
+  }, [profile.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: { name, description, category, scope, values }, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed])
+  }, [load])
+  const ro = ed.readOnly
 
   const preview = useLivePreview(schemaId, name || schema.data?.name || '', values, !!schema.data)
   const errors = preview.data?.errors?.length ? preview.data.errors : saveErrors
@@ -67,10 +90,10 @@ export function SchemaProfileEditorPage() {
   }
 
   const save = async () => {
-    if (!schemaId) return
+    if (!schemaId) return false
     if (!name.trim()) {
       setSaveError('Enter a profile name.')
-      return
+      return false
     }
     setSaving(true)
     setSaveError(null)
@@ -79,14 +102,28 @@ export function SchemaProfileEditorPage() {
       const out = await api.post<ConfigProfile>(`${schemaPath(schemaId)}/profiles`, body)
       await invalidate(qk.profiles, qk.profile(out.id), qk.profileDeployments(out.id), qk.customSchemas, qk.dashboard)
       toast.success(isNew ? 'Profile created' : 'Profile saved', 'Deployment to scoped computers has been queued.')
-      navigate(`/profiles/${out.id}`)
+      if (isNew) navigate(`/profiles/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       const fe = fieldErrors(e)
       setSaveErrors(fe)
       setSaveError(fe.length ? null : errorMessage(e))
       toast.error('Save failed', fe.length ? 'Some values are invalid; they are marked in the form.' : errorMessage(e))
+      return false
     } finally {
       setSaving(false)
+    }
+  }
+
+  const doDelete = async () => {
+    try {
+      await api.del(`/api/v1/profiles/${profileId}`)
+      toast.success('Profile deleted')
+      await invalidate(qk.profiles, qk.customSchemas, qk.dashboard)
+      navigate('/profiles')
+    } catch (e) {
+      toast.error('Delete failed', errorMessage(e))
+      return false
     }
   }
 
@@ -149,11 +186,6 @@ export function SchemaProfileEditorPage() {
     )
 
   const sd = schema.data
-  const saveButton = (
-    <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-      {isNew ? 'Create profile' : 'Save changes'}
-    </Button>
-  )
 
   return (
     <>
@@ -169,7 +201,6 @@ export function SchemaProfileEditorPage() {
             {p && <span className="font-mono text-xs text-ink-faint">{p.identifier}</span>}
           </>
         }
-        actions={isAdmin && saveButton}
       />
       <div className="flex flex-col gap-6">
         {saveError && (
@@ -213,11 +244,31 @@ export function SchemaProfileEditorPage() {
           <CardBody>
             <SchemaForm schema={sd.schema} value={values} onChange={onValues} errors={errors} disabled={ro} />
           </CardBody>
-          {isAdmin && <CardFooter>{saveButton}</CardFooter>}
         </Card>
 
         <ProfileXmlPanel preview={preview} />
       </div>
+
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath={isNew ? '/profiles/custom-settings' : `/profiles/${profileId}`}
+        noun="profile"
+        name={p?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={isNew ? undefined : doDelete}
+        deleteDescription="It is removed from every computer that has it installed, then deleted."
+        onClone={
+          schemaId
+            ? () =>
+                navigate(`/profiles/custom-settings/${encodeURIComponent(schemaId)}/new`, {
+                  state: { clone: { name: `Copy of ${name}`, description, category, values } satisfies SchemaProfileClone },
+                })
+            : undefined
+        }
+        historyId={profileId}
+      />
     </>
   )
 }

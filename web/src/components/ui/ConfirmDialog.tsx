@@ -57,10 +57,10 @@ export function ConfirmDialog({
       size="sm"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={busy || loading}>
+          <Button variant="ghost" onClick={onClose} disabled={busy || loading} data-shortcut="cancel">
             {cancelLabel}
           </Button>
-          <Button variant={destructive ? 'danger' : 'primary'} onClick={handle} disabled={!ok} loading={busy || loading}>
+          <Button variant={destructive ? 'danger' : 'primary'} onClick={handle} disabled={!ok} loading={busy || loading} data-shortcut={destructive ? 'delete' : 'save'}>
             {confirmLabel}
           </Button>
         </>

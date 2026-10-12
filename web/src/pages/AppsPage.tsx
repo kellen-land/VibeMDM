@@ -92,7 +92,7 @@ export function AppsPage() {
         description="Every app VibeMDM installs with Installomator, defined once: install it automatically, offer it in Self Service only, or use it in policies."
         actions={
           isAdmin && (
-            <Link to="/apps/new">
+            <Link to="/apps/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 Add app
               </Button>
@@ -115,7 +115,7 @@ export function AppsPage() {
           emptyDescription={q ? undefined : 'Add an app by its Installomator label (e.g. googlechrome, slack, zoom) and scope it to computers.'}
           emptyAction={
             isAdmin && !q ? (
-              <Link to="/apps/new">
+              <Link to="/apps/new" data-shortcut="new">
                 <Button variant="primary" size="sm" icon={<Plus />}>
                   Add app
                 </Button>

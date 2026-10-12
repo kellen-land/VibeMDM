@@ -162,10 +162,10 @@ function NamedList({
             <Input value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus required />
           </Field>
           <div className="flex justify-end gap-2 pt-1">
-            <Button variant="ghost" onClick={() => setEdit(null)}>
+            <Button variant="ghost" onClick={() => setEdit(null)} data-shortcut="cancel">
               Cancel
             </Button>
-            <Button type="submit" variant="primary" loading={busy}>
+            <Button type="submit" variant="primary" loading={busy} data-shortcut="save">
               Save
             </Button>
           </div>
@@ -322,10 +322,10 @@ function SegmentDialog({ seg, onClose }: { seg: NetworkSegment; onClose: () => v
           </Field>
         </FormGrid>
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} data-shortcut="cancel">
             Cancel
           </Button>
-          <Button type="submit" variant="primary" loading={busy}>
+          <Button type="submit" variant="primary" loading={busy} data-shortcut="save">
             {isNew ? 'Create segment' : 'Save'}
           </Button>
         </div>

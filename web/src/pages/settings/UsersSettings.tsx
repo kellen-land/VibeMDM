@@ -148,10 +148,10 @@ function UserDialog({ open, onClose, user, isSelf }: { open: boolean; onClose: (
         </FormGrid>
         {user && <Toggle checked={form.enabled} onChange={(v) => setForm({ ...form, enabled: v })} disabled={isSelf} label="Enabled" description="Disabled users cannot sign in." />}
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} data-shortcut="cancel">
             Cancel
           </Button>
-          <Button type="submit" variant="primary" loading={busy}>
+          <Button type="submit" variant="primary" loading={busy} data-shortcut="save">
             {user ? 'Save' : 'Create user'}
           </Button>
         </div>
@@ -192,10 +192,10 @@ function PasswordDialog({ user, onClose }: { user: AdminUser; onClose: () => voi
           <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />
         </Field>
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} data-shortcut="cancel">
             Cancel
           </Button>
-          <Button type="submit" variant="primary" loading={busy}>
+          <Button type="submit" variant="primary" loading={busy} data-shortcut="save">
             Reset password
           </Button>
         </div>

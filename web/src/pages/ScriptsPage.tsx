@@ -44,7 +44,7 @@ export function ScriptsPage() {
         description="Shell scripts that run on computers via policies or on demand."
         actions={
           isAdmin && (
-            <Link to="/scripts/new">
+            <Link to="/scripts/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 New script
               </Button>
@@ -66,7 +66,7 @@ export function ScriptsPage() {
           emptyDescription={q ? undefined : 'Add a shell script to run it through policies or directly on computers.'}
           emptyAction={
             isAdmin && !q ? (
-              <Link to="/scripts/new">
+              <Link to="/scripts/new" data-shortcut="new">
                 <Button variant="primary" size="sm" icon={<Plus />}>
                   New script
                 </Button>

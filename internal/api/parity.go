@@ -291,6 +291,7 @@ func (h *Handler) updateSearch(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "search")
 		return
 	}
+	h.st.Audit(r.Context(), actor(r), "search.update", "advanced_search", out.ID, map[string]any{"name": out.Name})
 	writeJSON(w, 200, out)
 }
 
@@ -299,6 +300,7 @@ func (h *Handler) deleteSearch(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "search")
 		return
 	}
+	h.st.Audit(r.Context(), actor(r), "search.delete", "advanced_search", r.PathValue("id"), nil)
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 

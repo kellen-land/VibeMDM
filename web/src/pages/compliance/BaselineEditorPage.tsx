@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Check, ChevronDown, ChevronRight, FileCode2, ListPlus, MinusCircle, Plus, RotateCcw, Save, ShieldCheck, Wrench, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, FileCode2, ListPlus, MinusCircle, Plus, RotateCcw, ShieldCheck, Wrench, X } from 'lucide-react'
 import { qk, useComplianceBaseline, useComplianceCatalog, useComplianceProfile, useComplianceRules, useInvalidate } from '../../api/queries'
 import { api, ApiError, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
@@ -37,6 +37,8 @@ import {
   sectionLabel,
 } from '../../components/compliance/compliance'
 import { cn } from '../../lib/cn'
+import { useCloneSource, useEditMode } from '../../components/editor/useEditMode'
+import { ObjectBar } from '../../components/editor/ObjectBar'
 
 const intervalPresets = [
   { hours: 6, label: 'Every 6 hours' },
@@ -143,20 +145,39 @@ export function BaselineEditorPage() {
   const { isAdmin } = useAuth()
   const toast = useToast()
   const invalidate = useInvalidate()
-  const readOnly = !isAdmin
   const baseline = useComplianceBaseline(isNew ? undefined : id)
   const catalog = useComplianceCatalog()
-  const [f, setF] = useState<Form>(emptyForm)
+  const clone = useCloneSource<ComplianceBaseline>()
+  const [f, setF] = useState<Form>(() => (isNew && clone ? toForm(clone) : emptyForm()))
   const [errors, setErrors] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [changingBenchmark, setChangingBenchmark] = useState(false)
   const [pendingBenchmark, setPendingBenchmark] = useState<string | null>(null)
 
   const seed = baseline.data ? `${baseline.data.id}|${baseline.data.updated_at}` : ''
+  const [loaded, setLoaded] = useState('')
+  const load = useCallback(() => {
+    if (baseline.data) {
+      setF(toForm(baseline.data))
+      setLoaded(`${baseline.data.id}|${baseline.data.updated_at}`)
+    }
+  }, [baseline.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: f, reset: load })
   useEffect(() => {
-    if (baseline.data) setF(toForm(baseline.data))
+    if (!ed.editing) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed])
+  }, [load])
+  // This page is the baseline's edit route (the report is its view), so an admin lands in edit
+  // mode once the saved values are in the form.
+  const autoEdit = useRef(!isNew)
+  useEffect(() => {
+    if (autoEdit.current && loaded) {
+      autoEdit.current = false
+      ed.startEdit()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded])
+  const readOnly = ed.readOnly
 
   const set = (patch: Partial<Form>) => setF((cur) => ({ ...cur, ...patch }))
   const rulesQ = useComplianceRules(f.benchmark || undefined)
@@ -201,7 +222,7 @@ export function BaselineEditorPage() {
     if (local.length) {
       setErrors(local.join('\n'))
       window.scrollTo({ top: 0, behavior: 'smooth' })
-      return
+      return false
     }
     setErrors(null)
     setSaving(true)
@@ -231,18 +252,20 @@ export function BaselineEditorPage() {
       const out = isNew ? await api.post<ComplianceBaseline>('/api/v1/compliance/baselines', body) : await api.put<ComplianceBaseline>(`/api/v1/compliance/baselines/${id}`, body)
       await invalidate(qk.compliance, qk.profiles)
       toast.success(isNew ? 'Baseline created' : 'Baseline saved', f.enabled ? 'Macs in scope are scanned on their next check-in.' : undefined)
-      navigate(`/compliance/${out.id}`)
+      navigate(`/compliance/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       if (e instanceof ApiError && e.status === 422) {
         await invalidate(qk.compliance, qk.profiles)
         toast.warning('Saved, but the profile could not be generated', e.message)
-        navigate(isNew ? '/compliance' : `/compliance/${id}`)
-        return
+        navigate(isNew ? '/compliance' : `/compliance/${id}`, { replace: true })
+        return true
       }
       const msg = errorMessage(e)
       setErrors(msg)
       window.scrollTo({ top: 0, behavior: 'smooth' })
       toast.error('Save failed', e instanceof ApiError && e.status === 400 ? 'See the problems listed at the top.' : msg)
+      return false
     } finally {
       setSaving(false)
     }
@@ -252,11 +275,6 @@ export function BaselineEditorPage() {
   if (!isNew && (baseline.error || !baseline.data)) return <Alert tone="critical">{baseline.error ? errorMessage(baseline.error) : 'Baseline not found'}</Alert>
 
   const showPicker = isNew ? !f.benchmark || changingBenchmark : changingBenchmark
-  const saveButton = isAdmin && f.benchmark && (
-    <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-      {isNew ? 'Create baseline' : 'Save changes'}
-    </Button>
-  )
 
   return (
     <>
@@ -264,16 +282,6 @@ export function BaselineEditorPage() {
         crumbs={[{ label: 'Compliance', to: '/compliance' }, ...(isNew ? [{ label: 'New baseline' }] : [{ label: baseline.data?.name ?? '', to: `/compliance/${id}` }, { label: 'Edit' }])]}
         title={isNew ? 'New compliance baseline' : `Edit ${baseline.data?.name ?? 'baseline'}`}
         description="Choose an mSCP benchmark, decide where it applies, then tailor its rules."
-        actions={
-          <>
-            {!isNew && (
-              <Link to={`/compliance/${id}`}>
-                <Button variant="ghost">Cancel</Button>
-              </Link>
-            )}
-            {saveButton}
-          </>
-        }
       />
       <div className="flex flex-col gap-6">
         {errors && (
@@ -333,20 +341,12 @@ export function BaselineEditorPage() {
               setPickerOpen={setPickerOpen}
             />
             {!isNew && id && <ProfilePreview id={id} dirty={seed !== '' && JSON.stringify(toForm(baseline.data!)) !== JSON.stringify(f)} />}
-            {saveButton && (
-              <div className="flex justify-end gap-2">
-                {!isNew && (
-                  <Link to={`/compliance/${id}`}>
-                    <Button variant="ghost">Cancel</Button>
-                  </Link>
-                )}
-                {saveButton}
-              </div>
-            )}
           </>
         )}
       </div>
       <ComplianceAttribution release={catalog.data?.release} />
+      {/* The report page is this baseline's view: Cancel, Save and Done all go back there. */}
+      <ObjectBar ed={ed} isNew listPath={isNew ? '/compliance' : `/compliance/${id}`} noun="baseline" name={baseline.data?.name} saving={saving} onSave={save} />
       <ConfirmDialog
         open={!!pendingBenchmark}
         onClose={() => setPendingBenchmark(null)}
@@ -885,10 +885,10 @@ function ExemptDialog({ rule, onClose, onConfirm }: { rule: ComplianceRule | nul
       description={rule?.title}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} data-shortcut="cancel">
             Cancel
           </Button>
-          <Button variant="primary" disabled={!reason.trim()} onClick={() => onConfirm(reason.trim())}>
+          <Button variant="primary" data-shortcut="save" disabled={!reason.trim()} onClick={() => onConfirm(reason.trim())}>
             Exempt rule
           </Button>
         </>
@@ -940,11 +940,12 @@ function AddRulesDialog({ open, onClose, rules, loading, existing, onAdd }: { op
       description="Added rules are scanned and enforced like the benchmark's own, and can be removed again at any time."
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} data-shortcut="cancel">
             Cancel
           </Button>
           <Button
             variant="primary"
+            data-shortcut="save"
             icon={<Plus />}
             disabled={picked.size === 0}
             onClick={() => {

@@ -59,7 +59,7 @@ export function CustomSettingsPage() {
         description="Build managed-preference profiles for apps from a JSON schema. VibeMDM renders the schema as a form and generates the profile."
         actions={
           isAdmin && (
-            <Button variant="primary" icon={<Plus />} onClick={() => setDialog({})}>
+            <Button variant="primary" icon={<Plus />} onClick={() => setDialog({})} data-shortcut="new">
               Add schema
             </Button>
           )
@@ -225,10 +225,10 @@ function SchemaDialog({ id, onClose }: { id?: string; onClose: () => void }) {
       description="Paste or upload a Jamf-style external application JSON schema."
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>
+          <Button variant="ghost" onClick={onClose} disabled={busy} data-shortcut="cancel">
             Cancel
           </Button>
-          <Button variant="primary" onClick={save} loading={busy} disabled={editing && existing.isPending}>
+          <Button variant="primary" onClick={save} loading={busy} disabled={editing && existing.isPending} data-shortcut="save">
             {editing ? 'Save schema' : 'Add schema'}
           </Button>
         </>

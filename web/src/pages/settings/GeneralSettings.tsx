@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
-import { Bot, Eye, EyeOff, RefreshCw, Save, X } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Bot, Eye, EyeOff, RefreshCw, X } from 'lucide-react'
 import { qk, useInvalidate, useSettings } from '../../api/queries'
 import { api, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import type { SettingsUpdate, SettingsView } from '../../api/types'
-import { Card, CardBody, CardFooter, CardHeader } from '../../components/ui/Card'
+import { Card, CardBody, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Field, FormGrid } from '../../components/ui/Field'
 import { Input, Textarea } from '../../components/ui/Input'
@@ -16,6 +16,8 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { CodeBlock, CopyButton } from '../../components/ui/CopyButton'
 import { useToast } from '../../components/ui/Toast'
 import { statusKey } from '../../auth/AuthContext'
+import { useEditMode } from '../../components/editor/useEditMode'
+import { ObjectBar } from '../../components/editor/ObjectBar'
 
 /** The parts of the server settings form, each shown on its own Settings page. */
 export type GeneralSection = 'general' | 'enrollment' | 'remote-shell' | 'ai' | 'logging' | 'signing' | 'self-service'
@@ -26,6 +28,7 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
   const invalidate = useInvalidate()
   const settings = useSettings()
   const [form, setForm] = useState<SettingsView | null>(null)
+  const [logDays, setLogDays] = useState('30')
   const [certPem, setCertPem] = useState('')
   const [keyPem, setKeyPem] = useState('')
   const [clearSigning, setClearSigning] = useState(false)
@@ -34,12 +37,29 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
   const [rotateOpen, setRotateOpen] = useState(false)
   const [rotating, setRotating] = useState(false)
 
-  useEffect(() => {
-    if (settings.data) setForm(settings.data)
+  const load = useCallback(() => {
+    if (!settings.data) return
+    setForm(settings.data)
+    setLogDays(String(settings.data.log_retention_days))
+    setCertPem('')
+    setKeyPem('')
+    setClearSigning(false)
   }, [settings.data])
+  const ed = useEditMode({ isNew: false, canEdit: isAdmin, snapshot: { form, logDays, certPem, keyPem, clearSigning }, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
+
+  const logN = Number(logDays)
+  const logInvalid = !Number.isInteger(logN) || logN < 1 || logN > 3650
 
   const save = async () => {
-    if (!form) return
+    if (!form) return false
+    if (section === 'logging' && logInvalid) {
+      toast.error('Check the retention', 'Enter a whole number of days between 1 and 3650.')
+      return false
+    }
     setSaving(true)
     try {
       const body: SettingsUpdate = {
@@ -59,6 +79,10 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
         self_service_accent_color: form.self_service_accent_color,
         self_service_welcome: form.self_service_welcome,
       }
+      if (!logInvalid) {
+        body.log_retention_days = logN
+        body.log_archive_enabled = form.log_archive_enabled
+      }
       if (clearSigning) body.clear_signing = true
       else if (certPem.trim() && keyPem.trim()) {
         body.signing_cert_pem = certPem
@@ -69,9 +93,11 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
       setCertPem('')
       setKeyPem('')
       setClearSigning(false)
-      toast.success('Settings saved')
+      toast.success(section === 'logging' ? 'Logging settings saved' : 'Settings saved')
+      return true
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
+      return false
     } finally {
       setSaving(false)
     }
@@ -93,8 +119,9 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
 
   if (settings.isPending || !form) return <LoadingBlock />
   if (settings.error) return <Alert tone="critical">{errorMessage(settings.error)}</Alert>
-  const ro = !isAdmin
-  const set = (patch: Partial<SettingsView>) => setForm({ ...form, ...patch })
+  const ro = ed.readOnly
+  const set = (patch: Partial<SettingsView>) => setForm((cur) => (cur ? { ...cur, ...patch } : cur))
+  const secret = settings.data?.agent_enrollment_secret ?? ''
 
   return (
     <div className="flex flex-col gap-6">
@@ -161,9 +188,9 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
           {isAdmin && (
             <Field label="Agent enrollment secret" hint="Embedded in the agent install command. Rotate it if it leaks.">
               <div className="flex flex-wrap items-center gap-2">
-                <Input readOnly mono type={showSecret ? 'text' : 'password'} value={form.agent_enrollment_secret ?? ''} className="flex-1 min-w-[240px]" />
+                <Input readOnly mono type={showSecret ? 'text' : 'password'} value={secret} className="flex-1 min-w-[240px]" />
                 <Button icon={showSecret ? <EyeOff /> : <Eye />} onClick={() => setShowSecret((s) => !s)} aria-label={showSecret ? 'Hide' : 'Show'} />
-                <CopyButton text={form.agent_enrollment_secret ?? ''} />
+                <CopyButton text={secret} />
                 <Button variant="danger-outline" icon={<RefreshCw />} onClick={() => setRotateOpen(true)}>
                   Rotate
                 </Button>
@@ -239,7 +266,7 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
         </Card>
       )}
 
-      {section === 'logging' && <LoggingCard settings={settings.data} readOnly={ro} />}
+      {section === 'logging' && <LoggingCard days={logDays} setDays={setLogDays} invalid={logInvalid} archive={form.log_archive_enabled} setArchive={(v) => set({ log_archive_enabled: v })} readOnly={ro} />}
 
       {section === 'signing' && (
       <Card>
@@ -263,7 +290,7 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
                   <Textarea mono rows={6} value={keyPem} onChange={(e) => setKeyPem(e.target.value)} disabled={ro} placeholder="-----BEGIN PRIVATE KEY-----" />
                 </Field>
               </FormGrid>
-              {isAdmin && form.signing_configured && (
+              {!ro && form.signing_configured && (
                 <div>
                   <Button variant="danger-outline" size="sm" icon={<X />} onClick={() => setClearSigning(true)}>
                     Remove signing identity
@@ -276,14 +303,7 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
       </Card>
       )}
 
-      {isAdmin && section !== 'logging' && (
-        <div className="flex items-center justify-end gap-3">
-          {section === 'general' && <span className="mr-auto text-xs text-ink-muted">Server version {form.version}</span>}
-          <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-            Save
-          </Button>
-        </div>
-      )}
+      {section === 'general' && <p className="text-xs text-ink-muted">Server version {form.version}</p>}
 
       <ConfirmDialog
         open={rotateOpen}
@@ -295,6 +315,7 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
         description="A new secret is generated immediately. Any install command or script that embeds the current secret will stop working. Already-enrolled agents are unaffected."
         confirmLabel="Rotate secret"
       />
+      {isAdmin && <ObjectBar ed={ed} isNew={false} listPath={section === 'general' ? '/settings' : `/settings/${section}`} noun="settings" saving={saving} onSave={save} noDone />}
     </div>
   )
 }
@@ -360,38 +381,8 @@ function MCPCard({ form, set, readOnly }: { form: SettingsView; set: (patch: Par
   )
 }
 
-/** Log retention and archiving. Keeps its own edit state and saves only its two fields. */
-function LoggingCard({ settings, readOnly }: { settings: SettingsView | undefined; readOnly: boolean }) {
-  const toast = useToast()
-  const invalidate = useInvalidate()
-  const [days, setDays] = useState(String(settings?.log_retention_days ?? 30))
-  const [archive, setArchive] = useState(!!settings?.log_archive_enabled)
-  const [saving, setSaving] = useState(false)
-  useEffect(() => {
-    if (!settings) return
-    setDays(String(settings.log_retention_days))
-    setArchive(settings.log_archive_enabled)
-  }, [settings?.log_retention_days, settings?.log_archive_enabled]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const n = Number(days)
-  const invalid = !Number.isInteger(n) || n < 1 || n > 3650
-  const dirty = !!settings && (n !== settings.log_retention_days || archive !== settings.log_archive_enabled)
-
-  const save = async () => {
-    if (invalid) return
-    setSaving(true)
-    try {
-      const body: SettingsUpdate = { log_retention_days: n, log_archive_enabled: archive }
-      await api.put('/api/v1/settings', body)
-      await invalidate(qk.settings)
-      toast.success('Logging settings saved')
-    } catch (e) {
-      toast.error('Save failed', errorMessage(e))
-    } finally {
-      setSaving(false)
-    }
-  }
-
+/** Log retention and archiving. Saved with the main settings form. */
+function LoggingCard({ days, setDays, invalid, archive, setArchive, readOnly }: { days: string; setDays: (v: string) => void; invalid: boolean; archive: boolean; setArchive: (v: boolean) => void; readOnly: boolean }) {
   return (
     <Card>
       <CardHeader title="Logging" description="How long server and agent logs are kept in the database, and whether they are archived before being pruned." />
@@ -410,13 +401,6 @@ function LoggingCard({ settings, readOnly }: { settings: SettingsView | undefine
           The minimum level stored in the database is set with the <code className="font-mono text-ink">VIBEMDM_LOG_DB_LEVEL</code> environment variable on the server (default <code className="font-mono text-ink">info</code>).
         </p>
       </CardBody>
-      {!readOnly && (
-        <CardFooter>
-          <Button variant="primary" icon={<Save />} loading={saving} onClick={save} disabled={invalid || !dirty}>
-            Save logging
-          </Button>
-        </CardFooter>
-      )}
     </Card>
   )
 }

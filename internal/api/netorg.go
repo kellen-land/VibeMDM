@@ -129,6 +129,7 @@ func (h *Handler) updateSegment(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "network segment")
 		return
 	}
+	h.st.Audit(r.Context(), actor(r), "network_segment.update", "network_segment", out.ID, map[string]any{"name": out.Name})
 	writeJSON(w, 200, out)
 }
 

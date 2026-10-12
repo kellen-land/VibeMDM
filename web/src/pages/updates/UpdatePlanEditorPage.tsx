@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CalendarClock, Save, ShieldAlert, SlidersHorizontal, Trash2 } from 'lucide-react'
+import { CalendarClock, ShieldAlert, SlidersHorizontal } from 'lucide-react'
 import { qk, useInvalidate, useUpdatePlan, useUpdatesCatalog } from '../../api/queries'
 import { api, ApiError, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import { emptyScope, normalizeScope, type CatalogVersion, type Scope, type UpdateAction, type UpdatePlan, type UpdatePlanKind, type UpdateSettings } from '../../api/types'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { Card, CardBody, CardFooter, CardHeader } from '../../components/ui/Card'
+import { Card, CardBody, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { Toggle } from '../../components/ui/Checkbox'
@@ -14,13 +14,14 @@ import { Field, FormGrid } from '../../components/ui/Field'
 import { Input, Select } from '../../components/ui/Input'
 import { Alert } from '../../components/ui/Alert'
 import { LoadingBlock, Spinner } from '../../components/ui/Spinner'
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { ScopeEditor, ScopeSummary } from '../../components/pickers/ScopeEditor'
 import { formatLocalDeadline, SupervisionCallout } from '../../components/updates/updateState'
 import { ErrorList } from './SoftwareUpdatesPage'
 import { relativeTime, shortDate } from '../../lib/format'
 import { cn } from '../../lib/cn'
+import { useCloneSource, useEditMode } from '../../components/editor/useEditMode'
+import { ObjectBar } from '../../components/editor/ObjectBar'
 
 type Tri = '' | 'true' | 'false'
 type Act = '' | UpdateAction
@@ -158,18 +159,20 @@ export function UpdatePlanEditorPage() {
   const toast = useToast()
   const invalidate = useInvalidate()
   const plan = useUpdatePlan(isNew ? undefined : id)
-  const [f, setF] = useState<Form>(emptyForm)
+  const clone = useCloneSource<Form>()
+  const [f, setF] = useState<Form>(() => (isNew && clone ? clone : emptyForm()))
   const [errors, setErrors] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [delOpen, setDelOpen] = useState(false)
-  const readOnly = !isAdmin
 
-  // Re-seed only when the server copy changes (not on every focus refetch).
-  const seed = plan.data ? `${plan.data.id}|${plan.data.updated_at}` : ''
-  useEffect(() => {
+  const load = useCallback(() => {
     if (plan.data) setF(planToForm(plan.data))
+  }, [plan.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: f, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed])
+  }, [load])
+  const readOnly = ed.readOnly
 
   const set = (patch: Partial<Form>) => setF((cur) => ({ ...cur, ...patch }))
   const setS = (patch: Partial<SettingsForm>) => setF((cur) => ({ ...cur, settings: { ...cur.settings, ...patch } }))
@@ -178,7 +181,7 @@ export function UpdatePlanEditorPage() {
     const local = validate(f)
     if (local.length) {
       setErrors(local.join('\n'))
-      return
+      return false
     }
     setErrors(null)
     setSaving(true)
@@ -198,11 +201,13 @@ export function UpdatePlanEditorPage() {
       const out = isNew ? await api.post<UpdatePlan>('/api/v1/updates/plans', body) : await api.put<UpdatePlan>(`/api/v1/updates/plans/${id}`, body)
       await invalidate(qk.updatePlans, qk.updatesOverview, qk.updatePlan(out.id))
       toast.success(isNew ? 'Plan created' : 'Plan saved', 'Affected Macs will be asked to sync within a minute.')
-      navigate('/updates/plans')
+      if (isNew) navigate(`/updates/plans/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       const msg = errorMessage(e)
       setErrors(msg)
       toast.error('Save failed', e instanceof ApiError && e.status === 400 ? 'See the problems listed above the form.' : msg)
+      return false
     } finally {
       setSaving(false)
     }
@@ -214,8 +219,10 @@ export function UpdatePlanEditorPage() {
       await invalidate(qk.updatePlans, qk.updatesOverview)
       toast.success('Plan deleted', 'Affected Macs will be asked to sync within a minute.')
       navigate('/updates/plans')
+      return true
     } catch (e) {
       toast.error('Delete failed', errorMessage(e))
+      return false
     }
   }
 
@@ -228,20 +235,6 @@ export function UpdatePlanEditorPage() {
         crumbs={[{ label: 'Software Updates', to: '/updates/plans' }, { label: isNew ? 'New plan' : plan.data?.name ?? '' }]}
         title={isNew ? 'New update plan' : plan.data?.name ?? 'Update plan'}
         description="Delivered to Macs as Declarative Device Management declarations."
-        actions={
-          isAdmin && (
-            <>
-              {!isNew && (
-                <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDelOpen(true)}>
-                  Delete
-                </Button>
-              )}
-              <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                {isNew ? 'Create plan' : 'Save changes'}
-              </Button>
-            </>
-          )
-        }
       />
       <div className="flex flex-col gap-6">
         {errors && (
@@ -295,25 +288,22 @@ export function UpdatePlanEditorPage() {
             description="When several plans reach the same Mac, the enforcement plan with the highest target version wins (ties: earliest deadline), and the most recently updated settings plan wins."
           />
           <CardBody>{readOnly ? <ScopeSummary scope={f.scope} /> : <ScopeEditor value={f.scope} onChange={(scope) => set({ scope })} />}</CardBody>
-          {isAdmin && (
-            <CardFooter>
-              <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                {isNew ? 'Create plan' : 'Save changes'}
-              </Button>
-            </CardFooter>
-          )}
         </Card>
 
         <SupervisionCallout />
       </div>
-      <ConfirmDialog
-        open={delOpen}
-        onClose={() => setDelOpen(false)}
-        onConfirm={doDelete}
-        destructive
-        title={`Delete "${plan.data?.name}"?`}
-        description="The plan's declaration is removed from every Mac in scope at their next sync. Updates already installed are not affected."
-        confirmLabel="Delete plan"
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/updates/plans"
+        noun="plan"
+        name={plan.data?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="The plan's declaration is removed from every Mac in scope at their next sync. Updates already installed are not affected."
+        onClone={() => navigate('/updates/plans/new', { state: { clone: { ...f, name: `Copy of ${f.name}`, enabled: false } } })}
+        historyId={id}
       />
     </>
   )

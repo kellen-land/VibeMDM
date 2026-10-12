@@ -37,7 +37,7 @@ export function RestrictedSoftwarePage() {
         description="Block or report processes on scoped computers. The agent watches running processes and can kill them and notify the user."
         actions={
           isAdmin && (
-            <Link to="/restricted-software/new">
+            <Link to="/restricted-software/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 New rule
               </Button>
@@ -102,7 +102,7 @@ function RulesTab() {
           emptyDescription={q ? undefined : 'Create a rule to block a process by name, substring or regular expression.'}
           emptyAction={
             isAdmin && !q ? (
-              <Link to="/restricted-software/new">
+              <Link to="/restricted-software/new" data-shortcut="new">
                 <Button variant="primary" size="sm" icon={<Plus />}>
                   New rule
                 </Button>

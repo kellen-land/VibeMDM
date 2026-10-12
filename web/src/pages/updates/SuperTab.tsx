@@ -1,11 +1,11 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowUpCircle, CheckCircle2, CircleDashed, Download, ExternalLink, Save, ShieldCheck, Target, UserCog, UserRound, Users, type LucideIcon } from 'lucide-react'
+import { ArrowUpCircle, CheckCircle2, CircleDashed, Download, ExternalLink, ShieldCheck, Target, UserCog, UserRound, Users, type LucideIcon } from 'lucide-react'
 import { qk, useCustomSchema, useInvalidate, useSuper, useSuperStatus } from '../../api/queries'
 import { api, errorMessage, fieldErrors } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import { emptyScope, normalizeScope, type SchemaFieldError, type SchemaValues, type Scope, type SuperAuthMode, type SuperInstallResult, type SuperSaveRequest, type SuperState, type SuperStatusRow, type SuperView } from '../../api/types'
-import { Card, CardBody, CardFooter, CardHeader } from '../../components/ui/Card'
+import { Card, CardBody, CardHeader } from '../../components/ui/Card'
 import { Table } from '../../components/ui/Table'
 import { Button } from '../../components/ui/Button'
 import { Badge, type BadgeTone } from '../../components/ui/Badge'
@@ -25,6 +25,8 @@ import { ProfileXmlPanel, useLivePreview } from '../../components/schema/Profile
 import { pruneValues } from '../../components/schema/schema'
 import { compactNumber, shortHash } from '../../lib/format'
 import { cn } from '../../lib/cn'
+import { useEditMode, type EditMode } from '../../components/editor/useEditMode'
+import { ObjectBar } from '../../components/editor/ObjectBar'
 
 const SUPER_SCHEMA = 'builtin:com.macjutsu.super'
 const SUPER_PROFILE_NAME = 'super (S.U.P.E.R.M.A.N.) settings'
@@ -34,7 +36,67 @@ type View = 'status' | 'settings'
 export function SuperTab() {
   const [sp, setSp] = useSearchParams()
   const view: View = sp.get('view') === 'settings' ? 'settings' : 'status'
+  const setView = (v: View) => setSp(v === 'status' ? {} : { view: v }, { replace: true })
+  const { isAdmin } = useAuth()
   const cfg = useSuper()
+  const toast = useToast()
+  const invalidate = useInvalidate()
+
+  // The settings form lives here so that one edit mode (and one Save) covers the whole tab,
+  // whichever view is showing.
+  const [f, setF] = useState<Form>({ enabled: false, scope: emptyScope(), auth_mode: 'none', auth_account: '', password: '', clearPassword: false, values: {} })
+  const [saveErrors, setSaveErrors] = useState<SchemaFieldError[]>([])
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(() => {
+    if (cfg.data) setF(toForm(cfg.data))
+    setSaveError(null)
+    setSaveErrors([])
+  }, [cfg.data])
+  const ed = useEditMode({ isNew: false, canEdit: isAdmin, snapshot: f, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
+  // Edit opens the settings, which is where the form is.
+  useEffect(() => {
+    if (ed.editing && view !== 'settings') setView('settings')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ed.editing])
+
+  const save = async () => {
+    if (f.auth_mode !== 'none' && !f.auth_account.trim()) {
+      setView('settings')
+      setSaveError(`Enter the account name for ${f.auth_mode === 'local' ? 'the local account' : 'the service account'}.`)
+      return false
+    }
+    setSaving(true)
+    setSaveError(null)
+    const body: SuperSaveRequest = { enabled: f.enabled, scope: f.scope, auth_mode: f.auth_mode, auth_account: f.auth_mode === 'none' ? '' : f.auth_account.trim(), values: pruneValues(f.values) }
+    if (f.auth_mode !== 'none') {
+      if (f.clearPassword) body.auth_password = ''
+      else if (f.password) body.auth_password = f.password
+    }
+    try {
+      const out = await api.put<SuperView>('/api/v1/updates/super', body)
+      setF(toForm(out))
+      setSaveErrors([])
+      await invalidate(qk.superAll, qk.profiles)
+      toast.success('super settings saved', out.config.enabled ? 'Macs in scope get super and its settings profile at their next check-in.' : 'super is off; its settings profile is removed from every Mac.')
+      return true
+    } catch (e) {
+      const fe = fieldErrors(e)
+      setSaveErrors(fe)
+      setSaveError(fe.length ? 'Some preference values are invalid; they are marked in the form below.' : errorMessage(e))
+      setView('settings')
+      toast.error('Save failed', fe.length ? 'Some values are invalid.' : errorMessage(e))
+      return false
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <Alert tone="info" title="Use DDM enforcement or super on each Mac, not both">
@@ -48,10 +110,11 @@ export function SuperTab() {
           { key: 'settings', label: 'Settings' },
         ]}
         value={view}
-        onChange={(v) => setSp(v === 'status' ? {} : { view: v }, { replace: true })}
+        onChange={setView}
       />
-      {view === 'status' ? <StatusSection /> : <SettingsSection />}
+      {view === 'status' ? <StatusSection /> : <SettingsSection f={f} setF={setF} ed={ed} saveErrors={saveErrors} saveError={saveError} />}
       {cfg.data && <AboutCard v={cfg.data} />}
+      <ObjectBar ed={ed} isNew={false} listPath="/updates/super" noun="super settings" saving={saving} onSave={save} noDone />
     </div>
   )
 }
@@ -290,64 +353,26 @@ const authOptions: { key: SuperAuthMode; title: string; text: string; icon: Reac
   { key: 'service', title: 'Service account', text: 'A dedicated account that super uses only to install updates.', icon: <UserCog /> },
 ]
 
-function SettingsSection() {
-  const { isAdmin } = useAuth()
+interface SettingsProps {
+  f: Form
+  setF: React.Dispatch<React.SetStateAction<Form>>
+  ed: EditMode
+  saveErrors: SchemaFieldError[]
+  saveError: string | null
+}
+
+function SettingsSection({ f, setF, ed, saveErrors, saveError }: SettingsProps) {
   const q = useSuper()
   const schema = useCustomSchema(SUPER_SCHEMA)
-  const toast = useToast()
-  const invalidate = useInvalidate()
-  const [f, setF] = useState<Form>({ enabled: false, scope: emptyScope(), auth_mode: 'none', auth_account: '', password: '', clearPassword: false, values: {} })
-  const [saveErrors, setSaveErrors] = useState<SchemaFieldError[]>([])
-  const [saveError, setSaveError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const ro = !isAdmin
-
-  const seed = q.data ? `${q.data.config.updated_at}|${q.data.config.profile_id ?? ''}` : ''
-  useEffect(() => {
-    if (q.data) setF(toForm(q.data))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed])
+  const ro = ed.readOnly
 
   const preview = useLivePreview(SUPER_SCHEMA, SUPER_PROFILE_NAME, f.values, !!schema.data)
   const errors = preview.data?.errors?.length ? preview.data.errors : saveErrors
   const set = (p: Partial<Form>) => setF((cur) => ({ ...cur, ...p }))
 
-  const save = async () => {
-    if (f.auth_mode !== 'none' && !f.auth_account.trim()) {
-      setSaveError(`Enter the account name for ${f.auth_mode === 'local' ? 'the local account' : 'the service account'}.`)
-      return
-    }
-    setSaving(true)
-    setSaveError(null)
-    const body: SuperSaveRequest = { enabled: f.enabled, scope: f.scope, auth_mode: f.auth_mode, auth_account: f.auth_mode === 'none' ? '' : f.auth_account.trim(), values: pruneValues(f.values) }
-    if (f.auth_mode !== 'none') {
-      if (f.clearPassword) body.auth_password = ''
-      else if (f.password) body.auth_password = f.password
-    }
-    try {
-      const out = await api.put<SuperView>('/api/v1/updates/super', body)
-      setF(toForm(out))
-      setSaveErrors([])
-      await invalidate(qk.superAll, qk.profiles)
-      toast.success('super settings saved', out.config.enabled ? 'Macs in scope get super and its settings profile at their next check-in.' : 'super is off; its settings profile is removed from every Mac.')
-    } catch (e) {
-      const fe = fieldErrors(e)
-      setSaveErrors(fe)
-      setSaveError(fe.length ? 'Some preference values are invalid; they are marked in the form below.' : errorMessage(e))
-      toast.error('Save failed', fe.length ? 'Some values are invalid.' : errorMessage(e))
-    } finally {
-      setSaving(false)
-    }
-  }
-
   if (q.isPending) return <LoadingBlock />
   if (q.error || !q.data) return <Alert tone="critical">{q.error ? errorMessage(q.error) : 'super settings unavailable'}</Alert>
   const v = q.data
-  const saveButton = isAdmin ? (
-    <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-      Save settings
-    </Button>
-  ) : null
 
   return (
     <div className="flex flex-col gap-6">
@@ -357,7 +382,7 @@ function SettingsSection() {
         </Alert>
       )}
       <Card>
-        <CardHeader title="Deployment" description={`Install super ${v.version} with the VibeMDM agent on the Macs in scope.`} actions={saveButton} />
+        <CardHeader title="Deployment" description={`Install super ${v.version} with the VibeMDM agent on the Macs in scope.`} />
         <CardBody className="flex flex-col gap-5">
           <Toggle checked={f.enabled} onChange={(enabled) => set({ enabled })} disabled={ro} label="Enable super" description="When off, VibeMDM stops installing super and removes its settings profile from every Mac." />
           <div>
@@ -424,7 +449,7 @@ function SettingsSection() {
                     placeholder={v.config.has_password ? '••••••••' : ''}
                     className="flex-1"
                   />
-                  {isAdmin && v.config.has_password && (
+                  {!ro && v.config.has_password && (
                     <Button size="sm" variant="ghost" onClick={() => set({ clearPassword: !f.clearPassword, password: '' })}>
                       {f.clearPassword ? 'Keep stored' : 'Clear stored'}
                     </Button>
@@ -454,7 +479,6 @@ function SettingsSection() {
             <SchemaForm schema={schema.data.schema} value={f.values} onChange={(values) => set({ values })} errors={errors} disabled={ro} />
           )}
         </CardBody>
-        {isAdmin && <CardFooter>{saveButton}</CardFooter>}
       </Card>
 
       {schema.data && <ProfileXmlPanel preview={preview} />}

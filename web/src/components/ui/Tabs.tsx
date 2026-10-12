@@ -7,6 +7,8 @@ export interface TabItem<K extends string = string> {
   count?: number
   icon?: ReactNode
   disabled?: boolean
+  /** Keyboard shortcut that opens this tab (e.g. "logs" for ⌃L). */
+  shortcut?: string
 }
 
 export function Tabs<K extends string>({
@@ -34,6 +36,7 @@ export function Tabs<K extends string>({
               type="button"
               aria-selected={active}
               disabled={t.disabled}
+              data-shortcut={t.shortcut}
               onClick={() => onChange(t.key)}
               className={cn(
                 'inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-medium transition-colors focus-ring disabled:opacity-45',

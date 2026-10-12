@@ -56,7 +56,7 @@ export function MobileSearchesPage() {
         description="Saved searches over iPhones and iPads: reusable inventory criteria with a chosen set of columns, viewable in the console or exported as CSV."
         actions={
           isAdmin && (
-            <Link to="/mobile-searches/new">
+            <Link to="/mobile-searches/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 New search
               </Button>
@@ -78,7 +78,7 @@ export function MobileSearchesPage() {
           emptyDescription={q ? undefined : 'Build criteria once, then run or export the results whenever you need them.'}
           emptyAction={
             isAdmin && !q ? (
-              <Link to="/mobile-searches/new">
+              <Link to="/mobile-searches/new" data-shortcut="new">
                 <Button variant="primary" size="sm" icon={<Plus />}>
                   New search
                 </Button>

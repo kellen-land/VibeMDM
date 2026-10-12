@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { KeyRound, Pencil, RefreshCw, Save, X } from 'lucide-react'
 import { qk, useBuildings, useDepartments, useInvalidate, useMobileDevice, useMobileDeviceProfileDeployments, useMobileEAs } from '../../api/queries'
@@ -6,7 +6,7 @@ import { api, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import type { MobileDeviceDetail } from '../../api/types'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { Card, CardBody, CardHeader } from '../../components/ui/Card'
+import { Card, CardBody, CardFooter, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Badge, BoolBadge, StatusBadge } from '../../components/ui/Badge'
 import { Alert } from '../../components/ui/Alert'
@@ -18,10 +18,13 @@ import { Field, FormGrid } from '../../components/ui/Field'
 import { Input, Select, Textarea } from '../../components/ui/Input'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { ObjectBar } from '../../components/editor/ObjectBar'
 import { RelativeTime } from '../../components/ui/RelativeTime'
 import { CopyButton } from '../../components/ui/CopyButton'
 import { useToast } from '../../components/ui/Toast'
 import { absoluteTime } from '../../lib/format'
+import { shortcutHint } from '../../lib/shortcuts'
+import { useEditMode } from '../../components/editor/useEditMode'
 import { ComputerCommandsTab } from '../computers/ActivityTabs'
 import { DeviceIcon, MobileStatusBadges } from './MobileDevicesPage'
 import { MobileActions } from './MobileActions'
@@ -79,6 +82,7 @@ export function MobileDeviceDetailPage() {
       setRefreshing(false)
     }
   }
+  const ed = useEditMode({ isNew: false, canEdit: false, snapshot: null, reset: () => {} })
   const doDelete = async () => {
     try {
       await api.del(`/api/v1/mobile-devices/${id}`)
@@ -143,10 +147,11 @@ export function MobileDeviceDetailPage() {
           {active === 'profiles' && <ProfilesSection d={d} />}
           {active === 'groups' && <GroupsSection d={d} />}
           {active === 'attributes' && <AttributesSection d={d} />}
-          {active === 'actions' && <MobileActions d={d} onDelete={() => setDeleteOpen(true)} />}
+          {active === 'actions' && <MobileActions d={d} />}
           {active === 'commands' && <ComputerCommandsTab id={d.id} mobile />}
         </Card>
       </div>
+      <ObjectBar ed={ed} isNew={false} listPath="/mobile-devices" noun="mobile device" name={d.name} onSave={async () => true} noEdit onDeleteRequest={() => setDeleteOpen(true)} historyId={d.id} />
       <ConfirmDialog
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
@@ -178,16 +183,22 @@ function GeneralSection({ d }: { d: MobileDeviceDetail }) {
   const { isAdmin } = useAuth()
   const toast = useToast()
   const invalidate = useInvalidate()
-  const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<Record<EditKey, string>>({} as Record<EditKey, string>)
   const [saving, setSaving] = useState(false)
-  const buildings = useBuildings({ enabled: editing })
-  const departments = useDepartments({ enabled: editing })
-  useEffect(() => {
+  // User and location is edited as one category, as in Jamf Pro: Edit, then Cancel or Save.
+  const load = useCallback(() => {
     const f = { notes: d.notes } as Record<EditKey, string>
     for (const e of editable) f[e.key] = d[e.key] ?? ''
     setForm(f)
   }, [d])
+  const ed = useEditMode({ isNew: false, canEdit: isAdmin, snapshot: form, reset: load })
+  const editing = ed.editing
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
+  const buildings = useBuildings({ enabled: editing })
+  const departments = useDepartments({ enabled: editing })
   const options = (list: 'building' | 'department', current: string) => {
     const names = ((list === 'building' ? buildings.data : departments.data)?.items ?? []).map((i) => i.name)
     if (current && !names.includes(current)) names.unshift(current)
@@ -203,7 +214,7 @@ function GeneralSection({ d }: { d: MobileDeviceDetail }) {
         await invalidate(qk.mobileDevice(d.id), ['mobile-devices'])
         toast.success('Mobile device updated')
       }
-      setEditing(false)
+      ed.finishEdit()
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
     } finally {
@@ -245,20 +256,11 @@ function GeneralSection({ d }: { d: MobileDeviceDetail }) {
         className="border-t border-line"
         actions={
           isAdmin &&
-          (editing ? (
-            <>
-              <Button size="sm" variant="ghost" icon={<X />} onClick={() => setEditing(false)}>
-                Cancel
-              </Button>
-              <Button size="sm" variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                Save
-              </Button>
-            </>
-          ) : (
-            <Button size="sm" icon={<Pencil />} onClick={() => setEditing(true)}>
+          !editing && (
+            <Button size="sm" icon={<Pencil />} onClick={ed.startEdit} data-shortcut="edit" title={shortcutHint('edit', 'Edit')}>
               Edit
             </Button>
-          ))
+          )
         }
       />
       <CardBody>
@@ -281,6 +283,8 @@ function GeneralSection({ d }: { d: MobileDeviceDetail }) {
           <DescriptionList cols={3} items={[...editable.map((e) => ({ label: e.label, value: d[e.key] })), { label: 'Notes', value: d.notes, span: true }]} />
         )}
       </CardBody>
+      {editing && <EditFooter saving={saving} onCancel={ed.cancelEdit} onSave={save} />}
+      {ed.guard}
     </>
   )
 }
@@ -528,15 +532,26 @@ function AttributesSection({ d }: { d: MobileDeviceDetail }) {
   const defs = new Map((eas.data?.items ?? []).map((e) => [e.id, e]))
   const [values, setValues] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
-  useEffect(() => setValues(Object.fromEntries(d.extension_attributes.map((v) => [v.ea_id, v.value]))), [d])
-  const dirty = d.extension_attributes.filter((v) => (values[v.ea_id] ?? '') !== v.value)
+  // Edited as one category, as in Jamf Pro: Edit, then Cancel or Save.
+  const load = useCallback(() => setValues(Object.fromEntries(d.extension_attributes.map((v) => [v.ea_id, v.value]))), [d])
+  const ed = useEditMode({ isNew: false, canEdit: isAdmin, snapshot: values, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
   const save = async () => {
+    const dirty = d.extension_attributes.filter((v) => (values[v.ea_id] ?? '') !== v.value)
     setSaving(true)
     try {
       for (const v of dirty) await api.put(`/api/v1/mobile-devices/${d.id}/ea-values/${v.ea_id}`, { value: values[v.ea_id] ?? '' })
-      await invalidate(qk.mobileDevice(d.id))
-      toast.success('Saved')
+      if (dirty.length > 0) {
+        await invalidate(qk.mobileDevice(d.id))
+        toast.success('Saved')
+      }
+      ed.finishEdit()
     } catch (e) {
+      // Values saved before the failure are kept; reload them so the page shows what the server has.
+      await invalidate(qk.mobileDevice(d.id))
       toast.error('Save failed', errorMessage(e))
     } finally {
       setSaving(false)
@@ -548,11 +563,12 @@ function AttributesSection({ d }: { d: MobileDeviceDetail }) {
         title="Extension attributes"
         description="Custom fields defined under Settings → Mobile device attributes."
         actions={
-          isAdmin && dirty.length > 0 ? (
-            <Button size="sm" variant="primary" icon={<Save />} loading={saving} onClick={save}>
-              Save
+          isAdmin &&
+          !ed.editing && (
+            <Button size="sm" icon={<Pencil />} onClick={ed.startEdit} data-shortcut="edit" title={shortcutHint('edit', 'Edit')}>
+              Edit
             </Button>
-          ) : undefined
+          )
         }
       />
       <CardBody>
@@ -564,15 +580,31 @@ function AttributesSection({ d }: { d: MobileDeviceDetail }) {
             return (
               <Field key={v.ea_id} label={v.name} hint={def?.description}>
                 {def?.input_type === 'popup' ? (
-                  <Select value={val} onChange={(e) => set(e.target.value)} disabled={!isAdmin} options={[{ value: '', label: '— None —' }, ...def.popup_choices.map((c) => ({ value: c, label: c }))]} />
+                  <Select value={val} onChange={(e) => set(e.target.value)} disabled={ed.readOnly} options={[{ value: '', label: '— None —' }, ...def.popup_choices.map((c) => ({ value: c, label: c }))]} />
                 ) : (
-                  <Input value={val} onChange={(e) => set(e.target.value)} disabled={!isAdmin} type={v.data_type === 'date' ? 'date' : v.data_type === 'integer' ? 'number' : 'text'} />
+                  <Input value={val} onChange={(e) => set(e.target.value)} disabled={ed.readOnly} type={v.data_type === 'date' ? 'date' : v.data_type === 'integer' ? 'number' : 'text'} />
                 )}
               </Field>
             )
           })}
         </FormGrid>
       </CardBody>
+      {ed.editing && <EditFooter saving={saving} onCancel={ed.cancelEdit} onSave={save} />}
+      {ed.guard}
     </>
+  )
+}
+
+/** Cancel and Save for a category being edited (one Save per category, as in Jamf Pro). */
+function EditFooter({ saving, onCancel, onSave }: { saving: boolean; onCancel: () => void; onSave: () => void }) {
+  return (
+    <CardFooter>
+      <Button icon={<X />} onClick={onCancel} data-shortcut="cancel" title={shortcutHint('cancel', 'Cancel')}>
+        Cancel
+      </Button>
+      <Button variant="primary" icon={<Save />} loading={saving} onClick={onSave} data-shortcut="save" title={shortcutHint('save', 'Save')}>
+        Save
+      </Button>
+    </CardFooter>
   )
 }

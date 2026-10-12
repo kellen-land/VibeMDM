@@ -1,13 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Save, Trash2 } from 'lucide-react'
 import { qk, useInvalidate, useRestrictedEvents, useRestrictedSoftwareItem } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { emptyScope, normalizeScope, type RestrictedMatchType, type RestrictedSoftware } from '../api/types'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
 import { Field, FormGrid, FormSection } from '../components/ui/Field'
 import { Input, Select, Textarea } from '../components/ui/Input'
 import { Checkbox, Toggle } from '../components/ui/Checkbox'
@@ -15,12 +13,13 @@ import { Tabs } from '../components/ui/Tabs'
 import { Alert } from '../components/ui/Alert'
 import { Badge } from '../components/ui/Badge'
 import { LoadingBlock } from '../components/ui/Spinner'
-import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Pagination } from '../components/ui/Pagination'
 import { useToast } from '../components/ui/Toast'
 import { ScopeEditor } from '../components/pickers/ScopeEditor'
 import { RestrictedEventTable } from '../components/activity/RestrictedEventTable'
 import { matchTypeLabels } from './RestrictedSoftwarePage'
+import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
+import { ObjectBar } from '../components/editor/ObjectBar'
 
 type Tab = 'general' | 'scope' | 'events'
 
@@ -47,22 +46,28 @@ export function RestrictedSoftwareEditorPage() {
   const toast = useToast()
   const invalidate = useInvalidate()
   const item = useRestrictedSoftwareItem(isNew ? undefined : id)
-  const [r, setR] = useState<RestrictedSoftware>(blank())
+  const clone = useCloneSource<RestrictedSoftware>()
+  const [r, setR] = useState<RestrictedSoftware>(() => (isNew && clone ? { ...blank(), ...clone, scope: normalizeScope(clone.scope) } : blank()))
   const [saving, setSaving] = useState(false)
-  const [del, setDel] = useState(false)
   const tab = (sp.get('tab') as Tab) || 'general'
   const setTab = (t: Tab) => setSp(t === 'general' ? {} : { tab: t }, { replace: true })
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (item.data) setR({ ...blank(), ...item.data, scope: normalizeScope(item.data.scope) })
   }, [item.data])
+  const ed = useEditMode({ isNew, canEdit: isAdmin, snapshot: r, reset: load })
+  useEffect(() => {
+    if (!ed.editing) load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load])
 
   const set = (patch: Partial<RestrictedSoftware>) => setR((cur) => ({ ...cur, ...patch }))
 
   const save = async () => {
     if (!r.name.trim() || !r.process_name.trim()) {
+      setTab('general')
       toast.error('Name and process name are required')
-      return
+      return false
     }
     setSaving(true)
     try {
@@ -71,8 +76,10 @@ export function RestrictedSoftwareEditorPage() {
       await invalidate(qk.restricted, qk.restrictedItem(out.id))
       toast.success(isNew ? 'Rule created' : 'Rule saved', 'Scoped agents were asked to check in.')
       if (isNew) navigate(`/restricted-software/${out.id}`, { replace: true })
+      return true
     } catch (e) {
       toast.error('Save failed', errorMessage(e))
+      return false
     } finally {
       setSaving(false)
     }
@@ -90,12 +97,12 @@ export function RestrictedSoftwareEditorPage() {
 
   if (!isNew && item.isPending) return <LoadingBlock />
   if (!isNew && item.error) return <Alert tone="critical">{errorMessage(item.error)}</Alert>
-  const ro = !isAdmin
-  const tabs: { key: Tab; label: string }[] = [
+  const ro = ed.readOnly
+  const tabs: { key: Tab; label: string; shortcut?: string }[] = [
     { key: 'general', label: 'General' },
     { key: 'scope', label: 'Scope' },
   ]
-  if (!isNew) tabs.push({ key: 'events', label: 'Events' })
+  if (!isNew) tabs.push({ key: 'events', label: 'Events', shortcut: 'logs' })
 
   return (
     <>
@@ -111,20 +118,6 @@ export function RestrictedSoftwareEditorPage() {
               <span className="text-xs text-ink-muted font-mono">{r.process_name}</span>
             </>
           ) : undefined
-        }
-        actions={
-          isAdmin && (
-            <>
-              {!isNew && (
-                <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDel(true)}>
-                  Delete
-                </Button>
-              )}
-              <Button variant="primary" icon={<Save />} loading={saving} onClick={save}>
-                {isNew ? 'Create rule' : 'Save changes'}
-              </Button>
-            </>
-          )
         }
       />
       <Tabs className="mb-5" value={tab} onChange={setTab} items={tabs} />
@@ -169,7 +162,19 @@ export function RestrictedSoftwareEditorPage() {
 
       {tab === 'events' && !isNew && id && <RuleEventsTab ruleId={id} />}
 
-      <ConfirmDialog open={del} onClose={() => setDel(false)} onConfirm={doDelete} destructive title={`Delete "${r.name}"?`} description="Agents stop enforcing the rule at their next check-in." confirmLabel="Delete rule" />
+      <ObjectBar
+        ed={ed}
+        isNew={isNew}
+        listPath="/restricted-software"
+        noun="rule"
+        name={item.data?.name}
+        saving={saving}
+        onSave={save}
+        onDelete={doDelete}
+        deleteDescription="Agents stop enforcing the rule at their next check-in."
+        onClone={() => navigate('/restricted-software/new', { state: { clone: { ...r, id: '', name: `Copy of ${r.name}` } } })}
+        historyId={id}
+      />
     </>
   )
 }

@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './index.css'
 import { App } from './App'
 import { AuthProvider, meKey } from './auth/AuthContext'
@@ -27,18 +27,27 @@ const queryClient = new QueryClient({
 // password: refetch me so RequireAuth swaps the app shell for that screen.
 setPasswordChangeHandler(() => void queryClient.invalidateQueries({ queryKey: meKey }))
 
+// A data router (one splat route around the app's own <Routes>) so pages can block
+// navigation while they have unsaved changes (useBlocker).
+const router = createBrowserRouter([
+  {
+    path: '*',
+    element: (
+      <ThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    ),
+  },
+])
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ThemeProvider>
-          <ToastProvider>
-            <AuthProvider>
-              <App />
-            </AuthProvider>
-          </ToastProvider>
-        </ThemeProvider>
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>
   </StrictMode>,
 )

@@ -41,7 +41,7 @@ export function ExtensionAttributesPage() {
         description="Custom inventory fields collected by a script on each computer or entered by hand."
         actions={
           isAdmin && (
-            <Link to="/extension-attributes/new">
+            <Link to="/extension-attributes/new" data-shortcut="new">
               <Button variant="primary" icon={<Plus />}>
                 New attribute
               </Button>
@@ -60,7 +60,7 @@ export function ExtensionAttributesPage() {
           emptyDescription="Create one to collect custom data, then use it in smart group criteria."
           emptyAction={
             isAdmin ? (
-              <Link to="/extension-attributes/new">
+              <Link to="/extension-attributes/new" data-shortcut="new">
                 <Button variant="primary" size="sm" icon={<Plus />}>
                   New attribute
                 </Button>

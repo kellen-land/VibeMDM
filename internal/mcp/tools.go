@@ -516,7 +516,7 @@ func (t *tools) commands(ctx context.Context, _ *auth.Principal, args map[string
 }
 
 func (t *tools) audit(ctx context.Context, _ *auth.Principal, args map[string]any) (any, error) {
-	items, _, err := t.d.St.ListAudit(ctx, argInt(args, "limit", 50, 1, 200), 0)
+	items, _, err := t.d.St.ListAudit(ctx, argInt(args, "limit", 50, 1, 200), 0, "")
 	if err != nil {
 		return nil, err
 	}

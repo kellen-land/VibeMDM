@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Download, Laptop, RefreshCw, Trash2, Wifi, WifiOff } from 'lucide-react'
+import { Download, Laptop, RefreshCw, Wifi, WifiOff } from 'lucide-react'
 import { useComputer, qk, useInvalidate, useSettings } from '../../api/queries'
 import { api, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
@@ -13,6 +13,8 @@ import { Card } from '../../components/ui/Card'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { Alert } from '../../components/ui/Alert'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { ObjectBar } from '../../components/editor/ObjectBar'
+import { useEditMode } from '../../components/editor/useEditMode'
 import { useToast } from '../../components/ui/Toast'
 import { RelativeTime } from '../../components/ui/RelativeTime'
 import { ComputerStatusBadges } from './ComputersPage'
@@ -127,6 +129,7 @@ export function ComputerDetailPage() {
     }
   }
 
+  const ed = useEditMode({ isNew: false, canEdit: false, snapshot: null, reset: () => {} })
   const doDelete = async () => {
     try {
       await api.del(`/api/v1/computers/${id}`)
@@ -178,9 +181,6 @@ export function ComputerDetailPage() {
               <Button icon={<RefreshCw />} loading={refreshing} onClick={updateInventory}>
                 Update inventory
               </Button>
-              <Button variant="danger-outline" icon={<Trash2 />} onClick={() => setDeleteOpen(true)}>
-                Delete
-              </Button>
             </>
           )
         }
@@ -226,6 +226,7 @@ export function ComputerDetailPage() {
         )}
       </Card>
       </div>
+      <ObjectBar ed={ed} isNew={false} listPath="/computers" noun="computer" name={c.name} onSave={async () => true} noEdit onDeleteRequest={() => setDeleteOpen(true)} historyId={c.id} />
       <ConfirmDialog
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
