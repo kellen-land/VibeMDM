@@ -11,7 +11,10 @@
 #      binary to /usr/local/bin and runs `vibemdm-agent enroll --from-mdm`;
 #   3. signs it: makes a key and certificate request here, has VibeMDM's package-signing CA
 #      sign it (the private key never leaves this Mac), then productsign with a throwaway
-#      keychain. Set SIGN_IDENTITY to sign with your own Developer ID Installer instead;
+#      keychain. productsign only uses a certificate whose CA this Mac trusts, which takes a
+#      configuration profile: the easiest way is Settings → Enrollment → Build on a Mac in
+#      VibeMDM, which installs that profile for the build and removes it after. Set
+#      SIGN_IDENTITY to sign with your own Developer ID Installer instead;
 #   4. uploads it to VibeMDM (Settings → Enrollment → Automatic agent install).
 #
 # Needs: macOS (pkgbuild, productbuild, productsign, security and openssl ship with it), curl.
@@ -88,6 +91,12 @@ else
 	security unlock-keychain -p "$kcpw" "$keychain"
 	security import "$work/id.p12" -k "$keychain" -P "$p12pw" -T /usr/bin/productsign >/dev/null
 	security set-key-partition-list -S apple-tool:,apple: -s -k "$kcpw" "$keychain" >/dev/null 2>&1 || true
+	if ! security find-identity -v "$keychain" | grep -q "$cn"; then
+		echo "This Mac does not trust VibeMDM's package-signing CA, so productsign cannot use the certificate." >&2
+		echo "Use Settings → Enrollment → Build on a Mac in VibeMDM (it trusts the CA for the build), or install a" >&2
+		echo "profile with the CA as a trusted root on this Mac and run this script again." >&2
+		exit 1
+	fi
 	productsign --keychain "$keychain" --sign "$cn" "$work/unsigned.pkg" "$work/VibeMDM-Agent.pkg"
 fi
 pkgutil --check-signature "$work/VibeMDM-Agent.pkg" || true # "untrusted" is expected here: Macs trust it via the bootstrap profile

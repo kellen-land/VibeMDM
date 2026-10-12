@@ -11,9 +11,11 @@
 //  4. when the agent enrolls, the bootstrap profile is removed again, so the root is
 //     trusted only for the minutes the install takes.
 //
-// The package is built and signed once on any Mac with deploy/macos/build-agent-pkg.sh.
-// The signing key never leaves that Mac: the script sends a CSR and this package's CA
-// signs a short-lived code-signing certificate.
+// The package is built and signed on a Mac with build-agent-pkg.sh (by hand, or from the
+// console with Build on a Mac). The signing key never leaves that Mac: the script sends a
+// CSR and this package's CA signs an installer-signing certificate. productsign only
+// accepts it when the CA is trusted on the build Mac (a configuration profile) and the
+// certificate carries Apple's installer-signing usage and no other.
 package agentinstall
 
 import (
@@ -22,6 +24,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/pem"
 	"errors"
 	"math/big"
@@ -33,9 +36,14 @@ func newSerial() (*big.Int, error) {
 	return rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 }
 
-// NewCA creates the package-signing CA. It may only issue code-signing certificates
-// (path length 0, and a DNS name constraint that permits only "invalid." so the root
-// cannot vouch for a TLS server even while a Mac trusts it).
+// OIDInstallerSigning is Apple's extended key usage for signing installer packages (the one in
+// Developer ID Installer certificates). productsign refuses a certificate without it, and also
+// one that carries the generic code-signing usage next to it (verified on macOS 26.6.2).
+var OIDInstallerSigning = asn1.ObjectIdentifier{1, 2, 840, 113635, 100, 4, 13}
+
+// NewCA creates the package-signing CA. It may only issue installer-signing certificates
+// (its extended key usage, path length 0, and a DNS name constraint that permits only
+// "invalid." so the root cannot vouch for a TLS server even while a Mac trusts it).
 func NewCA(orgName string) (certPEM, keyPEM string, err error) {
 	key, err := rsa.GenerateKey(rand.Reader, 3072)
 	if err != nil {
@@ -54,7 +62,7 @@ func NewCA(orgName string) (certPEM, keyPEM string, err error) {
 		NotBefore:                   time.Now().Add(-time.Hour),
 		NotAfter:                    time.Now().AddDate(10, 0, 0),
 		KeyUsage:                    x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		ExtKeyUsage:                 []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		UnknownExtKeyUsage:          []asn1.ObjectIdentifier{OIDInstallerSigning},
 		BasicConstraintsValid:       true,
 		IsCA:                        true,
 		MaxPathLen:                  0,
@@ -76,7 +84,7 @@ func NewCA(orgName string) (certPEM, keyPEM string, err error) {
 // so build a new package (which issues a new certificate) before then.
 const LeafValidity = 2 * 365 * 24 * time.Hour
 
-// SignCSR issues a code-signing certificate for a CSR made on the build Mac and returns
+// SignCSR issues an installer-signing certificate for a CSR made on the build Mac and returns
 // the leaf followed by the CA certificate (PEM).
 func SignCSR(csrPEM []byte, caCertPEM, caKeyPEM string) (string, error) {
 	blk, _ := pem.Decode(csrPEM)
@@ -111,7 +119,7 @@ func SignCSR(csrPEM []byte, caCertPEM, caKeyPEM string) (string, error) {
 		NotBefore:             time.Now().Add(-time.Hour),
 		NotAfter:              time.Now().Add(LeafValidity),
 		KeyUsage:              x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning},
+		UnknownExtKeyUsage:    []asn1.ObjectIdentifier{OIDInstallerSigning},
 		BasicConstraintsValid: true,
 	}
 	der, err := x509.CreateCertificate(rand.Reader, tmpl, caCert, csr.PublicKey, caKey)
@@ -163,4 +171,23 @@ func Fingerprint(certPEM string) string {
 		out = append(out, hexd[b>>4], hexd[b&15])
 	}
 	return string(out)
+}
+
+// CAIsCurrent reports whether a stored CA can issue certificates productsign accepts (CAs made
+// by earlier versions carried the code-signing usage, which productsign refuses).
+func CAIsCurrent(certPEM string) bool {
+	b, _ := pem.Decode([]byte(certPEM))
+	if b == nil {
+		return false
+	}
+	c, err := x509.ParseCertificate(b.Bytes)
+	if err != nil {
+		return false
+	}
+	for _, o := range c.UnknownExtKeyUsage {
+		if o.Equal(OIDInstallerSigning) {
+			return len(c.ExtKeyUsage) == 0
+		}
+	}
+	return false
 }

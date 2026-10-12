@@ -23,7 +23,29 @@ func (h *Handler) agentPackage(w http.ResponseWriter, r *http.Request) {
 	if ca, _, err := h.agentInstall.CA(r.Context()); err == nil {
 		out["ca_fingerprint"] = agentinstall.Fingerprint(ca)
 	}
+	out["build"] = h.agentInstall.BuildState()
 	writeJSON(w, 200, out)
+}
+
+// buildAgentPackage builds the agent package on an enrolled Mac (Build on a Mac).
+func (h *Handler) buildAgentPackage(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ComputerID string `json:"computer_id"`
+	}
+	if err := decode(r, &req); err != nil {
+		writeErr(w, 400, err.Error())
+		return
+	}
+	c, err := h.st.GetComputer(r.Context(), req.ComputerID)
+	if err != nil {
+		h.fail(w, err, "computer")
+		return
+	}
+	if err := h.agentInstall.Build(r.Context(), c, actor(r)); err != nil {
+		writeErr(w, 409, err.Error())
+		return
+	}
+	writeJSON(w, 202, map[string]any{"build": h.agentInstall.BuildState()})
 }
 
 // uploadAgentPackage stores a signed agent package (raw body). ?version= is required.

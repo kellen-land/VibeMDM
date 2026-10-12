@@ -156,3 +156,31 @@ func (s *Store) AgentInstallsSince(ctx context.Context, computerID string, t tim
 	err := s.DB.QueryRowContext(ctx, `SELECT count(*) FROM agent_install_attempts WHERE computer_id = $1 AND created_at > $2`, computerID, t).Scan(&n)
 	return n, err
 }
+
+// ReplacePkgSigningCA replaces the package-signing CA. Only for a CA that cannot sign usable
+// packages anyway; any package signed under the old one must be rebuilt.
+func (s *Store) ReplacePkgSigningCA(ctx context.Context, certPEM, keyPEM string) error {
+	sealed, err := s.Box.Seal(keyPEM)
+	if err != nil {
+		return err
+	}
+	_, err = s.DB.ExecContext(ctx, `UPDATE pkg_signing_ca SET cert_pem = $1, key_pem = $2, created_at = now() WHERE id = 1`, certPEM, sealed)
+	return err
+}
+
+// DeleteAgentPackage forgets the uploaded package.
+func (s *Store) DeleteAgentPackage(ctx context.Context) error {
+	_, err := s.DB.ExecContext(ctx, `DELETE FROM agent_package WHERE id = 1`)
+	return err
+}
+
+// MDMCommandStatus returns a command's result status ("Acknowledged", "Error", …), or "" while
+// the device has not answered.
+func (s *Store) MDMCommandStatus(ctx context.Context, commandUUID string) (string, error) {
+	var st string
+	err := s.DB.QueryRowContext(ctx, `SELECT status FROM command_results WHERE command_uuid = $1 AND status <> 'NotNow' ORDER BY updated_at DESC LIMIT 1`, commandUUID).Scan(&st)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil
+	}
+	return st, err
+}

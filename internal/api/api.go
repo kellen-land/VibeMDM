@@ -338,6 +338,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	adm("PUT /api/v1/agent-package", h.uploadAgentPackage)
 	adm("PUT /api/v1/agent-package/settings", h.agentPackageSettings)
 	adm("POST /api/v1/agent-package/sign-csr", h.signAgentPackageCSR)
+	adm("POST /api/v1/agent-package/build", h.buildAgentPackage)
 	r("GET /api/v1/computers/{id}/agent-install", h.computerAgentInstall)
 	adm("POST /api/v1/computers/{id}/agent-install", h.installAgentMDM)
 
