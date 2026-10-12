@@ -290,6 +290,15 @@ func (h *Handler) checkin(w http.ResponseWriter, r *http.Request) {
 				if err != nil || !in {
 					continue
 				}
+				if a.Deployment == "self_service" {
+					// Installed only from Self Service; "keep up to date" updates it where it is installed.
+					if a.UpdateBehavior != "keep_updated" {
+						continue
+					}
+					if has, err := h.st.AppInstalledOn(r.Context(), a.ID, comp.ID, a.Name); err != nil || !has {
+						continue
+					}
+				}
 				due, err := h.st.AppInstallDue(r.Context(), a.ID, comp.ID, a.UpdateBehavior)
 				if err != nil || !due {
 					continue

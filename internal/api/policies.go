@@ -78,6 +78,12 @@ func (h *Handler) validPolicyAccounts(ctx context.Context, accounts, prev []mode
 
 func (h *Handler) validPolicyApps(apps []model.PolicyApp) error {
 	for _, a := range apps {
+		if a.AppID != "" {
+			if _, err := h.st.GetMacApp(context.Background(), a.AppID); err != nil {
+				return fmt.Errorf("the Mac App %q does not exist", a.AppID)
+			}
+			continue
+		}
 		if !h.validAppLabel(a.Label) {
 			return fmt.Errorf("unknown Installomator label %q", a.Label)
 		}

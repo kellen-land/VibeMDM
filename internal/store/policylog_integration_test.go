@@ -148,3 +148,39 @@ func TestLAPSAdminCredentialsDoNotCountAsViewing(t *testing.T) {
 		t.Fatal("agent use must not count as a human viewing the password")
 	}
 }
+
+func TestMacAppDeploymentAndInstalledDetection(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	stamp := time.Now().Format("150405.000")
+	c, _ := s.UpsertComputerFromAuthenticate(ctx, MDMAuthenticateInfo{UDID: "APP-" + stamp, SerialNumber: "APPC" + stamp, DeviceName: "app", Model: "Mac14,2", ProductName: "Mac14,2"})
+	t.Cleanup(func() { s.DeleteComputer(ctx, c.ID) })
+	a, err := s.CreateMacApp(ctx, model.MacApp{Name: "Zoom " + stamp, Label: "zoom", Deployment: "self_service", UpdateBehavior: "keep_updated", Enabled: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { s.DeleteMacApp(ctx, a.ID) })
+	if a.Deployment != "self_service" || !a.SelfService.Enabled || !SelfServiceVisible(*a) {
+		t.Fatalf("self service app: %+v", a)
+	}
+	auto, _ := s.CreateMacApp(ctx, model.MacApp{Name: "Chrome " + stamp, Label: "googlechrome", Deployment: "bogus", Enabled: true})
+	t.Cleanup(func() { s.DeleteMacApp(ctx, auto.ID) })
+	if auto.Deployment != "automatic" || SelfServiceVisible(*auto) {
+		t.Fatalf("automatic app: %+v", auto)
+	}
+	if has, _ := s.AppInstalledOn(ctx, a.ID, c.ID, a.Name); has {
+		t.Fatal("not installed yet")
+	}
+	// Installed some other way: the agent's inventory lists it.
+	s.ReplaceComputerApps(ctx, c.ID, "agent", []model.ComputerApp{{Name: a.Name, Version: "6.0"}})
+	if has, _ := s.AppInstalledOn(ctx, a.ID, c.ID, a.Name); !has {
+		t.Fatal("inventory match not detected")
+	}
+	// Installed through Self Service: a completed run.
+	s.ReplaceComputerApps(ctx, c.ID, "agent", nil)
+	logID, _ := s.CreateAppInstallLog(ctx, a.ID, c.ID, "self_service")
+	s.CompleteAppInstallLog(ctx, logID, c.ID, "completed", "ok")
+	if has, _ := s.AppInstalledOn(ctx, a.ID, c.ID, a.Name); !has {
+		t.Fatal("completed run not detected")
+	}
+}

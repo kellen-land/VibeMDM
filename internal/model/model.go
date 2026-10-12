@@ -393,6 +393,9 @@ type InstallomatorOptions struct {
 // PolicyApp is an Installomator step inside a policy. Label is a shipped
 // Installomator label or "custom:<key>" for a custom label.
 type PolicyApp struct {
+	// AppID refers to a Mac App in the catalog, whose label and options are used. Steps without
+	// it name an Installomator label directly (older policies, or the advanced option).
+	AppID   string               `json:"app_id,omitempty"`
 	Label   string               `json:"label"`
 	Options InstallomatorOptions `json:"options"`
 }
@@ -641,18 +644,21 @@ type AdvancedSearch struct {
 
 // MacApp is an app catalog entry installed via Installomator.
 type MacApp struct {
-	ID             string               `json:"id"`
-	Name           string               `json:"name"`
-	Label          string               `json:"label"`
-	Category       string               `json:"category"`
-	Description    string               `json:"description"`
-	UpdateBehavior string               `json:"update_behavior"` // install_once | keep_updated
-	Options        InstallomatorOptions `json:"options"`
-	Enabled        bool                 `json:"enabled"`
-	Scope          Scope                `json:"scope"`
-	SelfService    PolicySelfService    `json:"self_service"`
-	CreatedAt      time.Time            `json:"created_at"`
-	UpdatedAt      time.Time            `json:"updated_at"`
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Label          string `json:"label"`
+	Category       string `json:"category"`
+	Description    string `json:"description"`
+	UpdateBehavior string `json:"update_behavior"` // install_once | keep_updated
+	// Deployment: "automatic" installs on every Mac in scope; "self_service" only offers it in
+	// Self Service to Macs in scope (keep_updated then updates it where it is installed).
+	Deployment  string               `json:"deployment"`
+	Options     InstallomatorOptions `json:"options"`
+	Enabled     bool                 `json:"enabled"`
+	Scope       Scope                `json:"scope"`
+	SelfService PolicySelfService    `json:"self_service"`
+	CreatedAt   time.Time            `json:"created_at"`
+	UpdatedAt   time.Time            `json:"updated_at"`
 }
 
 // AppInstallLog is one app install run on a computer.

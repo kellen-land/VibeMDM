@@ -4,7 +4,7 @@ import { Save, Trash2 } from 'lucide-react'
 import { qk, useApp, useAppLabels, useAppLogs, useInvalidate } from '../api/queries'
 import { api, errorMessage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
-import { emptyInstallomatorOptions, emptyScope, normalizeScope, type AppUpdateBehavior, type MacApp } from '../api/types'
+import { emptyInstallomatorOptions, emptyScope, normalizeScope, type AppDeployment, type AppUpdateBehavior, type MacApp } from '../api/types'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -33,6 +33,7 @@ const blank = (): MacApp => ({
   category: '',
   description: '',
   update_behavior: 'install_once',
+  deployment: 'automatic',
   options: emptyInstallomatorOptions(),
   enabled: true,
   scope: emptyScope(),
@@ -62,6 +63,7 @@ export function AppEditorPage() {
   }, [app.data])
 
   const set = (patch: Partial<MacApp>) => setA((cur) => ({ ...cur, ...patch }))
+  const ssOn = a.deployment === 'self_service' || a.self_service.enabled
 
   const save = async () => {
     if (!a.name.trim()) {
@@ -157,7 +159,30 @@ export function AppEditorPage() {
               <Field label="Category">
                 <Input value={a.category} onChange={(e) => set({ category: e.target.value })} disabled={ro} placeholder="e.g. Browsers" />
               </Field>
-              <Field label="Update behavior" hint={a.update_behavior === 'keep_updated' ? 'The agent re-runs Installomator weekly so the app stays on the latest vendor release.' : 'Installed once per computer; later updates are left to the app or the user.'}>
+              <Field
+                label="Deployment"
+                hint={a.deployment === 'self_service' ? 'Macs in scope see it in Self Service; it is installed only when someone clicks Install.' : 'Installed on every Mac in scope at its next check-in.'}
+              >
+                <Select
+                  value={a.deployment}
+                  onChange={(e) => set({ deployment: e.target.value as AppDeployment })}
+                  disabled={ro}
+                  options={[
+                    { value: 'automatic', label: 'Install automatically' },
+                    { value: 'self_service', label: 'Self Service only' },
+                  ]}
+                />
+              </Field>
+              <Field
+                label="Updates"
+                hint={
+                  a.update_behavior === 'keep_updated'
+                    ? a.deployment === 'self_service'
+                      ? 'Re-runs Installomator weekly on Macs where the app is installed (from Self Service or otherwise), so it stays on the latest vendor release.'
+                      : 'Re-runs Installomator weekly so the app stays on the latest vendor release.'
+                    : 'Installed once; later updates are left to the app or the user.'
+                }
+              >
                 <Select value={a.update_behavior} onChange={(e) => set({ update_behavior: e.target.value as AppUpdateBehavior })} disabled={ro} options={Object.entries(updateBehaviorLabels).map(([value, label]) => ({ value, label }))} />
               </Field>
               <Field label="Description" className="md:col-span-2">
@@ -178,7 +203,10 @@ export function AppEditorPage() {
 
       {tab === 'scope' && (
         <Card>
-          <CardHeader title="Scope" description="Computers in scope get the app installed automatically at their next check-in." />
+          <CardHeader
+            title="Scope"
+            description={a.deployment === 'self_service' ? 'Computers in scope see the app in Self Service.' : 'Computers in scope get the app installed automatically at their next check-in.'}
+          />
           <CardBody>
             <ScopeEditor value={a.scope} onChange={(scope) => set({ scope })} disabled={ro} />
           </CardBody>
@@ -187,28 +215,30 @@ export function AppEditorPage() {
 
       {tab === 'selfservice' && (
         <Card>
-          <CardHeader title="Self Service" description="Let users install this app themselves instead of (or in addition to) the automatic scope install." />
+          <CardHeader
+            title="Self Service"
+            description={a.deployment === 'self_service' ? 'How the app appears in the Self Service app on each Mac in scope.' : 'Optionally also list the app in Self Service, for example to reinstall it.'}
+          />
           <CardBody className="flex flex-col gap-5">
-            <p className="text-xs text-ink-muted">
-              Shown in the Self Service app on each Mac in scope (Settings → Self Service).
-            </p>
-            <Toggle checked={a.self_service.enabled} onChange={(v) => set({ self_service: { ...a.self_service, enabled: v } })} disabled={ro} label="Make available in Self Service" />
+            {a.deployment !== 'self_service' && (
+              <Toggle checked={a.self_service.enabled} onChange={(v) => set({ self_service: { ...a.self_service, enabled: v } })} disabled={ro} label="Also show in Self Service" />
+            )}
             <FormSection title="Listing">
               <FormGrid cols={2}>
                 <Field label="Display name">
-                  <Input value={a.self_service.display_name} onChange={(e) => set({ self_service: { ...a.self_service, display_name: e.target.value } })} disabled={ro || !a.self_service.enabled} placeholder={a.name} />
+                  <Input value={a.self_service.display_name} onChange={(e) => set({ self_service: { ...a.self_service, display_name: e.target.value } })} disabled={ro || !ssOn} placeholder={a.name} />
                 </Field>
                 <Field label="Button text">
-                  <Input value={a.self_service.button_text} onChange={(e) => set({ self_service: { ...a.self_service, button_text: e.target.value } })} disabled={ro || !a.self_service.enabled} placeholder="Install" />
+                  <Input value={a.self_service.button_text} onChange={(e) => set({ self_service: { ...a.self_service, button_text: e.target.value } })} disabled={ro || !ssOn} placeholder="Install" />
                 </Field>
                 <Field label="Description" className="md:col-span-2">
-                  <Textarea rows={3} value={a.self_service.description} onChange={(e) => set({ self_service: { ...a.self_service, description: e.target.value } })} disabled={ro || !a.self_service.enabled} />
+                  <Textarea rows={3} value={a.self_service.description} onChange={(e) => set({ self_service: { ...a.self_service, description: e.target.value } })} disabled={ro || !ssOn} />
                 </Field>
                 <Field label="Category" hint="Groups the item in Self Service.">
-                  <Input value={a.self_service.category ?? ''} onChange={(e) => set({ self_service: { ...a.self_service, category: e.target.value } })} disabled={ro || !a.self_service.enabled} placeholder={a.category || 'General'} />
+                  <Input value={a.self_service.category ?? ''} onChange={(e) => set({ self_service: { ...a.self_service, category: e.target.value } })} disabled={ro || !ssOn} placeholder={a.category || 'General'} />
                 </Field>
                 <Field label="Featured">
-                  <Checkbox checked={!!a.self_service.featured} onChange={(e) => set({ self_service: { ...a.self_service, featured: e.target.checked } })} disabled={ro || !a.self_service.enabled} label="Show on the Discover page" />
+                  <Checkbox checked={!!a.self_service.featured} onChange={(e) => set({ self_service: { ...a.self_service, featured: e.target.checked } })} disabled={ro || !ssOn} label="Show on the Discover page" />
                 </Field>
               </FormGrid>
             </FormSection>

@@ -840,6 +840,8 @@ export interface MacApp {
   category: string
   description: string
   update_behavior: AppUpdateBehavior
+  /** automatic: installed on every Mac in scope. self_service: offered in Self Service only. */
+  deployment: AppDeployment
   options: InstallomatorOptions
   enabled: boolean
   scope: Scope
@@ -847,6 +849,8 @@ export interface MacApp {
   created_at: string
   updated_at: string
 }
+
+export type AppDeployment = 'automatic' | 'self_service'
 
 export interface MacAppWithStatus extends MacApp {
   status: Record<string, number>
@@ -902,6 +906,8 @@ export interface PolicyAccount {
 }
 
 export interface PolicyApp {
+  /** A Mac App from the catalog (its label and options are used); empty for a direct label step. */
+  app_id?: string
   label: string
   options: InstallomatorOptions
 }

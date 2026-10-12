@@ -13,8 +13,8 @@ root with `/bin/zsh <script> <args…>`, passing the arguments as argv, without 
 
 | Where | What it does |
 | --- | --- |
-| **Mac Apps catalog** | Keeps an app installed (and updated weekly), or installs it once, on every Mac in scope; optionally offered in Self Service |
-| **Policy step** | A policy's *Apps* list runs labels alongside scripts and packages, with the policy's trigger, frequency and logs ([Chapter 7](07-policies-scripts-packages.md)) |
+| **Mac Apps catalog** | The one place an app is defined (label and options). Installed automatically on every Mac in scope, or offered in Self Service only; installed once or kept up to date |
+| **Policy step** | A policy's *Mac Apps* tab adds catalog apps (their label and options) alongside scripts and packages, with the policy's trigger, frequency and logs ([Chapter 7](07-policies-scripts-packages.md)). An Installomator label can still be used directly, with its own options, under *Use an Installomator label directly* |
 | **Onboarding step** | An onboarding `app` step installs a catalog app with a live progress row ([Chapter 14](14-white-glove-onboarding.md)) |
 | **swiftDialog bootstrap** | Onboarding installs swiftDialog with the `swiftdialog` label if `/usr/local/bin/dialog` is missing |
 | **Escrow Buddy remediation** | FileVault key repair installs Escrow Buddy with the `escrowbuddy` label ([Chapter 11](11-filevault.md)) |
@@ -26,10 +26,11 @@ root with `/bin/zsh <script> <args…>`, passing the arguments as argv, without 
 | --- | --- | --- |
 | Name, category, description | `name`, `category`, `description` | |
 | Label | `label` | A shipped label (`googlechrome`, `zoom`, `microsoftteamsnew`, …) or `custom:<key>` |
-| Update behaviour | `update_behavior` | `keep_updated` (re-runs weekly; Installomator only downloads when a newer version exists) or `install_once` |
+| Deployment | `deployment` | `automatic`: installed on every Mac in scope. `self_service`: offered in Self Service to Macs in scope and installed only when someone clicks Install |
+| Updates | `update_behavior` | `keep_updated` (re-runs weekly; Installomator only downloads when a newer version exists) or `install_once` |
 | Options | `options` | §9.4 |
 | Enabled, scope | `enabled`, `scope` | |
-| Self Service | `self_service` | `enabled`, `display_name`, `description`, `button_text` |
+| Self Service | `self_service` | `enabled` (for automatic apps: also list it, e.g. to reinstall; always on for Self Service apps), `display_name`, `description`, `button_text`, `category`, `featured` |
 
 ### Add an app
 
@@ -38,11 +39,15 @@ root with `/bin/zsh <script> <args…>`, passing the arguments as argv, without 
    (`POST /api/v1/apps`).
 3. At each `checkin` or `startup` check-in, every in-scope Mac for which the app is **due** gets an install job:
 
-   | Behaviour | Due when |
+   | Deployment and updates | Due when |
    | --- | --- |
-   | `keep_updated` | No completed install in the last 7 days |
-   | `install_once` | No completed install ever |
-   | either | No install pending in the last 2 hours (prevents duplicates) |
+   | automatic, `keep_updated` | No completed install in the last 7 days |
+   | automatic, `install_once` | No completed install ever |
+   | Self Service, `keep_updated` | The app is installed on the Mac (a completed install, from Self Service or anywhere else VibeMDM ran it, or the agent's inventory lists an app of that name) and there was no completed install in the last 7 days. Macs without it get nothing until someone installs it from Self Service |
+   | Self Service, `install_once` | Never automatically: only from Self Service |
+   | any | No install pending in the last 2 hours (prevents duplicates) |
+
+   A Mac App used by a policy cannot be deleted until it is removed from those policies.
 
 4. Results: `GET /api/v1/apps/{id}/logs` (one app) or `GET /api/v1/apps/logs` (all), and the computer's
    activity. Each log has a status (`pending`, `completed`, `failed`), the trigger and Installomator's output.

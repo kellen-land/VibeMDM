@@ -218,14 +218,14 @@ func (s *Store) RunAdvancedSearch(ctx context.Context, criteria []model.Criterio
 
 // ---- mac apps (Installomator catalog) ----
 
-const appCols = `id, name, label, category, description, update_behavior, options, enabled, scope, self_service, created_at, updated_at`
+const appCols = `id, name, label, category, description, update_behavior, options, enabled, scope, self_service, created_at, updated_at, deployment`
 
 func scanApp(row interface{ Scan(...any) error }) (*model.MacApp, error) {
 	var a model.MacApp
 	var sc db.JSON[model.Scope]
 	var ss db.JSON[model.PolicySelfService]
 	var opts db.JSON[model.InstallomatorOptions]
-	if err := row.Scan(&a.ID, &a.Name, &a.Label, &a.Category, &a.Description, &a.UpdateBehavior, &opts, &a.Enabled, &sc, &ss, &a.CreatedAt, &a.UpdatedAt); err != nil {
+	if err := row.Scan(&a.ID, &a.Name, &a.Label, &a.Category, &a.Description, &a.UpdateBehavior, &opts, &a.Enabled, &sc, &ss, &a.CreatedAt, &a.UpdatedAt, &a.Deployment); err != nil {
 		return nil, wrapNotFound(err)
 	}
 	a.Scope, a.SelfService, a.Options = sc.V, ss.V, opts.V
@@ -263,6 +263,11 @@ func normApp(a *model.MacApp) {
 	if a.SelfService.ButtonText == "" {
 		a.SelfService.ButtonText = "Install"
 	}
+	if a.Deployment != "self_service" {
+		a.Deployment = "automatic"
+	} else {
+		a.SelfService.Enabled = true // Self Service is the only way it is installed
+	}
 	a.Scope.Normalize()
 	a.Label = strings.TrimSpace(a.Label)
 }
@@ -270,23 +275,37 @@ func normApp(a *model.MacApp) {
 // CreateMacApp inserts a catalog entry.
 func (s *Store) CreateMacApp(ctx context.Context, a model.MacApp) (*model.MacApp, error) {
 	normApp(&a)
-	return scanApp(s.DB.QueryRowContext(ctx, `INSERT INTO mac_apps (name, label, category, description, update_behavior, enabled, scope, self_service, options)
-		VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9::jsonb) RETURNING `+appCols,
-		a.Name, a.Label, a.Category, a.Description, a.UpdateBehavior, a.Enabled, jsonArg(a.Scope), jsonArg(a.SelfService), jsonArg(a.Options)))
+	return scanApp(s.DB.QueryRowContext(ctx, `INSERT INTO mac_apps (name, label, category, description, update_behavior, enabled, scope, self_service, options, deployment)
+		VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9::jsonb,$10) RETURNING `+appCols,
+		a.Name, a.Label, a.Category, a.Description, a.UpdateBehavior, a.Enabled, jsonArg(a.Scope), jsonArg(a.SelfService), jsonArg(a.Options), a.Deployment))
 }
 
 // UpdateMacApp updates a catalog entry.
 func (s *Store) UpdateMacApp(ctx context.Context, a model.MacApp) (*model.MacApp, error) {
 	normApp(&a)
 	return scanApp(s.DB.QueryRowContext(ctx, `UPDATE mac_apps SET name=$2, label=$3, category=$4, description=$5, update_behavior=$6, enabled=$7,
-		scope=$8::jsonb, self_service=$9::jsonb, options=$10::jsonb, updated_at=now() WHERE id=$1 RETURNING `+appCols,
-		a.ID, a.Name, a.Label, a.Category, a.Description, a.UpdateBehavior, a.Enabled, jsonArg(a.Scope), jsonArg(a.SelfService), jsonArg(a.Options)))
+		scope=$8::jsonb, self_service=$9::jsonb, options=$10::jsonb, deployment=$11, updated_at=now() WHERE id=$1 RETURNING `+appCols,
+		a.ID, a.Name, a.Label, a.Category, a.Description, a.UpdateBehavior, a.Enabled, jsonArg(a.Scope), jsonArg(a.SelfService), jsonArg(a.Options), a.Deployment))
 }
 
 // DeleteMacApp removes a catalog entry.
 func (s *Store) DeleteMacApp(ctx context.Context, id string) error {
 	_, err := s.DB.ExecContext(ctx, `DELETE FROM mac_apps WHERE id=$1`, id)
 	return err
+}
+
+// AppInstalledOn reports whether a Mac has the app: VibeMDM installed it (a completed run), or
+// the agent's inventory lists an app of that name.
+func (s *Store) AppInstalledOn(ctx context.Context, appID, computerID, appName string) (bool, error) {
+	var ok bool
+	err := s.DB.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM app_install_logs WHERE app_id=$1 AND computer_id=$2 AND status='completed')
+		OR EXISTS (SELECT 1 FROM computer_apps WHERE computer_id=$2 AND lower(name) IN (lower($3), lower($3) || '.app'))`, appID, computerID, appName).Scan(&ok)
+	return ok, err
+}
+
+// SelfServiceVisible reports whether a Mac app appears in Self Service.
+func SelfServiceVisible(a model.MacApp) bool {
+	return a.Deployment == "self_service" || a.SelfService.Enabled
 }
 
 // AppInstallDue reports whether an app should run on a computer now,

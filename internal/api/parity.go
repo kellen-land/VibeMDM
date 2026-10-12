@@ -679,6 +679,22 @@ func (h *Handler) updateApp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) deleteApp(w http.ResponseWriter, r *http.Request) {
+	// Policies that install this app would silently lose the step.
+	if pols, err := h.st.ListPolicies(r.Context()); err == nil {
+		var using []string
+		for _, p := range pols {
+			for _, pa := range p.Apps {
+				if pa.AppID == r.PathValue("id") {
+					using = append(using, p.Name)
+					break
+				}
+			}
+		}
+		if len(using) > 0 {
+			writeErr(w, 409, "this app is used by the policies "+strings.Join(using, ", ")+"; remove it from them first")
+			return
+		}
+	}
 	if err := h.st.DeleteMacApp(r.Context(), r.PathValue("id")); err != nil {
 		h.fail(w, err, "app")
 		return
