@@ -36,7 +36,7 @@ that runs scripts and policies on the Mac.
 | **Management commands** | Update inventory, lock (PIN), restart, shut down, erase, remote desktop on/off, OS updates, remove MDM profile, raw command plist |
 | **Agent** | Single static Go binary; LaunchDaemon with long-poll tasks (near-instant script execution), login trigger, recon, `<result>` extension attributes |
 | **Remote shell** | Live interactive root shell to an online Mac from the browser (xterm.js), relayed through the agent — off by default, admin-only, same-origin, one session per Mac, idle timeout, full transcript audit |
-| **Console** | React + Tailwind UI (dark-first, teal), dashboard, activity log, audit log, users/roles (admin/viewer), API tokens |
+| **Console** | React + Tailwind UI (dark-first, purple and cyan), dashboard, activity log, audit log, users/roles (admin/viewer), API tokens |
 
 Jamf Pro's workflow was the inspiration (policies, smart groups, scripts, extension attributes, Self Service
 terminology). VibeMDM is an independent implementation and contains no Jamf code or assets.

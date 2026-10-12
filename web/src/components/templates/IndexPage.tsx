@@ -218,14 +218,15 @@ export function IndexPage<T>(p: IndexPageProps<T>) {
             <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
               {p.search && <SearchInput value={q} onChange={setQ} placeholder={p.search.placeholder} className="w-full sm:w-72" />}
               {p.filters?.map((f) => (
-                <Select
-                  key={f.key}
-                  value={filterValues[f.key] ?? ''}
-                  onChange={(e) => setFilterValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                  aria-label={f.label}
-                  className={cn('w-auto', filterValues[f.key] && 'border-accent-500/60')}
-                  options={[{ value: '', label: f.label }, ...f.options]}
-                />
+                <div key={f.key} className="w-full shrink-0 sm:w-44">
+                  <Select
+                    value={filterValues[f.key] ?? ''}
+                    onChange={(e) => setFilterValues((v) => ({ ...v, [f.key]: e.target.value }))}
+                    aria-label={f.label}
+                    className={cn(filterValues[f.key] && 'border-accent-500/60')}
+                    options={[{ value: '', label: f.label }, ...f.options]}
+                  />
+                </div>
               ))}
               {filtered && (
                 <Button

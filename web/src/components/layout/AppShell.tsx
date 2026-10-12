@@ -253,10 +253,12 @@ export function AppShell() {
 
   const sidebar = (compact: boolean) => (
     <div className="flex h-full flex-col overflow-hidden bg-surface">
-      <div className="flex items-center gap-2.5 px-4 h-14 border-b border-line">
-        <div className="flex size-8 items-center justify-center rounded-md bg-accent-500/15 text-accent-400 ring-1 ring-accent-500/30">
-          <FileCode className="size-[18px]" aria-hidden="true" />
+      <div className="relative flex items-center gap-2.5 px-4 h-14 border-b border-line">
+        <div className="glow-under-violet flex size-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-violet-600 to-accent-600 text-white ring-1 ring-white/10">
+          <FileCode className="size-[18px] glow-cyan" aria-hidden="true" />
         </div>
+        {/* Purple → cyan edge under the brand. */}
+        <span className="neon-line absolute inset-x-0 -bottom-px h-px opacity-70" aria-hidden="true" />
         <div className={cn('min-w-0 whitespace-nowrap transition-opacity duration-200 motion-reduce:transition-none', compact && 'pointer-events-none opacity-0')}>
           <p className="truncate text-[13px] font-semibold text-ink leading-4 tracking-tight">{status?.org_name || 'VibeMDM'}</p>
           <p className="truncate text-[10px] uppercase tracking-[0.12em] text-ink-faint leading-4">Device Management</p>
@@ -310,8 +312,8 @@ export function AppShell() {
                     >
                       {({ isActive }) => (
                         <>
-                          <span className={cn('absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-accent-400 transition-opacity', isActive ? 'opacity-100' : 'opacity-0')} aria-hidden="true" />
-                          <n.icon className={cn('size-4 shrink-0', isActive ? 'text-accent-400' : 'text-ink-faint group-hover:text-ink-muted')} aria-hidden="true" />
+                          <span className={cn('neon-line-v glow-under-violet absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full transition-opacity', isActive ? 'opacity-100' : 'opacity-0')} aria-hidden="true" />
+                          <n.icon className={cn('size-4 shrink-0', isActive ? 'glow-cyan text-accent-600 dark:text-accent-400' : 'text-ink-faint group-hover:text-ink-muted')} aria-hidden="true" />
                           <span className={cn('truncate whitespace-nowrap transition-[opacity,transform] duration-200 motion-reduce:transition-none', compact && '-translate-x-1 opacity-0')}>{n.label}</span>
                           {n.badge === 'health' && (compact ? <HealthNavDot /> : <HealthNavBadge />)}
                         </>

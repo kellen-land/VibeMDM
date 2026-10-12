@@ -8,7 +8,7 @@ import { cn } from '../../lib/cn'
 export function MetricsCard({ label, value, note, to, tone, icon }: { label: string; value: ReactNode; note?: ReactNode; to?: string; tone?: 'good' | 'warning' | 'critical'; icon?: ReactNode }) {
   const body = (
     <Card className={cn('h-full px-4 py-3.5 transition-colors', to && 'hover:border-line-strong')}>
-      <p className="flex items-center gap-1.5 text-xs text-ink-muted [&>svg]:size-3.5">
+      <p className="flex items-center gap-1.5 text-xs text-ink-muted [&>svg]:size-3.5 [&>svg]:text-violet-600 dark:[&>svg]:text-violet-400 [&>svg]:glow-violet">
         {icon}
         {label}
       </p>
@@ -29,7 +29,7 @@ export function MetricsCard({ label, value, note, to, tone, icon }: { label: str
 export function CalloutCard({ title, children, action, actionTo, icon, onDismiss }: { title: string; children?: ReactNode; action: string; actionTo: string; icon?: ReactNode; onDismiss?: () => void }) {
   return (
     <Card className="flex items-start gap-4 px-4 py-4">
-      {icon && <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-500/10 text-accent-700 dark:text-accent-300 [&>svg]:size-5">{icon}</div>}
+      {icon && <div className="glow-under-violet flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-accent-600 text-white [&>svg]:size-5">{icon}</div>}
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-ink">{title}</p>
         {children && <div className="mt-0.5 text-sm text-ink-muted">{children}</div>}

@@ -89,14 +89,16 @@ export function ComputersPage() {
       <Card>
         <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
           <SearchInput value={q} onChange={(v) => set({ q: v, offset: 0 })} placeholder="Search computers…" title="Name, serial, user, model or IP address" className="w-full sm:w-72" />
-          <Select value={groupId} onChange={(e) => set({ group_id: e.target.value, offset: 0 })} className={cn('w-auto', groupId && 'border-accent-500/60')} aria-label="Filter by group">
-            <option value="">Any group</option>
-            {(groups.data?.items ?? []).map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name} ({g.member_count})
-              </option>
-            ))}
-          </Select>
+          <div className="w-full shrink-0 sm:w-56">
+            <Select value={groupId} onChange={(e) => set({ group_id: e.target.value, offset: 0 })} className={cn(groupId && 'border-accent-500/60')} aria-label="Filter by group">
+              <option value="">Any group</option>
+              {(groups.data?.items ?? []).map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name} ({g.member_count})
+                </option>
+              ))}
+            </Select>
+          </div>
           {filtered && (
             <Button size="sm" variant="ghost" onClick={() => set({ q: undefined, group_id: undefined, offset: 0 })}>
               Clear filters
