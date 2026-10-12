@@ -16,6 +16,10 @@
 #
 # Needs: macOS (pkgbuild, productbuild, productsign, security and openssl ship with it), curl.
 set -euo pipefail
+# pkgbuild records the modes of every folder in the payload (Library, Application Support, …)
+# and Installer may apply them on the Mac. A restrictive umask here would make those folders
+# owner-only on every Mac that installs the package, so the normal one is set explicitly.
+umask 022
 
 : "${VIBEMDM_URL:?set VIBEMDM_URL, e.g. https://mdm.example.com}"
 : "${VIBEMDM_API_TOKEN:?set VIBEMDM_API_TOKEN to an admin API token (Settings → API tokens)}"
