@@ -17,7 +17,7 @@ import { Badge } from '../components/ui/Badge'
 import { LoadingBlock } from '../components/ui/Spinner'
 import { Pagination } from '../components/ui/Pagination'
 import { useToast } from '../components/ui/Toast'
-import { ScopeEditor } from '../components/pickers/ScopeEditor'
+import { ScopeEditor, ScopeSummary } from '../components/pickers/ScopeEditor'
 import { LabelCombobox, allLabels } from '../components/pickers/LabelCombobox'
 import { InstallomatorCommandPreview, InstallomatorOptionsEditor } from '../components/installomator/Installomator'
 import { AppInstallLogTable } from '../components/activity/AppInstallLogTable'
@@ -25,6 +25,8 @@ import { AppIcon } from '../components/apps/AppIcon'
 import { InstallomatorFooter, updateBehaviorLabels } from './AppsPage'
 import { useEditMode } from '../components/editor/useEditMode'
 import { ObjectBar } from '../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../components/templates/DetailsLayout'
+import { RelativeTime } from '../components/ui/RelativeTime'
 
 type Tab = 'general' | 'scope' | 'selfservice' | 'logs'
 
@@ -90,7 +92,7 @@ export function AppEditorPage() {
       const body = { ...a, name: a.name.trim(), label: a.label.trim() }
       const out = isNew ? await api.post<MacApp>('/api/v1/apps', body) : await api.put<MacApp>(`/api/v1/apps/${id}`, body)
       await invalidate(qk.apps, qk.app(out.id))
-      toast.success(isNew ? 'App added' : 'App saved', 'Scoped agents were asked to check in.')
+      toast.success(isNew ? 'App created' : 'App saved', 'Scoped agents were asked to check in.')
       if (isNew) navigate(`/apps/${out.id}`, { replace: true })
       return true
     } catch (e) {
@@ -103,7 +105,7 @@ export function AppEditorPage() {
   const doDelete = async () => {
     try {
       await api.del(`/api/v1/apps/${id}`)
-      toast.success('App removed')
+      toast.success('App deleted')
       await invalidate(qk.apps)
       navigate('/apps')
     } catch (e) {
@@ -119,28 +121,30 @@ export function AppEditorPage() {
     { key: 'scope', label: 'Scope' },
     { key: 'selfservice', label: 'Self Service' },
   ]
-  if (!isNew) tabs.push({ key: 'logs', label: 'Install Logs', shortcut: 'logs' })
+  if (!isNew) tabs.push({ key: 'logs', label: 'Install logs', shortcut: 'logs' })
 
   return (
     <>
-      <PageHeader
-        crumbs={[{ label: 'Mac Apps', to: '/apps' }, { label: isNew ? 'Add app' : app.data?.name ?? '' }]}
-        title={isNew ? 'Add app to catalog' : app.data?.name}
-        meta={
-          !isNew ? (
-            <>
-              <Badge tone={a.enabled ? 'good' : 'neutral'} dot>
-                {a.enabled ? 'Enabled' : 'Disabled'}
-              </Badge>
-              <span className="text-xs text-ink-muted font-mono">{a.label}</span>
-              <Badge tone={a.update_behavior === 'keep_updated' ? 'accent' : 'neutral'}>{updateBehaviorLabels[a.update_behavior]}</Badge>
-            </>
-          ) : undefined
-        }
-      />
+      <PageHeader crumbs={[{ label: 'Mac apps', to: '/apps' }, { label: isNew ? 'New app' : app.data?.name ?? '' }]} title={isNew ? 'New app' : app.data?.name} />
       <Tabs className="mb-5" value={tab} onChange={setTab} items={tabs} />
 
       {tab === 'general' && (
+        <DetailsLayout
+          aside={
+            !isNew && (
+              <SummaryCard
+                rows={[
+                  { label: 'Status', value: <Badge tone={a.enabled ? 'good' : 'neutral'} dot>{a.enabled ? 'Enabled' : 'Disabled'}</Badge> },
+                  { label: 'Label', value: <span className="font-mono">{a.label}</span> },
+                  { label: 'Deployment', value: a.deployment === 'self_service' ? 'Self Service only' : a.self_service.enabled ? 'Automatic + Self Service' : 'Automatic' },
+                  { label: 'Updates', value: <Badge tone={a.update_behavior === 'keep_updated' ? 'accent' : 'neutral'}>{updateBehaviorLabels[a.update_behavior]}</Badge> },
+                  { label: 'Scope', value: <ScopeSummary scope={a.scope} /> },
+                  { label: 'Last changed', value: app.data?.updated_at ? <RelativeTime value={app.data.updated_at} /> : '' },
+                ]}
+              />
+            )
+          }
+        >
         <Card>
           <CardHeader title="General" />
           <CardBody className="flex flex-col gap-8">
@@ -198,6 +202,7 @@ export function AppEditorPage() {
             <InstallomatorFooter />
           </CardBody>
         </Card>
+        </DetailsLayout>
       )}
 
       {tab === 'scope' && (
@@ -224,7 +229,7 @@ export function AppEditorPage() {
             )}
             <FormSection title="Icon" description="Shown in Self Service and in the notification when the install finishes.">
               {isNew || !id ? (
-                <p className="text-sm text-ink-muted">Add the app first, then upload its icon here.</p>
+                <p className="text-sm text-ink-muted">Create the app first, then upload its icon here.</p>
               ) : (
                 <IconUpload appId={id} version={app.data?.icon_version} disabled={!isAdmin} />
               )}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { KeyRound, Pencil, RefreshCw, Save, X } from 'lucide-react'
+import { KeyRound, Pencil, RefreshCw, X } from 'lucide-react'
 import { qk, useBuildings, useDepartments, useInvalidate, useMobileDevice, useMobileDeviceProfileDeployments, useMobileEAs } from '../../api/queries'
 import { api, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
@@ -25,6 +25,7 @@ import { useToast } from '../../components/ui/Toast'
 import { absoluteTime } from '../../lib/format'
 import { shortcutHint } from '../../lib/shortcuts'
 import { useEditMode } from '../../components/editor/useEditMode'
+import { useCelebrate } from '../../components/editor/SaveFeedback'
 import { ComputerCommandsTab } from '../computers/ActivityTabs'
 import { DeviceIcon, MobileStatusBadges } from './MobileDevicesPage'
 import { MobileActions } from './MobileActions'
@@ -183,6 +184,7 @@ function GeneralSection({ d }: { d: MobileDeviceDetail }) {
   const { isAdmin } = useAuth()
   const toast = useToast()
   const invalidate = useInvalidate()
+  const celebrate = useCelebrate()
   const [form, setForm] = useState<Record<EditKey, string>>({} as Record<EditKey, string>)
   const [saving, setSaving] = useState(false)
   // User and location is edited as one category, as in Jamf Pro: Edit, then Cancel or Save.
@@ -213,6 +215,7 @@ function GeneralSection({ d }: { d: MobileDeviceDetail }) {
         await api.patch(`/api/v1/mobile-devices/${d.id}`, patch)
         await invalidate(qk.mobileDevice(d.id), ['mobile-devices'])
         toast.success('Mobile device updated')
+        celebrate()
       }
       ed.finishEdit()
     } catch (e) {
@@ -528,6 +531,7 @@ function AttributesSection({ d }: { d: MobileDeviceDetail }) {
   const { isAdmin } = useAuth()
   const toast = useToast()
   const invalidate = useInvalidate()
+  const celebrate = useCelebrate()
   const eas = useMobileEAs()
   const defs = new Map((eas.data?.items ?? []).map((e) => [e.id, e]))
   const [values, setValues] = useState<Record<string, string>>({})
@@ -546,7 +550,8 @@ function AttributesSection({ d }: { d: MobileDeviceDetail }) {
       for (const v of dirty) await api.put(`/api/v1/mobile-devices/${d.id}/ea-values/${v.ea_id}`, { value: values[v.ea_id] ?? '' })
       if (dirty.length > 0) {
         await invalidate(qk.mobileDevice(d.id))
-        toast.success('Saved')
+        toast.success(dirty.length === 1 ? 'Value saved' : 'Values saved')
+        celebrate()
       }
       ed.finishEdit()
     } catch (e) {
@@ -602,7 +607,7 @@ function EditFooter({ saving, onCancel, onSave }: { saving: boolean; onCancel: (
       <Button icon={<X />} onClick={onCancel} data-shortcut="cancel" title={shortcutHint('cancel', 'Cancel')}>
         Cancel
       </Button>
-      <Button variant="primary" icon={<Save />} loading={saving} onClick={onSave} data-shortcut="save" title={shortcutHint('save', 'Save')}>
+      <Button variant="primary" loading={saving} onClick={onSave} data-shortcut="save" title={shortcutHint('save', 'Save')}>
         Save
       </Button>
     </CardFooter>

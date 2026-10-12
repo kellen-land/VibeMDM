@@ -14,13 +14,16 @@ import { Input, Textarea } from '../../components/ui/Input'
 import { Alert } from '../../components/ui/Alert'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/Toast'
-import { ScopeEditor } from '../../components/pickers/ScopeEditor'
+import { ScopeEditor, ScopeSummary } from '../../components/pickers/ScopeEditor'
 import { SchemaForm } from '../../components/schema/SchemaForm'
 import { ProfileXmlPanel, useLivePreview } from '../../components/schema/ProfileXmlPanel'
 import { managedProfiles, pruneValues, schemaIdFromSource } from '../../components/schema/schema'
 import { customSettingsCrumb } from './CustomSettingsPage'
 import { useCloneSource, useEditMode } from '../../components/editor/useEditMode'
 import { ObjectBar } from '../../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../../components/templates/DetailsLayout'
+import { RelativeTime } from '../../components/ui/RelativeTime'
+import { DeploymentCounts } from '../ProfilesPage'
 
 /** What Clone carries over to a new profile from the same schema (scope is left empty so nothing deploys by surprise). */
 export interface SchemaProfileClone {
@@ -133,7 +136,7 @@ function SchemaProfileEditor() {
   const p = profile.data
   const managed = p ? managedProfiles[p.identifier] : undefined
   const crumbs = [
-    { label: 'Configuration Profiles', to: '/profiles' },
+    { label: 'Configuration profiles', to: '/profiles' },
     ...(isNew ? [customSettingsCrumb] : p ? [{ label: p.name, to: `/profiles/${p.id}` }] : []),
     { label: isNew ? `New ${schema.data?.name ?? ''} profile`.replace('  ', ' ') : 'Edit with form' },
   ]
@@ -194,60 +197,87 @@ function SchemaProfileEditor() {
         title={isNew ? 'New configuration profile' : p?.name}
         description={sd.description || undefined}
         meta={
-          <>
-            <Badge icon={<FileCode2 />}>{sd.name}</Badge>
-            {sd.builtin && <Badge tone="accent">Built-in</Badge>}
-            <span className="font-mono text-xs text-ink-muted">{sd.preference_domain}</span>
-            {p && <span className="font-mono text-xs text-ink-faint">{p.identifier}</span>}
-          </>
+          // Existing profiles show these in the summary instead.
+          !p && (
+            <>
+              <Badge icon={<FileCode2 />}>{sd.name}</Badge>
+              {sd.builtin && <Badge tone="accent">Built-in</Badge>}
+              <span className="font-mono text-xs text-ink-muted">{sd.preference_domain}</span>
+            </>
+          )
         }
       />
-      <div className="flex flex-col gap-6">
-        {saveError && (
-          <Alert tone="critical" title="The profile couldn’t be saved">
-            {saveError}
-          </Alert>
-        )}
-        <Card>
-          <CardHeader title="General" />
-          <CardBody>
-            <FormGrid cols={2}>
-              <Field label="Name" required>
-                <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} placeholder={`e.g. ${sd.name}`} />
-              </Field>
-              <Field label="Category">
-                <Input value={category} onChange={(e) => setCategory(e.target.value)} disabled={ro} placeholder="Applications" />
-              </Field>
-              <Field label="Description" className="md:col-span-2">
-                <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} disabled={ro} />
-              </Field>
-            </FormGrid>
-          </CardBody>
-        </Card>
+      <DetailsLayout
+        aside={
+          p && (
+            <SummaryCard
+              rows={[
+                {
+                  label: 'Schema',
+                  value: (
+                    <span className="inline-flex flex-wrap justify-end gap-1">
+                      <Badge icon={<FileCode2 />}>{sd.name}</Badge>
+                      {sd.builtin && <Badge tone="accent">Built-in</Badge>}
+                    </span>
+                  ),
+                },
+                { label: 'Domain', value: <span className="font-mono text-xs break-all">{sd.preference_domain}</span> },
+                { label: 'Identifier', value: <span className="font-mono text-xs break-all">{p.identifier}</span> },
+                { label: 'Scope', value: <ScopeSummary scope={p.scope} /> },
+                { label: 'Deployment', value: <DeploymentCounts status={p.status} /> },
+                { label: 'Last changed', value: p.updated_at ? <RelativeTime value={p.updated_at} /> : '' },
+              ]}
+            />
+          )
+        }
+      >
+        <div className="flex flex-col gap-6">
+          {saveError && (
+            <Alert tone="critical" title="The profile couldn’t be saved">
+              {saveError}
+            </Alert>
+          )}
+          <Card>
+            <CardHeader title="General" />
+            <CardBody>
+              <FormGrid cols={2}>
+                <Field label="Name" required>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} placeholder={`e.g. ${sd.name}`} />
+                </Field>
+                <Field label="Category">
+                  <Input value={category} onChange={(e) => setCategory(e.target.value)} disabled={ro} placeholder="Applications" />
+                </Field>
+                <Field label="Description" className="md:col-span-2">
+                  <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} disabled={ro} />
+                </Field>
+              </FormGrid>
+            </CardBody>
+          </Card>
 
-        <Card>
-          <CardHeader title="Scope" description="Scoped computers receive the profile when it is saved; computers that fall out of scope have it removed." />
-          <CardBody>
-            <ScopeEditor value={scope} onChange={setScope} disabled={ro} />
-          </CardBody>
-        </Card>
+          <Card>
+            <CardHeader title="Scope" description="Scoped computers receive the profile when it is saved; computers that fall out of scope have it removed." />
+            <CardBody>
+              <ScopeEditor value={scope} onChange={setScope} disabled={ro} />
+            </CardBody>
+          </Card>
 
-        <Card>
-          <CardHeader
-            title="Preferences"
-            description={
-              <>
-                Managed preferences for <code className="font-mono">{sd.preference_domain}</code>. Only settings you configure are included; everything else keeps the app&apos;s default.
-              </>
-            }
-          />
-          <CardBody>
-            <SchemaForm schema={sd.schema} value={values} onChange={onValues} errors={errors} disabled={ro} />
-          </CardBody>
-        </Card>
+          <Card>
+            <CardHeader
+              title="Preferences"
+              description={
+                <>
+                  Managed preferences for <code className="font-mono">{sd.preference_domain}</code>. Only settings you configure are included; everything else keeps the app&apos;s default.
+                </>
+              }
+            />
+            <CardBody>
+              <SchemaForm schema={sd.schema} value={values} onChange={onValues} errors={errors} disabled={ro} />
+            </CardBody>
+          </Card>
 
-        <ProfileXmlPanel preview={preview} />
-      </div>
+          <ProfileXmlPanel preview={preview} />
+        </div>
+      </DetailsLayout>
 
       <ObjectBar
         ed={ed}

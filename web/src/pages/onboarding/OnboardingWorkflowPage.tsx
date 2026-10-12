@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, Ban, ChevronDown, CircleOff, Laptop, LogOut, Play, Plus, Power, RotateCcw, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Ban, ChevronDown, Laptop, LogOut, Play, Plus, Power, RotateCcw, X } from 'lucide-react'
 import { qk, useApps, useInvalidate, useOnboardingRuns, useOnboardingWorkflow, useOnboardingWorkflows } from '../../api/queries'
 import { api, ApiError, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
@@ -37,6 +37,8 @@ import { ErrorList } from '../updates/SoftwareUpdatesPage'
 import { cn } from '../../lib/cn'
 import { useCloneSource, useEditMode } from '../../components/editor/useEditMode'
 import { ObjectBar } from '../../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../../components/templates/DetailsLayout'
+import { RelativeTime } from '../../components/ui/RelativeTime'
 
 type TabKey = 'workflow' | 'runs'
 
@@ -138,18 +140,6 @@ export function OnboardingWorkflowPage() {
         crumbs={[{ label: 'Onboarding', to: '/onboarding' }, { label: isNew ? 'New workflow' : wf.data?.name ?? '' }]}
         title={isNew ? 'New onboarding workflow' : wf.data?.name ?? 'Onboarding workflow'}
         description="Shown by the VibeMDM agent, with swiftDialog, the first time a user is logged in after enrollment."
-        meta={
-          !isNew &&
-          wf.data && (
-            <>
-              {!wf.data.enabled && <Badge icon={<CircleOff />}>Disabled</Badge>}
-              <span className="text-xs text-ink-muted">Priority {wf.data.priority}</span>
-              <span className="text-xs text-ink-muted">
-                Scope: <ScopeSummary scope={wf.data.scope} />
-              </span>
-            </>
-          )
-        }
       />
 
       {!isNew && <Tabs<TabKey> items={[{ key: 'workflow', label: 'Workflow' }, { key: 'runs', label: 'Runs', shortcut: 'logs' }]} value={active} onChange={setTab} className="mb-5" />}
@@ -157,6 +147,22 @@ export function OnboardingWorkflowPage() {
       {active === 'runs' && !isNew ? (
         <RunsTab workflowId={id!} fieldKeys={fieldKeys} canRun={isAdmin} onRun={() => setRunOpen(true)} />
       ) : (
+        <DetailsLayout
+          aside={
+            !isNew && (
+              <SummaryCard
+                rows={[
+                  { label: 'Status', value: <Badge tone={f.enabled ? 'good' : 'neutral'} dot>{f.enabled ? 'Enabled' : 'Disabled'}</Badge> },
+                  { label: 'Priority', value: <span className="tabular-nums">{f.priority}</span> },
+                  { label: 'Scope', value: <ScopeSummary scope={f.scope} /> },
+                  { label: 'Fields', value: <span className="tabular-nums">{f.config.fields?.length ?? 0}</span> },
+                  { label: 'Steps', value: <span className="tabular-nums">{f.config.steps?.length ?? 0}</span> },
+                  { label: 'Last changed', value: wf.data?.updated_at ? <RelativeTime value={wf.data.updated_at} /> : '' },
+                ]}
+              />
+            )
+          }
+        >
         <div className="flex flex-col gap-6">
           {errors && (
             <Alert tone="critical" title="The workflow couldn't be saved">
@@ -191,6 +197,7 @@ export function OnboardingWorkflowPage() {
           <StepsCard c={f.config} setC={setC} readOnly={readOnly} />
           <FinishCard c={f.config} setC={setC} readOnly={readOnly} />
         </div>
+        </DetailsLayout>
       )}
 
       <ObjectBar

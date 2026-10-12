@@ -19,6 +19,7 @@ import { CodeEditor } from '../components/CodeEditor'
 import { TargetPicker, emptyTargets, type Targets } from '../components/pickers/TargetPicker'
 import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
 import { ObjectBar } from '../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../components/templates/DetailsLayout'
 
 const defaultScript = `#!/bin/bash
 # $1 = mount point, $2 = computer name, $3 = username
@@ -115,59 +116,66 @@ export function ScriptEditorPage() {
       <PageHeader
         crumbs={[{ label: 'Scripts', to: '/scripts' }, { label: isNew ? 'New script' : script.data?.name ?? '' }]}
         title={isNew ? 'New script' : script.data?.name}
-        meta={
-          !isNew && script.data ? (
-            <span className="text-xs text-ink-muted">
-              Updated <RelativeTime value={script.data.updated_at} />
-            </span>
-          ) : undefined
-        }
       />
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader title="General" />
-            <CardBody>
-              <FormGrid cols={2}>
-                <Field label="Name" required>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} />
-                </Field>
-                <Field label="Category">
-                  <Input value={category} onChange={(e) => setCategory(e.target.value)} disabled={ro} placeholder="e.g. Maintenance" />
-                </Field>
-                <Field label="Information" hint="Shown to admins when selecting the script.">
-                  <Textarea value={info} onChange={(e) => setInfo(e.target.value)} rows={2} disabled={ro} />
-                </Field>
-                <Field label="Notes">
-                  <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} disabled={ro} />
-                </Field>
-                <Field label="Default priority" hint="Whether the script runs before or after packages in a policy.">
-                  <Select value={priority} onChange={(e) => setPriority(e.target.value as ScriptPriority)} disabled={ro} options={[{ value: 'before', label: 'Before packages' }, { value: 'after', label: 'After packages' }]} />
-                </Field>
-                <Field label="OS requirements" hint="Free text, e.g. 13.x, 14.x">
-                  <Input value={osReq} onChange={(e) => setOsReq(e.target.value)} disabled={ro} />
-                </Field>
-              </FormGrid>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardHeader title="Script" description="Runs as root. $1 is the mount point, $2 the computer name, $3 the current user; $4–$11 are the policy parameters." />
-            <CardBody>
-              <CodeEditor language="shell" value={contents} onChange={setContents} height="480px" readOnly={ro} />
-            </CardBody>
-          </Card>
-        </div>
-        <Card className="self-start">
-          <CardHeader title="Parameter labels" description="Give $4–$11 friendly names so they are easy to fill in when the script is added to a policy." />
-          <CardBody className="flex flex-col gap-3">
-            {labels.map((l, i) => (
-              <Field key={i} label={`Parameter $${i + 4}`}>
-                <Input value={l} onChange={(e) => setLabels(labels.map((x, j) => (j === i ? e.target.value : x)))} disabled={ro} placeholder="Label" />
+      <DetailsLayout asideLast
+        aside={
+          <>
+            {!isNew && (
+              <SummaryCard
+                rows={[
+                  { label: 'Category', value: category },
+                  { label: 'Priority', value: priority === 'before' ? 'Before packages' : 'After packages' },
+                  { label: 'Parameters', value: `${labels.filter(Boolean).length} labelled` },
+                  { label: 'OS requirements', value: osReq },
+                  { label: 'Last changed', value: script.data?.updated_at ? <RelativeTime value={script.data.updated_at} /> : '' },
+                ]}
+              />
+            )}
+            <Card>
+              <CardHeader title="Parameter labels" description="Give $4–$11 friendly names so they are easy to fill in when the script is added to a policy." />
+              <CardBody className="flex flex-col gap-3">
+                {labels.map((l, i) => (
+                  <Field key={i} label={`Parameter $${i + 4}`}>
+                    <Input value={l} onChange={(e) => setLabels(labels.map((x, j) => (j === i ? e.target.value : x)))} disabled={ro} placeholder="Label" />
+                  </Field>
+                ))}
+              </CardBody>
+            </Card>
+          </>
+        }
+      >
+        <Card>
+          <CardHeader title="General" />
+          <CardBody>
+            <FormGrid cols={2}>
+              <Field label="Name" required>
+                <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} />
               </Field>
-            ))}
+              <Field label="Category">
+                <Input value={category} onChange={(e) => setCategory(e.target.value)} disabled={ro} placeholder="e.g. Maintenance" />
+              </Field>
+              <Field label="Information" hint="Shown to admins when selecting the script.">
+                <Textarea value={info} onChange={(e) => setInfo(e.target.value)} rows={2} disabled={ro} />
+              </Field>
+              <Field label="Notes">
+                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} disabled={ro} />
+              </Field>
+              <Field label="Default priority" hint="Whether the script runs before or after packages in a policy.">
+                <Select value={priority} onChange={(e) => setPriority(e.target.value as ScriptPriority)} disabled={ro} options={[{ value: 'before', label: 'Before packages' }, { value: 'after', label: 'After packages' }]} />
+              </Field>
+              <Field label="OS requirements" hint="Free text, e.g. 13.x, 14.x">
+                <Input value={osReq} onChange={(e) => setOsReq(e.target.value)} disabled={ro} />
+              </Field>
+            </FormGrid>
           </CardBody>
         </Card>
-      </div>
+        <Card>
+          <CardHeader title="Script" description="Runs as root. $1 is the mount point, $2 the computer name, $3 the current user; $4–$11 are the policy parameters." />
+          <CardBody>
+            <CodeEditor language="shell" value={contents} onChange={setContents} height="480px" readOnly={ro} />
+          </CardBody>
+        </Card>
+      </DetailsLayout>
       <ObjectBar
         ed={ed}
         isNew={isNew}

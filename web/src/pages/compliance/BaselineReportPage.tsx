@@ -6,8 +6,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   CircleDashed,
-  CircleOff,
-  Clock,
   Download,
   Gauge,
   Laptop,
@@ -39,6 +37,7 @@ import { SearchInput } from '../../components/ui/SearchInput'
 import { RelativeTime } from '../../components/ui/RelativeTime'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { ObjectBar } from '../../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../../components/templates/DetailsLayout'
 import { useEditMode } from '../../components/editor/useEditMode'
 import { useToast } from '../../components/ui/Toast'
 import { ScopeSummary } from '../../components/pickers/ScopeEditor'
@@ -146,54 +145,49 @@ export function BaselineReportPage() {
             {b.description && <span className="mt-1 block text-ink-muted">{b.description}</span>}
           </>
         }
-        meta={
-          <>
-            {!b.enabled && <Badge icon={<CircleOff />}>Disabled</Badge>}
-            {b.auto_remediate && (
-              <Badge tone="accent" icon={<Wrench />}>
-                Auto-remediate
-              </Badge>
-            )}
-            {b.deploy_profile && (
-              <Badge icon={<ShieldCheck />} title={`Deployed as “Compliance: ${b.name}” in Profiles`}>
-                Profile deployed
-              </Badge>
-            )}
-            <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
-              <Clock className="size-3.5 text-ink-faint" aria-hidden="true" />
-              Scanned {intervalLabel(b.scan_interval_hours).toLowerCase()}
-            </span>
-            <span className="text-xs text-ink-muted">
-              Scope: <ScopeSummary scope={b.scope} />
-            </span>
-          </>
-        }
         actions={
-          <>
-            <a
-              href={`/api/v1/compliance/baselines/${id}/export.csv`}
-              download
-              className="inline-flex h-[34px] items-center gap-2 rounded-md px-3.5 text-[13px] font-medium text-ink-muted hover:bg-line/40 hover:text-ink focus-ring"
-            >
-              <Download className="size-4" aria-hidden="true" />
-              Export CSV
-            </a>
-            {isAdmin && (
-              <>
-                <Button icon={<Wrench />} onClick={() => setConfirmRemediate(true)} disabled={!b.enabled}>
-                  Scan &amp; remediate
-                </Button>
-                <Button variant="primary" icon={<Play />} loading={busy === 'scan'} onClick={() => run('scan', () => scan(id, { remediate: false }))} disabled={!b.enabled} title={b.enabled ? undefined : 'Enable the baseline to scan'}>
-                  Scan now
-                </Button>
-              </>
-            )}
-          </>
+          isAdmin && (
+            <Button variant="primary" icon={<Play />} loading={busy === 'scan'} onClick={() => run('scan', () => scan(id, { remediate: false }))} disabled={!b.enabled} title={b.enabled ? undefined : 'Enable the baseline to scan'}>
+              Scan now
+            </Button>
+          )
         }
       />
 
       <div className="flex flex-col gap-6">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <DetailsLayout
+          aside={
+            <SummaryCard
+              rows={[
+                { label: 'Status', value: <Badge tone={b.enabled ? 'good' : 'neutral'} dot>{b.enabled ? 'Enabled' : 'Disabled'}</Badge> },
+                {
+                  label: 'Enforcement',
+                  value:
+                    b.auto_remediate || b.deploy_profile ? (
+                      <span className="flex flex-wrap justify-end gap-1">
+                        {b.auto_remediate && (
+                          <Badge tone="accent" icon={<Wrench />}>
+                            Auto-remediate
+                          </Badge>
+                        )}
+                        {b.deploy_profile && (
+                          <Badge icon={<ShieldCheck />} title={`Deployed as “Compliance: ${b.name}” in Profiles`}>
+                            Profile deployed
+                          </Badge>
+                        )}
+                      </span>
+                    ) : (
+                      'Report only'
+                    ),
+                },
+                { label: 'Scans', value: intervalLabel(b.scan_interval_hours) },
+                { label: 'Scope', value: <ScopeSummary scope={b.scope} /> },
+                { label: 'Last changed', value: b.updated_at ? <RelativeTime value={b.updated_at} /> : '' },
+              ]}
+            />
+          }
+        >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-6">
           <Tile label="Fleet score" icon={Gauge} value={scoreText(sum.score, sum.scanned > 0)} sub={sum.scanned ? 'average passing' : 'no scans yet'} />
           <Tile label="Compliant Macs" icon={CheckCircle2} value={sum.scanned ? `${compactNumber(sum.compliant)}/${compactNumber(sum.scanned)}` : '—'} sub="of scanned" />
           <Tile label="Targeted" icon={Target} value={compactNumber(sum.targeted)} sub={sum.targeted - sum.scanned > 0 ? `${sum.targeted - sum.scanned} not scanned yet` : 'in scope'} />
@@ -210,6 +204,7 @@ export function BaselineReportPage() {
             if (k) setTab('computers')
           }}
         />
+        </DetailsLayout>
 
         <div>
           <Tabs<TabKey>
@@ -253,6 +248,23 @@ export function BaselineReportPage() {
         deleteDescription={`All scan results and history for this baseline are removed${b.deploy_profile ? ', and its configuration profile is removed from Macs' : ''}.`}
         onClone={() => navigate('/compliance/new', { state: { clone: { ...b, id: '', name: `Copy of ${b.name}`, enabled: false } } })}
         historyId={id}
+        extras={
+          <>
+            <a
+              href={`/api/v1/compliance/baselines/${id}/export.csv`}
+              download
+              className="inline-flex h-[34px] items-center gap-2 rounded-md px-3.5 text-[13px] font-medium text-ink-muted hover:bg-line/40 hover:text-ink focus-ring"
+            >
+              <Download className="size-4" aria-hidden="true" />
+              Export CSV
+            </a>
+            {isAdmin && (
+              <Button variant="ghost" icon={<Wrench />} onClick={() => setConfirmRemediate(true)} disabled={!b.enabled}>
+                Scan &amp; remediate
+              </Button>
+            )}
+          </>
+        }
       />
     </>
   )

@@ -17,11 +17,13 @@ import { LoadingBlock, Spinner } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/Toast'
 import { ScopeEditor, ScopeSummary } from '../../components/pickers/ScopeEditor'
 import { formatLocalDeadline, SupervisionCallout } from '../../components/updates/updateState'
-import { ErrorList } from './SoftwareUpdatesPage'
+import { ErrorList, PlanKindBadge } from './SoftwareUpdatesPage'
 import { relativeTime, shortDate } from '../../lib/format'
 import { cn } from '../../lib/cn'
 import { useCloneSource, useEditMode } from '../../components/editor/useEditMode'
 import { ObjectBar } from '../../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../../components/templates/DetailsLayout'
+import { RelativeTime } from '../../components/ui/RelativeTime'
 
 type Tri = '' | 'true' | 'false'
 type Act = '' | UpdateAction
@@ -232,10 +234,26 @@ export function UpdatePlanEditorPage() {
   return (
     <>
       <PageHeader
-        crumbs={[{ label: 'Software Updates', to: '/updates/plans' }, { label: isNew ? 'New plan' : plan.data?.name ?? '' }]}
+        crumbs={[{ label: 'Software updates', to: '/updates/plans' }, { label: isNew ? 'New plan' : plan.data?.name ?? '' }]}
         title={isNew ? 'New update plan' : plan.data?.name ?? 'Update plan'}
         description="Delivered to Macs as Declarative Device Management declarations."
       />
+      <DetailsLayout
+        aside={
+          !isNew && (
+            <SummaryCard
+              rows={[
+                { label: 'Status', value: <Badge tone={f.enabled ? 'good' : 'neutral'} dot>{f.enabled ? 'Enabled' : 'Disabled'}</Badge> },
+                { label: 'Kind', value: <PlanKindBadge kind={f.kind} /> },
+                { label: 'Target', value: f.kind === 'enforcement' && f.target_os_version && <span className="tabular-nums">macOS {f.target_os_version}{f.target_build_version && ` (${f.target_build_version})`}</span> },
+                { label: 'Deadline', value: f.kind === 'enforcement' && f.date && f.time && formatLocalDeadline(`${f.date}T${f.time}:00`) },
+                { label: 'Scope', value: <ScopeSummary scope={f.scope} /> },
+                { label: 'Last changed', value: plan.data?.updated_at ? <RelativeTime value={plan.data.updated_at} /> : '' },
+              ]}
+            />
+          )
+        }
+      >
       <div className="flex flex-col gap-6">
         {errors && (
           <Alert tone="critical" title="The plan couldn't be saved">
@@ -292,6 +310,7 @@ export function UpdatePlanEditorPage() {
 
         <SupervisionCallout />
       </div>
+      </DetailsLayout>
       <ObjectBar
         ed={ed}
         isNew={isNew}

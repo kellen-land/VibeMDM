@@ -28,14 +28,16 @@ import { useToast } from '../../components/ui/Toast'
 import { CodeEditor } from '../../components/CodeEditor'
 import { PayloadEditor, VariablesHint, type PayloadSelection } from '../../components/profiles/PayloadEditor'
 import { pruneValues } from '../../components/schema/schema'
-import { MobileScopeEditor } from '../../components/pickers/MobileScopeEditor'
+import { MobileScopeEditor, MobileScopeSummary } from '../../components/pickers/MobileScopeEditor'
 import { useCloneSource, useEditMode } from '../../components/editor/useEditMode'
 import { ObjectBar } from '../../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../../components/templates/DetailsLayout'
+import { DeploymentCounts } from '../ProfilesPage'
 import { clonePayloads, type ProfileClone } from '../profiles/PayloadProfileEditorPage'
 
 type Tab = 'options' | 'scope' | 'deployments'
 
-const crumbs = [{ label: 'Mobile Devices', to: '/mobile-devices' }, { label: 'Configuration Profiles', to: '/mobile-profiles' }]
+const crumbs = [{ label: 'Mobile Devices', to: '/mobile-devices' }, { label: 'Configuration profiles', to: '/mobile-profiles' }]
 
 export function MobileProfileEditorPage() {
   const { id } = useParams()
@@ -140,6 +142,7 @@ function MobileProfileEditor() {
   if (!isNew && profile.isPending) return <LoadingBlock />
   if (!isNew && (profile.error || !profile.data)) return <Alert tone="critical">{profile.error ? errorMessage(profile.error) : 'Profile not found'}</Alert>
 
+  const p = profile.data
   const title = isNew ? (uploaded ? 'Upload a profile' : 'New mobile profile') : profile.data!.name
 
   return (
@@ -147,7 +150,6 @@ function MobileProfileEditor() {
       <PageHeader
         crumbs={[...crumbs, { label: title }]}
         title={title}
-        meta={!isNew && <span className="font-mono text-xs text-ink-faint">{profile.data!.identifier}</span>}
       />
       <Tabs
         className="mb-5"
@@ -167,23 +169,38 @@ function MobileProfileEditor() {
           readOnly={ro}
           preview={{ path: '/api/v1/mobile-device-profiles/preview', body: { name, description } }}
           general={
-            <Card>
-              <CardHeader title="General" />
-              <CardBody className="flex flex-col gap-4">
-                <FormGrid cols={2}>
-                  <Field label="Name" required={!uploaded} hint={uploaded ? 'Defaults to the profile’s PayloadDisplayName.' : undefined}>
-                    <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} autoFocus={isNew} />
-                  </Field>
-                  <Field label="Category">
-                    <Input value={category} onChange={(e) => setCategory(e.target.value)} disabled={ro} placeholder="e.g. Network" />
-                  </Field>
-                  <Field label="Description" className="md:col-span-2" hint="Shown to the user in Settings → General → VPN & Device Management.">
-                    <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} disabled={ro} />
-                  </Field>
-                </FormGrid>
-                {!uploaded && <VariablesHint />}
-              </CardBody>
-            </Card>
+            <DetailsLayout breakpoint="2xl"
+              aside={
+                p && (
+                  <SummaryCard
+                    rows={[
+                      { label: 'Identifier', value: <span className="font-mono text-xs break-all">{p.identifier}</span> },
+                      { label: 'Scope', value: <MobileScopeSummary scope={p.scope} /> },
+                      { label: 'Deployment', value: <DeploymentCounts status={p.status} /> },
+                      { label: 'Last changed', value: p.updated_at ? <RelativeTime value={p.updated_at} /> : '' },
+                    ]}
+                  />
+                )
+              }
+            >
+              <Card>
+                <CardHeader title="General" />
+                <CardBody className="flex flex-col gap-4">
+                  <FormGrid cols={2}>
+                    <Field label="Name" required={!uploaded} hint={uploaded ? 'Defaults to the profile’s PayloadDisplayName.' : undefined}>
+                      <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} autoFocus={isNew} />
+                    </Field>
+                    <Field label="Category">
+                      <Input value={category} onChange={(e) => setCategory(e.target.value)} disabled={ro} placeholder="e.g. Network" />
+                    </Field>
+                    <Field label="Description" className="md:col-span-2" hint="Shown to the user in Settings → General → VPN & Device Management.">
+                      <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} disabled={ro} />
+                    </Field>
+                  </FormGrid>
+                  {!uploaded && <VariablesHint />}
+                </CardBody>
+              </Card>
+            </DetailsLayout>
           }
           xml={
             uploaded ? (

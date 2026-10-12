@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Pencil, Save, X } from 'lucide-react'
+import { Pencil, X } from 'lucide-react'
 import type { ComputerApp, ComputerDetail, ComputerEdit, ComputerProfile, EAValue, LocalUser, ProfileDeployment } from '../../api/types'
 import { api, errorMessage } from '../../api/client'
 import { qk, useBuildings, useDepartments, useExtensionAttributes, useInvalidate } from '../../api/queries'
@@ -19,6 +19,7 @@ import { FileVaultPanel } from './FileVaultPanel'
 import { LapsPanel } from './LapsPanel'
 import { absoluteTime, dash, formatDuration, formatMB } from '../../lib/format'
 import { useEditMode } from '../../components/editor/useEditMode'
+import { useCelebrate } from '../../components/editor/SaveFeedback'
 import { shortcutHint } from '../../lib/shortcuts'
 
 const editableFields: { key: keyof ComputerEdit; label: string; textarea?: boolean; list?: 'building' | 'department' }[] = [
@@ -40,6 +41,7 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
   const { isAdmin } = useAuth()
   const toast = useToast()
   const invalidate = useInvalidate()
+  const celebrate = useCelebrate()
   const [form, setForm] = useState<ComputerEdit>({})
   const [saving, setSaving] = useState(false)
   // User and location is edited as one category, as in Jamf Pro: Edit, then Cancel or Save.
@@ -71,6 +73,7 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
         await api.patch(`/api/v1/computers/${c.id}`, patch)
         await invalidate(qk.computer(c.id), ['computers'])
         toast.success('Computer updated')
+        celebrate()
       }
       ed.finishEdit()
     } catch (e) {
@@ -156,7 +159,7 @@ export function GeneralTab({ c }: { c: ComputerDetail }) {
           <Button icon={<X />} onClick={ed.cancelEdit} data-shortcut="cancel" title={shortcutHint('cancel', 'Cancel')}>
             Cancel
           </Button>
-          <Button variant="primary" icon={<Save />} loading={saving} onClick={save} data-shortcut="save" title={shortcutHint('save', 'Save')}>
+          <Button variant="primary" loading={saving} onClick={save} data-shortcut="save" title={shortcutHint('save', 'Save')}>
             Save
           </Button>
         </CardFooter>
@@ -362,6 +365,7 @@ export function EATab({ c }: { c: ComputerDetail }) {
   const eas = useExtensionAttributes()
   const toast = useToast()
   const invalidate = useInvalidate()
+  const celebrate = useCelebrate()
   const byId = useMemo(() => new Map((eas.data?.items ?? []).map((e) => [e.id, e])), [eas.data])
   const [vals, setVals] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -395,6 +399,7 @@ export function EATab({ c }: { c: ComputerDetail }) {
       if (changed.length > 0) {
         await invalidate(qk.computer(c.id))
         toast.success(changed.length === 1 ? 'Value saved' : 'Values saved')
+        celebrate()
       }
       ed.finishEdit()
     } catch (e) {
@@ -471,7 +476,7 @@ export function EATab({ c }: { c: ComputerDetail }) {
           <Button icon={<X />} onClick={ed.cancelEdit} data-shortcut="cancel" title={shortcutHint('cancel', 'Cancel')}>
             Cancel
           </Button>
-          <Button variant="primary" icon={<Save />} loading={saving} onClick={save} data-shortcut="save" title={shortcutHint('save', 'Save')}>
+          <Button variant="primary" loading={saving} onClick={save} data-shortcut="save" title={shortcutHint('save', 'Save')}>
             Save
           </Button>
         </CardFooter>

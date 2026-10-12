@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, Clock, Laptop, Radio, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, Clock, Laptop, Radio } from 'lucide-react'
 import { useDashboard } from '../api/queries'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../components/ui/Card'
@@ -16,44 +16,30 @@ import { compactNumber, titleCase } from '../lib/format'
 import { errorMessage } from '../api/client'
 import type { AgentTask, Computer, PolicyLog } from '../api/types'
 import { useNavigate } from 'react-router-dom'
-import { cn } from '../lib/cn'
+import { MetricsCard, CalloutCard } from '../components/templates/Cards'
 import { HealthCard } from './health/HealthPage'
-
-export function StatTile({ label, value, icon: Icon, to, tone }: { label: string; value: number; icon: LucideIcon; to?: string; tone?: 'warn' | 'bad' }) {
-  const alert = (tone === 'bad' || tone === 'warn') && value > 0
-  const body = (
-    <Card className={cn('group relative h-full overflow-hidden px-4 pt-3.5 pb-4 transition-colors', to && 'hover:border-line-strong')}>
-      <div className="flex items-start justify-between gap-2">
-        <p className="micro-label">{label}</p>
-        <Icon className={cn('size-4 shrink-0', tone === 'bad' && value > 0 ? 'text-critical' : tone === 'warn' && value > 0 ? 'text-warning' : 'text-ink-faint group-hover:text-accent-400')} aria-hidden="true" />
-      </div>
-      <p className="mt-2 text-[30px] font-semibold tracking-tight text-ink leading-9 tabular-nums" title={value.toLocaleString()}>
-        {compactNumber(value)}
-      </p>
-      <span
-        className={cn(
-          'absolute inset-x-0 bottom-0 h-[2px] transition-all',
-          alert ? (tone === 'bad' ? 'bg-critical/70' : 'bg-warning/70') : 'bg-accent-500/0 group-hover:bg-accent-500/70',
-          to && !alert && 'group-hover:bg-accent-500/70',
-        )}
-        aria-hidden="true"
-      />
-    </Card>
-  )
-  return to ? (
-    <Link to={to} className="block focus-ring rounded-xl">
-      {body}
-    </Link>
-  ) : (
-    body
-  )
-}
 
 export function DashboardPage() {
   const dash = useDashboard()
   const navigate = useNavigate()
   const d = dash.data
   const [recent, setRecent] = useState<'checkins' | 'policies' | 'tasks'>('checkins')
+  // A fleet of only iPhones and iPads never enrolls a Mac: let the setup callout be dismissed.
+  const [enrollHidden, setEnrollHidden] = useState(() => {
+    try {
+      return localStorage.getItem('vibemdm.dashboard.enrollCalloutHidden') === '1'
+    } catch {
+      return false
+    }
+  })
+  const hideEnroll = () => {
+    setEnrollHidden(true)
+    try {
+      localStorage.setItem('vibemdm.dashboard.enrollCalloutHidden', '1')
+    } catch {
+      /* private mode: hidden for this visit only */
+    }
+  }
 
   return (
     <>
@@ -62,30 +48,38 @@ export function DashboardPage() {
       {dash.error && <Alert tone="critical">{errorMessage(dash.error)}</Alert>}
       {d && (
         <div className="flex flex-col gap-6">
+          {d.computers === 0 && !d.mobile_devices && !enrollHidden && (
+            <CalloutCard title="Enroll your first Mac" icon={<Laptop />} action="Go to enrollment" actionTo="/enrollment" onDismiss={hideEnroll}>
+              Computers show up here once they enroll with MDM or install the agent.
+            </CalloutCard>
+          )}
           <HealthCard />
           <div>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <StatTile label="Computers" value={d.computers} icon={Laptop} to="/computers" />
-              <StatTile label="Checked in (24h)" value={d.checked_in_24h} icon={Radio} />
-              <StatTile label="Not seen in 30 days" value={d.not_seen_30d} icon={Clock} tone="warn" />
-              <StatTile label="Failed policies (7d)" value={d.failed_policies_7d} icon={AlertTriangle} to="/activity/policy-logs" tone="bad" />
+              <MetricsCard label="Computers" value={<Figure n={d.computers} />} icon={<Laptop />} to="/computers" note={`${d.mdm_enrolled} with MDM · ${d.agent_enrolled} with the agent`} />
+              <MetricsCard label="Checked in (24h)" value={<Figure n={d.checked_in_24h} />} icon={<Radio />} note={`${d.agents_online ?? 0} online now`} />
+              <MetricsCard label="Not seen in 30 days" value={<Figure n={d.not_seen_30d} />} icon={<Clock />} tone={d.not_seen_30d > 0 ? 'warning' : undefined} />
+              <MetricsCard
+                label="Failed policies (7d)"
+                value={<Figure n={d.failed_policies_7d} />}
+                icon={<AlertTriangle />}
+                to="/activity/policy-logs"
+                tone={d.failed_policies_7d > 0 ? 'critical' : undefined}
+                note={`${d.completed_policies_7d} completed`}
+              />
             </div>
-            <p className="mt-3 text-xs text-ink-muted">
-              {d.mdm_enrolled} with MDM · {d.agent_enrolled} with the agent · {d.agents_online ?? 0} online now
-              {d.pending_commands + d.pending_tasks > 0 && (
-                <>
-                  {' · '}
-                  <Link to="/activity/commands" className="hover:text-ink hover:underline">
-                    {d.pending_commands} MDM {d.pending_commands === 1 ? 'command' : 'commands'}
-                  </Link>{' '}
-                  and{' '}
-                  <Link to="/activity/tasks" className="hover:text-ink hover:underline">
-                    {d.pending_tasks} agent {d.pending_tasks === 1 ? 'task' : 'tasks'}
-                  </Link>{' '}
-                  waiting
-                </>
-              )}
-            </p>
+            {d.pending_commands + d.pending_tasks > 0 && (
+              <p className="mt-3 text-xs text-ink-muted">
+                <Link to="/activity/commands" className="hover:text-ink hover:underline">
+                  {d.pending_commands} MDM {d.pending_commands === 1 ? 'command' : 'commands'}
+                </Link>{' '}
+                and{' '}
+                <Link to="/activity/tasks" className="hover:text-ink hover:underline">
+                  {d.pending_tasks} agent {d.pending_tasks === 1 ? 'task' : 'tasks'}
+                </Link>{' '}
+                waiting
+              </p>
+            )}
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
@@ -195,6 +189,11 @@ export function DashboardPage() {
       )}
     </>
   )
+}
+
+/** A headline figure, compact (1.2k) with the exact number on hover. */
+function Figure({ n }: { n: number }) {
+  return <span title={n.toLocaleString()}>{compactNumber(n)}</span>
 }
 
 export function latest(a: string | null, b: string | null): string | null {

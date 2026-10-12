@@ -1,12 +1,17 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Copy, History, Pencil, Save, Trash2 } from 'lucide-react'
+import { Copy, History, Lock, Pencil, Save, Trash2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { shortcutHint } from '../../lib/shortcuts'
 import { useAuth } from '../../auth/AuthContext'
 import type { EditMode } from './useEditMode'
 import { HistoryDialog } from './HistoryDialog'
+import { DrawnCheck, useCelebrate } from './SaveFeedback'
+import { cn } from '../../lib/cn'
+
+/** Fired after a successful save; the bar on the page (possibly a new one, after creating) plays the saved animation. */
+const SAVED_EVENT = 'vibemdm:saved'
 
 export interface ObjectBarProps {
   ed: EditMode
@@ -55,10 +60,33 @@ export function ObjectBar({ ed, isNew, listPath, noun, name, saving, onSave, onD
   const [deleting, setDeleting] = useState(false)
   const [discard, setDiscard] = useState(false)
   const [history, setHistory] = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
+  const celebrate = useCelebrate()
+
+  // "Saved · locked in": green check on the bar and a pulse over the page's cards. Listening
+  // to an event lets the bar of a just-created object (a new page) play it too.
+  useEffect(() => {
+    let t: number | undefined
+    const on = () => {
+      setJustSaved(true)
+      celebrate()
+      window.clearTimeout(t)
+      t = window.setTimeout(() => setJustSaved(false), 1600)
+    }
+    window.addEventListener(SAVED_EVENT, on)
+    return () => {
+      window.removeEventListener(SAVED_EVENT, on)
+      window.clearTimeout(t)
+    }
+  }, [celebrate])
 
   const save = async () => {
     const ok = await ed.allowNavigation(onSave)
-    if (ok !== false) ed.finishEdit()
+    if (ok !== false) {
+      ed.finishEdit()
+      // After the page (or the new object's page) has rendered in view mode.
+      window.setTimeout(() => window.dispatchEvent(new Event(SAVED_EVENT)), 30)
+    }
   }
   const cancel = () => {
     if (ed.dirty) return setDiscard(true)
@@ -79,7 +107,20 @@ export function ObjectBar({ ed, isNew, listPath, noun, name, saving, onSave, onD
   }
 
   let content: ReactNode
-  if (confirmDelete) {
+  if (justSaved && !ed.editing) {
+    content = (
+      <>
+        <span className="animate-lock-fade mr-auto inline-flex items-center gap-1.5 text-xs font-medium text-good">
+          <Lock className="size-3.5" aria-hidden="true" />
+          {name ? `${name} saved` : `Saved`}
+        </span>
+        <span role="status" className="animate-saved-pop inline-flex h-[34px] items-center gap-2 rounded-md bg-good px-3.5 text-[13px] font-semibold text-white">
+          <DrawnCheck className="size-4" />
+          Saved
+        </span>
+      </>
+    )
+  } else if (confirmDelete) {
     content = (
       <>
         <p className="mr-auto min-w-0 text-sm text-ink">
@@ -96,7 +137,12 @@ export function ObjectBar({ ed, isNew, listPath, noun, name, saving, onSave, onD
   } else if (ed.editing) {
     content = (
       <>
-        {ed.dirty && <span className="mr-auto text-xs text-ink-muted">Unsaved changes</span>}
+        {ed.dirty && (
+          <span className="mr-auto inline-flex items-center gap-2 text-xs font-medium text-ink">
+            <span className="animate-dirty-dot size-2 rounded-full bg-accent-500" aria-hidden="true" />
+            Unsaved changes
+          </span>
+        )}
         <Button onClick={cancel} data-shortcut="cancel" title={shortcutHint('cancel', 'Cancel')}>
           Cancel
         </Button>
@@ -143,7 +189,13 @@ export function ObjectBar({ ed, isNew, listPath, noun, name, saving, onSave, onD
   return (
     <>
       {!empty && (
-        <div className="sticky bottom-3 z-20 mt-8 rounded-xl border border-line bg-surface/95 px-4 py-2.5 shadow-lg backdrop-blur">
+        <div
+          className={cn(
+            'sticky bottom-3 z-20 mt-8 overflow-hidden rounded-xl border bg-surface/95 px-4 py-2.5 shadow-lg backdrop-blur transition-colors duration-300',
+            justSaved && !ed.editing ? 'border-good/50' : ed.dirty ? 'border-accent-500/60' : 'border-line',
+          )}
+        >
+          {justSaved && !ed.editing && <span aria-hidden="true" className="animate-bar-sweep absolute inset-x-0 top-0 h-0.5 bg-good" />}
           <div className="flex flex-wrap items-center justify-end gap-2">{content}</div>
         </div>
       )}

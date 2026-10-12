@@ -7,7 +7,7 @@ current task list, then `README.md`, `docs/architecture.md` and `docs/manual/`.
 
 - Build everything: `make web && make build && make sim && make agent` (UI is embedded: rebuild Go after `make web`).
 - Gates before committing: `gofmt -l internal cmd` (empty), `go vet ./...`, `go test ./...`,
-  `cd web && npm run typecheck && npm run build`.
+  `cd web && npm run typecheck && npm run check:ui && npm run build`.
 - Local run needs PostgreSQL (`make dev-db`) and `VIBEMDM_*` env vars (see `HANDOFF.md`, `docs/manual/02-installation.md`).
 - Test without a Mac: `bin/vibemdm-sim` (`-no-mdm` for agent-only Macs).
 
@@ -28,3 +28,4 @@ All SQL lives in `internal/store`. Admin routes are registered in `internal/api/
 - Keep Go and TypeScript API types in sync (`internal/model/model.go` ↔ `web/src/api/types.ts`).
 - UI must stay calm and simple (owner is ADHD-sensitive to clutter): group features under nested menus/tabs like Jamf
   rather than adding top-level items, one primary action per screen, collapse advanced options.
+  Follow `docs/ui-guidelines.md` (Index/Details/Settings templates, ObjectBar, one Save per object, sentence case).

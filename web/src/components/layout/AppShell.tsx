@@ -45,6 +45,7 @@ import { Dropdown } from '../ui/Dropdown'
 import { ShortcutHandler, ShortcutHelp } from '../editor/Shortcuts'
 import { pageKey } from '../../lib/pageKey'
 import { EditGuardProvider } from '../editor/EditGuard'
+import { SaveFeedbackProvider } from '../editor/SaveFeedback'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
 import { useToast } from '../ui/Toast'
 import { errorMessage } from '../../api/client'
@@ -70,17 +71,17 @@ const navGroups: { heading: string; items: NavItem[] }[] = [
     heading: 'Computers',
     items: [
       { to: '/computers', label: 'Computers', icon: Laptop },
-      { to: '/groups', label: 'Computer Groups', icon: Users },
+      { to: '/groups', label: 'Computer groups', icon: Users },
       { to: '/searches', label: 'Searches', icon: Search },
     ],
   },
   {
     heading: 'Mobile Devices',
     items: [
-      { to: '/mobile-devices', label: 'Mobile Devices', icon: Smartphone },
-      { to: '/mobile-groups', label: 'Mobile Device Groups', icon: Users },
+      { to: '/mobile-devices', label: 'Mobile devices', icon: Smartphone },
+      { to: '/mobile-groups', label: 'Mobile device groups', icon: Users },
       { to: '/mobile-searches', label: 'Searches', icon: Search },
-      { to: '/mobile-profiles', label: 'Configuration Profiles', icon: ShieldCheck },
+      { to: '/mobile-profiles', label: 'Configuration profiles', icon: ShieldCheck },
       { to: '/mobile-enrollment', label: 'Enrollment', icon: QrCode },
     ],
   },
@@ -89,21 +90,21 @@ const navGroups: { heading: string; items: NavItem[] }[] = [
     items: [
       { to: '/policies', label: 'Policies', icon: ListChecks },
       { to: '/scripts', label: 'Scripts', icon: Terminal },
-      { to: '/profiles', label: 'Configuration Profiles', icon: ShieldCheck },
-      { to: '/updates', label: 'Software Updates', icon: RefreshCcwDot },
+      { to: '/profiles', label: 'Configuration profiles', icon: ShieldCheck },
+      { to: '/updates', label: 'Software updates', icon: RefreshCcwDot },
       { to: '/packages', label: 'Packages', icon: Package },
       { to: '/apps', label: 'Mac Apps', icon: AppWindow },
-      { to: '/extension-attributes', label: 'Extension Attributes', icon: Puzzle },
+      { to: '/extension-attributes', label: 'Extension attributes', icon: Puzzle },
     ],
   },
   {
     heading: 'Security',
     items: [
       { to: '/filevault', label: 'FileVault', icon: LockKeyhole },
-      { to: '/laps', label: 'Local Admin Passwords', icon: UserLock },
+      { to: '/laps', label: 'Local admin passwords', icon: UserLock },
       { to: '/compliance', label: 'Compliance', icon: ShieldHalf },
       { to: '/identity', label: 'Identity', icon: Fingerprint },
-      { to: '/restricted-software', label: 'Restricted Software', icon: Ban },
+      { to: '/restricted-software', label: 'Restricted software', icon: Ban },
     ],
   },
   {
@@ -311,7 +312,9 @@ export function AppShell() {
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-7 max-w-[1440px] w-full mx-auto">
           {/* Keyed by page: every object page (including /x/new after /x/1, or a Clone) starts fresh. */}
           <EditGuardProvider>
-            <Outlet key={pageKey(loc.pathname)} />
+            <SaveFeedbackProvider>
+              <Outlet key={pageKey(loc.pathname)} />
+            </SaveFeedbackProvider>
           </EditGuardProvider>
         </main>
       </div>

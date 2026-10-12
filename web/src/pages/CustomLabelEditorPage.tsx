@@ -16,6 +16,8 @@ import { InstallomatorCommandPreview, InstallomatorOptionsEditor } from '../comp
 import { InstallomatorFooter } from './AppsPage'
 import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
 import { ObjectBar } from '../components/editor/ObjectBar'
+import { SummaryCard } from '../components/templates/DetailsLayout'
+import { RelativeTime } from '../components/ui/RelativeTime'
 
 type Form = Omit<CustomLabel, 'id' | 'created_at' | 'updated_at' | 'blocking_processes'> & { blocking_processes: string[] }
 
@@ -116,9 +118,8 @@ export function CustomLabelEditorPage() {
   return (
     <>
       <PageHeader
-        crumbs={[{ label: 'Mac Apps', to: '/apps' }, { label: 'Custom Labels', to: '/apps/custom-labels' }, { label: isNew ? 'New' : label.data?.name ?? '' }]}
+        crumbs={[{ label: 'Mac apps', to: '/apps' }, { label: 'Custom labels', to: '/apps/custom-labels' }, { label: isNew ? 'New' : label.data?.name ?? '' }]}
         title={isNew ? 'New custom label' : label.data?.name}
-        meta={!isNew && label.data ? <span className="font-mono text-xs text-ink-muted">custom:{label.data.key}</span> : undefined}
       />
       {saveError && (
         <Alert tone="critical" title="The label could not be saved" className="mb-5">
@@ -174,11 +175,21 @@ export function CustomLabelEditorPage() {
           </CardBody>
         </Card>
         <div className="flex flex-col gap-6 xl:sticky xl:top-6 xl:self-start">
+          {!isNew && label.data && (
+            <SummaryCard
+              rows={[
+                { label: 'Reference', value: <span className="font-mono">custom:{label.data.key}</span> },
+                { label: 'Type', value: label.data.type && <span className="font-mono">{label.data.type}</span> },
+                { label: 'Team ID', value: label.data.expected_team_id && <span className="font-mono">{label.data.expected_team_id}</span> },
+                { label: 'Last changed', value: label.data.updated_at ? <RelativeTime value={label.data.updated_at} /> : '' },
+              ]}
+            />
+          )}
           <Card>
             <CardHeader title="Command preview" description="Exactly what the agent runs, updated as you type." />
             <CardBody className="flex flex-col gap-4">
               <InstallomatorCommandPreview body={hasInput ? { custom: f, options: previewOpts } : null} emptyHint="Fill in the definition to see the command." />
-              <FormSection title="Preview with options" description="Options are set where the label is used (Mac App or policy step); these only affect the preview.">
+              <FormSection title="Preview with options" description="Options are set where the label is used (Mac app or policy step); these only affect the preview.">
                 <InstallomatorOptionsEditor value={previewOpts} onChange={setPreviewOpts} />
               </FormSection>
             </CardBody>
@@ -195,7 +206,7 @@ export function CustomLabelEditorPage() {
         saving={saving}
         onSave={save}
         onDelete={doDelete}
-        deleteDescription="Labels still used by a Mac App or a policy can't be deleted; remove them there first."
+        deleteDescription="Labels still used by a Mac app or a policy can't be deleted; remove them there first."
         onClone={() => navigate('/apps/custom-labels/new', { state: { clone: { ...f, key: `${f.key}-copy` } } })}
         historyId={id}
       />

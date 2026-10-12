@@ -13,13 +13,15 @@ import { Tabs } from '../../components/ui/Tabs'
 import { Alert } from '../../components/ui/Alert'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { useToast } from '../../components/ui/Toast'
-import { ScopeEditor } from '../../components/pickers/ScopeEditor'
+import { ScopeEditor, ScopeSummary } from '../../components/pickers/ScopeEditor'
 import { PayloadEditor, VariablesHint, type PayloadSelection } from '../../components/profiles/PayloadEditor'
 import { pruneValues } from '../../components/schema/schema'
 import { DeploymentCounts } from '../ProfilesPage'
 import { DeploymentsTab } from '../ProfileEditorPage'
 import { useCloneSource, useEditMode } from '../../components/editor/useEditMode'
 import { ObjectBar } from '../../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../../components/templates/DetailsLayout'
+import { RelativeTime } from '../../components/ui/RelativeTime'
 
 type Tab = 'options' | 'scope' | 'deployments'
 
@@ -145,17 +147,8 @@ export function PayloadProfileEditorPage() {
   return (
     <>
       <PageHeader
-        crumbs={[{ label: 'Configuration Profiles', to: '/profiles' }, { label: isNew ? 'New profile' : p?.name ?? '' }]}
+        crumbs={[{ label: 'Configuration profiles', to: '/profiles' }, { label: isNew ? 'New profile' : p?.name ?? '' }]}
         title={isNew ? 'New configuration profile' : p?.name}
-        meta={
-          p && (
-            <>
-              <Badge>{p.level === 'user' ? 'User level' : 'Computer level'}</Badge>
-              <span className="font-mono text-xs text-ink-muted">{p.identifier}</span>
-              <DeploymentCounts status={p.status} />
-            </>
-          )
-        }
       />
       <Tabs className="mb-5" value={tab} onChange={setTab} items={[{ key: 'options', label: 'Options' }, { key: 'scope', label: 'Scope' }, ...(isNew ? [] : [{ key: 'deployments' as Tab, label: 'Deployments' }])]} />
 
@@ -171,34 +164,50 @@ export function PayloadProfileEditorPage() {
           level={level}
           preview={{ path: '/api/v1/profiles/preview', body: { name, description, level } }}
           general={
-            <Card>
-              <CardHeader title="General" />
-              <CardBody className="flex flex-col gap-4">
-                <FormGrid cols={2}>
-                  <Field label="Name" required>
-                    <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} autoFocus={isNew} />
-                  </Field>
-                  <Field label="Category">
-                    <Input value={category} onChange={(e) => setCategory(e.target.value)} disabled={ro} placeholder="e.g. Security" />
-                  </Field>
-                  <Field label="Level" hint={level === 'user' ? 'Installed for the user who logs in (needs a directory or MDM-enabled account).' : 'Applies to the whole computer.'}>
-                    <Select
-                      value={level}
-                      onChange={(e) => setLevel(e.target.value as 'device' | 'user')}
-                      disabled={ro}
-                      options={[
-                        { value: 'device', label: 'Computer level' },
-                        { value: 'user', label: 'User level' },
-                      ]}
-                    />
-                  </Field>
-                  <Field label="Description" className="md:col-span-2" hint="Shown in System Settings → Device Management.">
-                    <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} disabled={ro} />
-                  </Field>
-                </FormGrid>
-                <VariablesHint />
-              </CardBody>
-            </Card>
+            <DetailsLayout breakpoint="2xl"
+              aside={
+                p && (
+                  <SummaryCard
+                    rows={[
+                      { label: 'Level', value: <Badge>{p.level === 'user' ? 'User level' : 'Computer level'}</Badge> },
+                      { label: 'Identifier', value: <span className="font-mono text-xs break-all">{p.identifier}</span> },
+                      { label: 'Scope', value: <ScopeSummary scope={p.scope} /> },
+                      { label: 'Deployment', value: <DeploymentCounts status={p.status} /> },
+                      { label: 'Last changed', value: p.updated_at ? <RelativeTime value={p.updated_at} /> : '' },
+                    ]}
+                  />
+                )
+              }
+            >
+              <Card>
+                <CardHeader title="General" />
+                <CardBody className="flex flex-col gap-4">
+                  <FormGrid cols={2}>
+                    <Field label="Name" required>
+                      <Input value={name} onChange={(e) => setName(e.target.value)} disabled={ro} autoFocus={isNew} />
+                    </Field>
+                    <Field label="Category">
+                      <Input value={category} onChange={(e) => setCategory(e.target.value)} disabled={ro} placeholder="e.g. Security" />
+                    </Field>
+                    <Field label="Level" hint={level === 'user' ? 'Installed for the user who logs in (needs a directory or MDM-enabled account).' : 'Applies to the whole computer.'}>
+                      <Select
+                        value={level}
+                        onChange={(e) => setLevel(e.target.value as 'device' | 'user')}
+                        disabled={ro}
+                        options={[
+                          { value: 'device', label: 'Computer level' },
+                          { value: 'user', label: 'User level' },
+                        ]}
+                      />
+                    </Field>
+                    <Field label="Description" className="md:col-span-2" hint="Shown in System Settings → Device Management.">
+                      <Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} disabled={ro} />
+                    </Field>
+                  </FormGrid>
+                  <VariablesHint />
+                </CardBody>
+              </Card>
+            </DetailsLayout>
           }
         />
       )}

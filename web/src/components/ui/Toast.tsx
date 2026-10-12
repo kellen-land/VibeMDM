@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { CheckCircle2, AlertCircle, Info, X, AlertTriangle } from 'lucide-react'
+import { AlertCircle, Info, X, AlertTriangle } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { DrawnCheck } from '../editor/SaveFeedback'
 
 export type ToastKind = 'success' | 'error' | 'info' | 'warning'
 
@@ -54,13 +55,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
       {createPortal(
-        <div className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-full max-w-sm flex-col gap-2">
+        <div className="pointer-events-none fixed right-4 top-4 z-[60] flex w-full max-w-sm flex-col gap-2">
           {items.map((t) => (
             <div
               key={t.id}
               role="status"
               className={cn(
-                'pointer-events-auto animate-toast-in flex items-start gap-3 rounded-lg border bg-surface-raised px-3.5 py-3 shadow-xl ring-1 ring-black/30',
+                'pointer-events-auto animate-toast-in-top relative flex items-start gap-3 overflow-hidden rounded-lg border bg-surface-raised px-3.5 py-3 shadow-xl ring-1 ring-black/30',
                 t.kind === 'error' ? 'border-critical/35' : t.kind === 'success' ? 'border-good/35' : t.kind === 'warning' ? 'border-warning/45' : 'border-line-strong/60',
               )}
             >
@@ -73,7 +74,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   t.kind === 'info' && 'text-accent-600',
                 )}
               >
-                {t.kind === 'success' ? <CheckCircle2 /> : t.kind === 'error' ? <AlertCircle /> : t.kind === 'warning' ? <AlertTriangle /> : <Info />}
+                {t.kind === 'success' ? (
+                  <span className="flex size-5 items-center justify-center rounded-full bg-good text-white animate-saved-pop">
+                    <DrawnCheck className="!size-3.5" />
+                  </span>
+                ) : t.kind === 'error' ? <AlertCircle /> : t.kind === 'warning' ? <AlertTriangle /> : <Info />}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-ink">{t.title}</p>
@@ -82,6 +87,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <button type="button" onClick={() => remove(t.id)} className="text-ink-faint hover:text-ink [&>svg]:size-4" aria-label="Dismiss">
                 <X />
               </button>
+              {/* How long until it goes away. */}
+              <span
+                aria-hidden="true"
+                className={cn('animate-toast-timer absolute inset-x-0 bottom-0 h-0.5', t.kind === 'success' ? 'bg-good/70' : t.kind === 'error' ? 'bg-critical/60' : 'bg-line-strong')}
+                style={{ animationDuration: `${t.kind === 'error' ? 8000 : 4500}ms` }}
+              />
             </div>
           ))}
         </div>,

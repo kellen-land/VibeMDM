@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { CalendarClock, CheckCircle2, CircleDashed, Plus, SlidersHorizontal, Trash2 } from 'lucide-react'
+import { CalendarClock, CheckCircle2, CircleDashed, Plus, Power, PowerOff, SlidersHorizontal, Trash2 } from 'lucide-react'
 import { qk, useInvalidate, useUpdatePlans, useUpdatesOverview } from '../../api/queries'
 import { api, errorMessage } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
@@ -17,7 +17,6 @@ import { SearchInput } from '../../components/ui/SearchInput'
 import { Alert } from '../../components/ui/Alert'
 import { LoadingBlock } from '../../components/ui/Spinner'
 import { RelativeTime } from '../../components/ui/RelativeTime'
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { ScopeSummary } from '../../components/pickers/ScopeEditor'
 import { ComplianceBar } from '../../components/charts/ComplianceBar'
@@ -35,8 +34,13 @@ import {
 import { compactNumber } from '../../lib/format'
 import { SuperTab } from './SuperTab'
 import { cn } from '../../lib/cn'
+import { shortcutHint } from '../../lib/shortcuts'
+import { IndexPage } from '../../components/templates/IndexPage'
 
 type TabKey = 'overview' | 'plans' | 'super'
+
+const pageTitle = 'Software updates'
+const pageDescription = 'Enforce macOS versions and control update behavior with Declarative Device Management, or run the super workflow for friendlier deferrals.'
 
 export function SoftwareUpdatesPage() {
   const { tab } = useParams()
@@ -44,22 +48,8 @@ export function SoftwareUpdatesPage() {
   const { isAdmin } = useAuth()
   const active: TabKey = tab === 'plans' || tab === 'super' ? tab : 'overview'
   const plans = useUpdatePlans()
-  return (
+  const tabs = (
     <>
-      <PageHeader
-        title="Software Updates"
-        description="Enforce macOS versions and control update behavior with Declarative Device Management, or run the super workflow for friendlier deferrals."
-        actions={
-          isAdmin &&
-          active !== 'super' && (
-            <Link to="/updates/plans/new" data-shortcut="new">
-              <Button variant="primary" icon={<Plus />}>
-                New plan
-              </Button>
-            </Link>
-          )
-        }
-      />
       {active !== 'super' && <SupervisionCallout className="mb-5" />}
       <Tabs<TabKey>
         items={[
@@ -71,7 +61,28 @@ export function SoftwareUpdatesPage() {
         onChange={(k) => navigate(k === 'overview' ? '/updates' : `/updates/${k}`, { replace: true })}
         className="mb-5"
       />
-      {active === 'overview' ? <OverviewTab /> : active === 'plans' ? <PlansTab /> : <SuperTab />}
+    </>
+  )
+  // The Plans tab is a list: it uses the Index template, which brings its own header.
+  if (active === 'plans') return <PlansTab above={tabs} />
+  return (
+    <>
+      <PageHeader
+        title={pageTitle}
+        description={pageDescription}
+        actions={
+          isAdmin &&
+          active !== 'super' && (
+            <Link to="/updates/plans/new" data-shortcut="new" title={shortcutHint('new', 'New plan')}>
+              <Button variant="primary" icon={<Plus />}>
+                New plan
+              </Button>
+            </Link>
+          )
+        }
+      />
+      {tabs}
+      {active === 'overview' ? <OverviewTab /> : <SuperTab />}
     </>
   )
 }
@@ -256,20 +267,23 @@ export function PlanKindBadge({ kind }: { kind: string }) {
   )
 }
 
-function PlansTab() {
+function PlansTab({ above }: { above: ReactNode }) {
   const { isAdmin } = useAuth()
   const plans = useUpdatePlans()
-  const navigate = useNavigate()
   const toast = useToast()
   const invalidate = useInvalidate()
-  const [del, setDel] = useState<UpdatePlan | null>(null)
   const [toggling, setToggling] = useState<string | null>(null)
+  const nPlans = (n: number) => `${n} ${n === 1 ? 'plan' : 'plans'}`
 
+  const setEnabled = async (p: UpdatePlan, enabled: boolean) => {
+    await api.put(`/api/v1/updates/plans/${p.id}`, { ...p, enabled })
+    await invalidate(qk.updatePlan(p.id))
+  }
   const toggle = async (p: UpdatePlan, enabled: boolean) => {
     setToggling(p.id)
     try {
-      await api.put(`/api/v1/updates/plans/${p.id}`, { ...p, enabled })
-      await invalidate(qk.updatePlans, qk.updatesOverview, qk.updatePlan(p.id))
+      await setEnabled(p, enabled)
+      await invalidate(qk.updatePlans, qk.updatesOverview)
       toast.success(enabled ? 'Plan enabled' : 'Plan disabled', 'Affected Macs will be asked to sync within a minute.')
     } catch (e) {
       toast.error('Update failed', errorMessage(e))
@@ -278,113 +292,89 @@ function PlansTab() {
     }
   }
 
-  const doDelete = async () => {
-    if (!del) return
-    try {
-      await api.del(`/api/v1/updates/plans/${del.id}`)
-      toast.success('Plan deleted', 'Affected Macs will be asked to sync within a minute.')
-      await invalidate(qk.updatePlans, qk.updatesOverview)
-      setDel(null)
-    } catch (e) {
-      toast.error('Delete failed', errorMessage(e))
-    }
-  }
-
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-xs text-ink-muted">
-        When several plans reach the same Mac, the enforcement plan with the <strong className="text-ink">highest target version</strong> wins (ties: earliest deadline), and the{' '}
-        <strong className="text-ink">most recently updated</strong> settings plan wins.
-      </p>
-      <Card>
-        <Table<UpdatePlan>
-          rows={plans.data?.items}
-          loading={plans.isPending}
-          error={plans.error ? errorMessage(plans.error) : null}
-          rowKey={(p) => p.id}
-          onRowClick={(p) => navigate(`/updates/plans/${p.id}`)}
-          emptyTitle="No update plans yet"
-          emptyDescription="Create an enforcement plan to require a macOS version by a deadline, or a settings plan to control update behavior."
-          emptyAction={
-            isAdmin ? (
-              <Link to="/updates/plans/new" data-shortcut="new">
-                <Button variant="primary" size="sm" icon={<Plus />}>
-                  New plan
-                </Button>
-              </Link>
-            ) : undefined
-          }
-          rowClassName={(p) => (p.enabled ? undefined : 'opacity-70')}
-          columns={[
-            {
-              key: 'enabled',
-              header: 'On',
-              width: '60px',
-              render: (p) => (
-                <span onClick={(e) => e.stopPropagation()}>
-                  <Toggle size="sm" checked={p.enabled} onChange={(v) => toggle(p, v)} disabled={!isAdmin || toggling === p.id} />
+    <IndexPage<UpdatePlan>
+      title={pageTitle}
+      description={pageDescription}
+      newTo="/updates/plans/new"
+      newLabel="New plan"
+      above={
+        <>
+          {above}
+          <p className="mb-4 text-xs text-ink-muted">
+            When several plans reach the same Mac, the enforcement plan with the <strong className="text-ink">highest target version</strong> wins (ties: earliest deadline), and the{' '}
+            <strong className="text-ink">most recently updated</strong> settings plan wins.
+          </p>
+        </>
+      }
+      rows={plans.data?.items}
+      loading={plans.isPending}
+      error={plans.error}
+      rowKey={(p) => p.id}
+      rowHref={(p) => `/updates/plans/${p.id}`}
+      rowClassName={(p) => (p.enabled ? undefined : 'opacity-70')}
+      search={{ placeholder: 'Search plans…', text: (p) => `${p.name} ${p.target_os_version}` }}
+      filters={[
+        { key: 'state', label: 'Any state', options: [{ value: 'on', label: 'Enabled' }, { value: 'off', label: 'Disabled' }], match: (p, v) => p.enabled === (v === 'on') },
+        { key: 'kind', label: 'Any kind', options: [{ value: 'enforcement', label: 'Enforcement' }, { value: 'settings', label: 'Settings' }], match: (p, v) => (v === 'enforcement' ? p.kind === 'enforcement' : p.kind !== 'enforcement') },
+      ]}
+      defaultSort={{ key: 'name', dir: 'asc' }}
+      onChanged={() => invalidate(qk.updatePlans, qk.updatesOverview)}
+      bulkActions={[
+        { label: 'Enable', icon: <Power />, run: (p) => setEnabled(p, true), done: (n) => `${nPlans(n)} enabled` },
+        { label: 'Disable', icon: <PowerOff />, run: (p) => setEnabled(p, false), done: (n) => `${nPlans(n)} disabled` },
+        {
+          label: 'Delete',
+          icon: <Trash2 />,
+          destructive: true,
+          confirm: { title: (n) => `Delete ${nPlans(n)}?`, description: "The plans' declarations are removed from every Mac in scope at their next sync. Updates already installed are not affected." },
+          run: (p) => api.del(`/api/v1/updates/plans/${p.id}`),
+          done: (n) => `${nPlans(n)} deleted`,
+        },
+      ]}
+      empty={{ title: 'No plans yet', description: 'Create an enforcement plan to require a macOS version by a deadline, or a settings plan to control update behavior.' }}
+      columns={[
+        {
+          key: 'enabled',
+          header: 'On',
+          width: '60px',
+          sortValue: (p) => (p.enabled ? 0 : 1),
+          render: (p) => (
+            <span onClick={(e) => e.stopPropagation()}>
+              <Toggle size="sm" checked={p.enabled} onChange={(v) => toggle(p, v)} disabled={!isAdmin || toggling === p.id} />
+            </span>
+          ),
+        },
+        { key: 'name', header: 'Name', sortValue: (p) => p.name, render: (p) => <span className="font-medium text-ink">{p.name}</span> },
+        { key: 'kind', header: 'Kind', sortValue: (p) => p.kind, render: (p) => <PlanKindBadge kind={p.kind} /> },
+        {
+          key: 'detail',
+          header: 'Target / settings',
+          render: (p) => {
+            if (p.kind === 'enforcement')
+              return (
+                <span className="text-sm whitespace-nowrap">
+                  macOS <span className="tabular-nums text-ink">{p.target_os_version}</span>
+                  {p.target_build_version && <span className="ml-1 font-mono text-xs text-ink-muted">({p.target_build_version})</span>}
+                  <span className="text-ink-muted"> by {formatLocalDeadline(p.target_local_datetime)}</span>
                 </span>
-              ),
-            },
-            { key: 'name', header: 'Name', render: (p) => <span className="font-medium text-ink">{p.name}</span> },
-            { key: 'kind', header: 'Kind', render: (p) => <PlanKindBadge kind={p.kind} /> },
-            {
-              key: 'detail',
-              header: 'Target / settings',
-              render: (p) => {
-                if (p.kind === 'enforcement')
-                  return (
-                    <span className="text-sm whitespace-nowrap">
-                      macOS <span className="tabular-nums text-ink">{p.target_os_version}</span>
-                      {p.target_build_version && <span className="ml-1 font-mono text-xs text-ink-muted">({p.target_build_version})</span>}
-                      <span className="text-ink-muted"> by {formatLocalDeadline(p.target_local_datetime)}</span>
-                    </span>
-                  )
-                const s = settingsSummary(p.settings)
-                return s.length ? (
-                  <span className="flex flex-wrap gap-1">
-                    {s.map((x) => (
-                      <Badge key={x}>{x}</Badge>
-                    ))}
-                  </span>
-                ) : (
-                  <span className="text-xs text-ink-faint">No settings set</span>
-                )
-              },
-            },
-            { key: 'scope', header: 'Scope', render: (p) => <ScopeSummary scope={p.scope} /> },
-            { key: 'updated', header: 'Updated', render: (p) => <RelativeTime value={p.updated_at} className="text-ink-muted" /> },
-            {
-              key: 'actions',
-              header: '',
-              align: 'right',
-              render: (p) =>
-                isAdmin ? (
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    icon={<Trash2 />}
-                    aria-label="Delete plan"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setDel(p)
-                    }}
-                  />
-                ) : null,
-            },
-          ]}
-        />
-      </Card>
-      <ConfirmDialog
-        open={!!del}
-        onClose={() => setDel(null)}
-        onConfirm={doDelete}
-        destructive
-        title={`Delete "${del?.name}"?`}
-        description="The plan's declaration is removed from every Mac in scope at their next sync. Updates already installed are not affected."
-        confirmLabel="Delete plan"
-      />
-    </div>
+              )
+            const s = settingsSummary(p.settings)
+            return s.length ? (
+              <span className="flex flex-wrap gap-1">
+                {s.map((x) => (
+                  <Badge key={x}>{x}</Badge>
+                ))}
+              </span>
+            ) : (
+              <span className="text-xs text-ink-faint">No settings set</span>
+            )
+          },
+        },
+        { key: 'scope', header: 'Scope', render: (p) => <ScopeSummary scope={p.scope} /> },
+        { key: 'updated', header: 'Updated', sortValue: (p) => p.updated_at, render: (p) => <RelativeTime value={p.updated_at} className="text-ink-muted" /> },
+      ]}
+    />
   )
 }
 

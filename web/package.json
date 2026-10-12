@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:ui": "node scripts/check-ui.mjs"
   },
   "dependencies": {
     "@codemirror/language": "^6.13.1",

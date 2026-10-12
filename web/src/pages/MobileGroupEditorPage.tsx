@@ -20,6 +20,7 @@ import { RelativeTime } from '../components/ui/RelativeTime'
 import { useToast } from '../components/ui/Toast'
 import { useCloneSource, useEditMode } from '../components/editor/useEditMode'
 import { ObjectBar } from '../components/editor/ObjectBar'
+import { DetailsLayout, SummaryCard } from '../components/templates/DetailsLayout'
 import { CriteriaBuilder, describeCriteria } from '../components/pickers/CriteriaBuilder'
 import { MobileDevicePicker } from '../components/pickers/MobileDevicePicker'
 
@@ -138,24 +139,27 @@ export function MobileGroupEditorPage() {
   return (
     <>
       <PageHeader
-        crumbs={[{ label: 'Mobile Device Groups', to: '/mobile-groups' }, { label: isNew ? 'New group' : group.data?.name ?? '' }]}
+        crumbs={[{ label: 'Mobile device groups', to: '/mobile-groups' }, { label: isNew ? 'New group' : group.data?.name ?? '' }]}
         title={isNew ? 'New mobile device group' : group.data?.name}
-        meta={
-          !isNew && group.data ? (
-            <>
-              <Badge tone={group.data.is_smart ? 'accent' : 'neutral'}>{group.data.is_smart ? 'Smart group' : 'Static group'}</Badge>
-              <span className="text-xs text-ink-muted">{group.data.member_count} members</span>
-              <span className="text-xs text-ink-muted">
-                Updated <RelativeTime value={group.data.updated_at} />
-              </span>
-            </>
-          ) : undefined
-        }
       />
       {!isNew && <Tabs className="mb-5" value={tab} onChange={setTab} items={[{ key: 'settings', label: 'Settings' }, { key: 'members', label: 'Members', count: members.data?.total, shortcut: 'view' }]} />}
 
       {tab === 'settings' && (
-        <div className="flex flex-col gap-6">
+        <DetailsLayout
+          aside={
+            !isNew &&
+            group.data && (
+              <SummaryCard
+                rows={[
+                  { label: 'Type', value: <Badge tone={group.data.is_smart ? 'accent' : 'neutral'}>{group.data.is_smart ? 'Smart group' : 'Static group'}</Badge> },
+                  { label: 'Members', value: (members.data?.total ?? group.data.member_count).toLocaleString() },
+                  { label: 'Criteria', value: group.data.is_smart ? `${criteria.length} rule${criteria.length === 1 ? '' : 's'}` : '' },
+                  { label: 'Last changed', value: <RelativeTime value={group.data.updated_at} /> },
+                ]}
+              />
+            )
+          }
+        >
           <Card>
             <CardHeader title="General" />
             <CardBody>
@@ -224,7 +228,7 @@ export function MobileGroupEditorPage() {
               </CardBody>
             </Card>
           )}
-        </div>
+        </DetailsLayout>
       )}
 
       {tab === 'members' && !isNew && (
