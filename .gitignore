@@ -28,3 +28,6 @@
 /vibemdm-sim
 /.capture/
 .vibemdm-sim-tokens.json
+
+# local working notes (not published)
+/HANDOFF.md

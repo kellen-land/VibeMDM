@@ -1,14 +1,15 @@
 # VibeMDM
 
-Self-hosted Apple MDM: Go server (embeds NanoMDM) + macOS agent + React console. Start with `HANDOFF.md` for the
-current task list, then `README.md`, `docs/architecture.md` and `docs/manual/`.
+Self-hosted Apple MDM: Go server (embeds NanoMDM) + macOS agent + React console. Start with `HANDOFF.md` (local
+working notes, git-ignored; may not exist in a fresh clone) and `TODO.md` for the current task list, then `README.md`,
+`docs/architecture.md` and `docs/manual/`.
 
 ## Commands
 
 - Build everything: `make web && make build && make sim && make agent` (UI is embedded: rebuild Go after `make web`).
 - Gates before committing: `gofmt -l internal cmd` (empty), `go vet ./...`, `go test ./...`,
   `cd web && npm run typecheck && npm run check:ui && npm run build`.
-- Local run needs PostgreSQL (`make dev-db`) and `VIBEMDM_*` env vars (see `HANDOFF.md`, `docs/manual/02-installation.md`).
+- Local run needs PostgreSQL (`make dev-db`) and `VIBEMDM_*` env vars (see `docs/manual/02-installation.md`, and `HANDOFF.md` if present).
 - Test without a Mac: `bin/vibemdm-sim` (`-no-mdm` for agent-only Macs).
 
 ## Layout
