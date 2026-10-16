@@ -75,7 +75,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 )}
               >
                 {t.kind === 'success' ? (
-                  <span className="flex size-5 items-center justify-center rounded-full bg-good text-white animate-saved-pop">
+                  <span className="flex size-5 items-center justify-center rounded-full bg-good-strong text-white animate-saved-pop">
                     <DrawnCheck className="!size-3.5" />
                   </span>
                 ) : t.kind === 'error' ? <AlertCircle /> : t.kind === 'warning' ? <AlertTriangle /> : <Info />}

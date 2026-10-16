@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { FileCode } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
@@ -7,8 +7,12 @@ import { Field } from '../components/ui/Field'
 import { Input } from '../components/ui/Input'
 import { Alert } from '../components/ui/Alert'
 import { errorMessage } from '../api/client'
+import { pageTitle } from '../components/layout/RouteAnnouncer'
 
 export function LoginPage() {
+  useEffect(() => {
+    document.title = pageTitle('Sign in')
+  }, [])
   const { user, loading, login, status } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')

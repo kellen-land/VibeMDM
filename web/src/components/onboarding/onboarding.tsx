@@ -103,7 +103,7 @@ export const newStep = (type: OnboardingStepType): OnboardingStep => ({
 })
 
 export const stepTypeMeta: Record<OnboardingStepType, { label: string; icon: LucideIcon; description: string }> = {
-  app: { label: 'Install app', icon: AppWindow, description: 'Install an app from the Mac Apps catalog with Installomator.' },
+  app: { label: 'Install app', icon: AppWindow, description: 'Install an app from the Mac apps catalog with Installomator.' },
   policy: { label: 'Run policy', icon: ListChecks, description: 'Run an existing policy now, ignoring its triggers and frequency.' },
   script: { label: 'Run script', icon: Terminal, description: 'Run a script from the library as root.' },
   recon: { label: 'Update inventory', icon: RefreshCw, description: 'Submit a fresh inventory report, including the details the user entered.' },
@@ -138,7 +138,7 @@ export function validateWorkflow(w: OnboardingWorkflow): string[] {
     const n = `Step ${i + 1}`
     if (!s.title.trim()) e.push(`${n}: a title is required`)
     else if (s.title.includes(',')) e.push(`${n}: commas are not allowed in the title`)
-    if (s.type === 'app' && !s.app_id) e.push(`${n}: choose an app from the Mac Apps catalog`)
+    if (s.type === 'app' && !s.app_id) e.push(`${n}: choose an app from the Mac apps catalog`)
     if (s.type === 'policy' && !s.policy_id) e.push(`${n}: choose a policy`)
     if (s.type === 'script' && !s.script_id) e.push(`${n}: choose a script`)
     if (s.type === 'wait' && !(Number.isInteger(s.seconds) && (s.seconds ?? 0) >= 1 && (s.seconds ?? 0) <= 3600)) e.push(`${n}: wait between 1 and 3600 seconds`)

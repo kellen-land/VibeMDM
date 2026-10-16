@@ -524,7 +524,7 @@ function AppPicker({ value, onChange, disabled }: { value: string; onChange: (id
   const items = apps.data?.items ?? []
   return (
     <Select value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
-      <option value="">{apps.isPending ? 'Loading apps…' : items.length ? 'Select an app…' : 'No apps in the Mac Apps catalog'}</option>
+      <option value="">{apps.isPending ? 'Loading apps…' : items.length ? 'Select an app…' : 'No apps in the Mac apps catalog'}</option>
       {items.map((a) => (
         <option key={a.id} value={a.id}>
           {a.name}

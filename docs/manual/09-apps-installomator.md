@@ -1,4 +1,4 @@
-# 9. Mac Apps and Installomator
+# 9. Mac apps and Installomator
 
 VibeMDM vendors [Installomator](https://github.com/Installomator/Installomator) **v10.8** (the bundled script
 identifies itself as `10.8beta`, dated 2025-03-28; Apache-2.0; the license is served at `/agent/installomator-license`). Installomator is a community script with over a thousand *labels*,
@@ -13,14 +13,14 @@ root with `/bin/zsh <script> <args…>`, passing the arguments as argv, without 
 
 | Where | What it does |
 | --- | --- |
-| **Mac Apps catalog** | The one place an app is defined (label and options). Installed automatically on every Mac in scope, or offered in Self Service only; installed once or kept up to date |
-| **Policy step** | A policy's *Mac Apps* tab adds catalog apps (their label and options) alongside scripts and packages, with the policy's trigger, frequency and logs ([Chapter 7](07-policies-scripts-packages.md)). An Installomator label can still be used directly, with its own options, under *Use an Installomator label directly* |
+| **Mac apps catalog** | The one place an app is defined (label and options). Installed automatically on every Mac in scope, or offered in Self Service only; installed once or kept up to date |
+| **Policy step** | A policy's *Mac apps* tab adds catalog apps (their label and options) alongside scripts and packages, with the policy's trigger, frequency and logs ([Chapter 7](07-policies-scripts-packages.md)). An Installomator label can still be used directly, with its own options, under *Use an Installomator label directly* |
 | **Onboarding step** | An onboarding `app` step installs a catalog app with a live progress row ([Chapter 14](14-white-glove-onboarding.md)) |
 | **swiftDialog bootstrap** | Onboarding installs swiftDialog with the `swiftdialog` label if `/usr/local/bin/dialog` is missing |
 | **Escrow Buddy remediation** | FileVault key repair installs Escrow Buddy with the `escrowbuddy` label ([Chapter 11](11-filevault.md)) |
 | **XCreds** | Identity → XCreds creates a catalog app with the `xcreds` label ([Chapter 13](13-identity-xcreds.md)) |
 
-## 9.2 The Mac Apps catalog
+## 9.2 The Mac apps catalog
 
 | Field | JSON | Notes |
 | --- | --- | --- |
@@ -34,7 +34,7 @@ root with `/bin/zsh <script> <args…>`, passing the arguments as argv, without 
 
 ### Add an app
 
-1. **Mac Apps → New**. Search the label list (`GET /api/v1/apps/labels`) and pick the label.
+1. **Mac apps → New**. Search the label list (`GET /api/v1/apps/labels`) and pick the label.
 2. Choose the update behaviour and options, set the scope, optionally enable Self Service, save
    (`POST /api/v1/apps`).
 3. At each `checkin` or `startup` check-in, every in-scope Mac for which the app is **due** gets an install job:
@@ -57,7 +57,7 @@ half of the Macs it ran on in the last 7 days, which usually means a broken labe
 
 ### Icons
 
-Each app can have an icon (**Mac Apps → app → Self Service → Icon**, or `PUT /api/v1/apps/{id}/icon` with the file
+Each app can have an icon (**Mac apps → app → Self Service → Icon**, or `PUT /api/v1/apps/{id}/icon` with the file
 as the request body; `DELETE` removes it). Upload a PNG, JPEG or `.icns` file of up to 4 MB. VibeMDM decodes it and
 stores a fresh PNG of at most 256 × 256 pixels, so nothing but the pixels survives (no metadata, no scripts in SVGs:
 SVG is not accepted). The icon is saved straight away, separately from the app's **Save**.
@@ -129,7 +129,7 @@ server leaves it out.
 
 ## 9.5 Custom labels
 
-For an app Installomator doesn't know, define a **custom label** (**Mac Apps → Custom Labels**,
+For an app Installomator doesn't know, define a **custom label** (**Mac apps → Custom Labels**,
 `/api/v1/custom-labels`). VibeMDM passes it to Installomator through its documented `valuesfromarguments` label.
 
 | Field | Required | Validation |

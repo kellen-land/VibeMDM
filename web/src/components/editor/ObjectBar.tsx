@@ -114,7 +114,7 @@ export function ObjectBar({ ed, isNew, listPath, noun, name, saving, onSave, onD
           <Lock className="size-3.5" aria-hidden="true" />
           {name ? `${name} saved` : `Saved`}
         </span>
-        <span role="status" className="animate-saved-pop inline-flex h-[34px] items-center gap-2 rounded-md bg-good px-3.5 text-[13px] font-semibold text-white">
+        <span role="status" className="animate-saved-pop inline-flex h-[34px] items-center gap-2 rounded-md bg-good-strong px-3.5 text-[13px] font-semibold text-white">
           <DrawnCheck className="size-4" />
           Saved
         </span>

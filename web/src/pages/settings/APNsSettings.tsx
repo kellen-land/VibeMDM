@@ -22,7 +22,7 @@ import { cn } from '../../lib/cn'
 function Step({ n, title, description, children, done }: { n: number; title: string; description: string; children: React.ReactNode; done?: boolean }) {
   return (
     <div className="flex gap-4">
-      <div className={cn('flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold', done ? 'bg-good text-white' : 'bg-accent-600 text-white')}>{n}</div>
+      <div className={cn('flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold', done ? 'bg-good-strong text-white' : 'bg-accent-700 text-white')}>{n}</div>
       <div className="min-w-0 flex-1">
         <h3 className="text-sm font-semibold text-ink">{title}</h3>
         <p className="mt-0.5 text-xs text-ink-muted">{description}</p>

@@ -81,7 +81,7 @@ Example: template `{model}-{asset_tag}` with asset tag `A-1042` on a MacBook Pro
 
 | `type` | Required fields | What it does |
 | --- | --- | --- |
-| `app` | `app_id` (a Mac Apps catalog entry) | Installs the app with Installomator, using the app's label and options |
+| `app` | `app_id` (a Mac apps catalog entry) | Installs the app with Installomator, using the app's label and options |
 | `policy` | `policy_id` | Runs the policy (trigger `onboarding`; a policy log is created) |
 | `script` | `script_id` | Runs a library script (no parameters) |
 | `recon` | — | Submits full inventory |

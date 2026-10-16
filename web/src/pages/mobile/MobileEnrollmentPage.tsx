@@ -99,7 +99,7 @@ export function MobileEnrollmentPage() {
             <Steps
               items={[
                 'Scan the QR code with the camera, or open the link in Safari.',
-                <>Tap <strong className="text-ink">Download Enrollment Profile</strong>, then <strong className="text-ink">Allow</strong>.</>,
+                <>Tap <strong className="text-ink">Download enrollment profile</strong>, then <strong className="text-ink">Allow</strong>.</>,
                 <>In Settings, tap <strong className="text-ink">Profile Downloaded</strong> → <strong className="text-ink">Install</strong>, enter the passcode and trust remote management.</>,
               ]}
             />

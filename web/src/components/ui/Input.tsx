@@ -2,7 +2,7 @@ import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type T
 import { cn } from '../../lib/cn'
 
 export const inputClass =
-  'block w-full rounded-md border border-line-strong/70 bg-surface-sunken px-2.5 text-[13px] text-ink placeholder:text-ink-faint shadow-none focus-ring disabled:opacity-60 disabled:bg-surface-sunken read-only:bg-surface-sunken/70'
+  'block w-full rounded-md border border-line-control bg-surface-sunken px-2.5 text-[13px] text-ink placeholder:text-ink-faint shadow-none focus-ring disabled:opacity-60 disabled:bg-surface-sunken read-only:bg-surface-sunken/70'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   mono?: boolean
@@ -37,4 +37,4 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   )
 })
 
-const chevron = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%238a97a0' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>")`
+const chevron = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%23847e9e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>")`

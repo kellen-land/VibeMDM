@@ -371,4 +371,4 @@ was sent with: after renaming a device or changing its user, use **Redeploy** on
 | `POST /api/v1/profiles` / `PUT /api/v1/profiles/{id}` | `{"name", "category", "description", "level": "device"\|"user", "scope", "payloads": [{"type", "uuid", "values"}]}` builds the profile; `"payload": "<xml>"` uploads one instead |
 | `POST /api/v1/profiles/preview` | Build the XML without saving (`payload_errors` per payload) |
 
-Next: [Chapter 9 — Mac Apps and Installomator](09-apps-installomator.md).
+Next: [Chapter 9 — Mac apps and Installomator](09-apps-installomator.md).

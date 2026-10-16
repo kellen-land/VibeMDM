@@ -133,7 +133,7 @@ has data to show.
 - [docs/inspector.md](docs/inspector.md) – MDM command inspector: timelines, summaries, redaction
 - [docs/software-updates.md](docs/software-updates.md) – native DDM, update enforcement and settings plans
 - [docs/logging.md](docs/logging.md) – searchable server/agent logs, live tail, archives, diagnostic bundles
-- [docs/installomator.md](docs/installomator.md) – Mac Apps catalog, Installomator policy steps, custom labels
+- [docs/installomator.md](docs/installomator.md) – Mac apps catalog, Installomator policy steps, custom labels
 - [docs/filevault.md](docs/filevault.md) – FileVault recovery key escrow and Escrow Buddy remediation
 - [docs/mobile-devices.md](docs/mobile-devices.md) – iPhone and iPad: a separate Mobile Devices area, inventory, groups and searches
 - [docs/laps.md](docs/laps.md) – local administrator password (LAPS): rotation, escrow, audited reveal

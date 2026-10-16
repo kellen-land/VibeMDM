@@ -84,7 +84,7 @@ Base path `/api/v1`. Lists return `{"items": [...], "total": n}` and accept `lim
 | Policies | `GET/POST /policies`, `GET/PUT/DELETE /policies/{id}`, `GET /policies/{id}/logs`, `POST /policies/{id}/{flush,run}`, `GET /policy-logs`, `GET /policy-logs/{id}` |
 | Profiles | `GET/POST /profiles`, `GET/PUT/DELETE /profiles/{id}`, `GET /profiles/{id}/deployments`, `POST /profiles/{id}/{deploy,remove}` |
 | Custom settings | `GET/POST /custom-schemas`, `GET/PUT/DELETE /custom-schemas/{id}`, `POST /custom-schemas/{id}/{preview,profiles}` |
-| Mac Apps | `GET/POST /apps`, `GET /apps/labels`, `GET /apps/logs`, `POST /apps/installomator-preview`, `GET/PUT/DELETE /apps/{id}`, `GET /apps/{id}/logs`, `GET/POST /custom-labels`, `GET/PUT/DELETE /custom-labels/{id}` |
+| Mac apps | `GET/POST /apps`, `GET /apps/labels`, `GET /apps/logs`, `POST /apps/installomator-preview`, `GET/PUT/DELETE /apps/{id}`, `GET /apps/{id}/logs`, `GET/POST /custom-labels`, `GET/PUT/DELETE /custom-labels/{id}` |
 | Restricted software | `GET/POST /restricted-software`, `GET /restricted-software/events`, `GET/PUT/DELETE /restricted-software/{id}` |
 | Software updates | `GET/POST /updates/plans`, `GET/PUT/DELETE /updates/plans/{id}`, `GET /updates/overview`, `GET /updates/catalog`, `GET/PUT /updates/super`, `GET /updates/super/status`, `POST /updates/super/install` |
 | FileVault | `GET/PUT /filevault`, `POST /filevault/check` |

@@ -222,7 +222,7 @@ The server runs a one-minute housekeeping ticker. Approximate schedules:
 
 ## 1.7 Working in the console
 
-Every object (policies, configuration profiles, scripts, groups, searches, extension attributes, Mac Apps, baselines,
+Every object (policies, configuration profiles, scripts, groups, searches, extension attributes, Mac apps, baselines,
 update plans, …) is created, edited and deleted the same way, as in Jamf Pro:
 
 - **Opening an object shows it read-only.** The bar at the bottom right holds **History** (who changed it, from the

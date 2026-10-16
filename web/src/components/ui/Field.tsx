@@ -19,7 +19,14 @@ export function Field({ label, hint, error, required, className, children, inlin
       {label && (
         <label htmlFor={id} className={cn('text-sm font-medium text-ink', inline && 'sm:pt-2')}>
           {label}
-          {required && <span className="text-critical ml-0.5">*</span>}
+          {required && (
+            <>
+              <span className="text-critical ml-0.5" aria-hidden="true">
+                *
+              </span>
+              <span className="sr-only"> (required)</span>
+            </>
+          )}
         </label>
       )}
       <div className="flex flex-col gap-1 min-w-0">

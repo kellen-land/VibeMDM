@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { KeyRound, LogOut } from 'lucide-react'
@@ -9,9 +9,13 @@ import { Field } from '../components/ui/Field'
 import { Input } from '../components/ui/Input'
 import { Alert } from '../components/ui/Alert'
 import { useToast } from '../components/ui/Toast'
+import { pageTitle } from '../components/layout/RouteAnnouncer'
 
 /** Shown instead of the app shell while the signed-in account must choose a new password. */
 export function ForcePasswordChangePage() {
+  useEffect(() => {
+    document.title = pageTitle('Choose a new password')
+  }, [])
   const { user, status, logout } = useAuth()
   const qc = useQueryClient()
   const navigate = useNavigate()

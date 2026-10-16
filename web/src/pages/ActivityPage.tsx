@@ -37,12 +37,12 @@ export function ActivityPage() {
   let active: Tab = (tabs as readonly string[]).includes(tab ?? '') ? (tab as Tab) : 'policy-logs'
   if (active === 'shell-sessions' && !isAdmin) active = 'policy-logs'
   const items = [
-    { key: 'policy-logs' as Tab, label: 'Policy Logs' },
-    { key: 'app-installs' as Tab, label: 'App Installs' },
-    { key: 'restricted-events' as Tab, label: 'Restricted Software' },
+    { key: 'policy-logs' as Tab, label: 'Policy logs' },
+    { key: 'app-installs' as Tab, label: 'App installs' },
+    { key: 'restricted-events' as Tab, label: 'Restricted software' },
     { key: 'commands' as Tab, label: 'MDM Commands' },
-    { key: 'tasks' as Tab, label: 'Agent Tasks' },
-    ...(isAdmin ? [{ key: 'shell-sessions' as Tab, label: 'Shell Sessions' }] : []),
+    { key: 'tasks' as Tab, label: 'Agent tasks' },
+    ...(isAdmin ? [{ key: 'shell-sessions' as Tab, label: 'Shell sessions' }] : []),
   ]
   return (
     <>
@@ -170,7 +170,7 @@ export function AppInstallsTab({ computerId }: { computerId?: string }) {
   const q = useAllAppLogs({ computer_id: computerId, ...page })
   return (
     <>
-      <CardHeader title="App installs" description="Installomator runs from the Mac Apps catalog. Expand a row for the full output." />
+      <CardHeader title="App installs" description="Installomator runs from the Mac apps catalog. Expand a row for the full output." />
       {q.error && <p className="px-5 py-4 text-sm text-critical">{errorMessage(q.error)}</p>}
       <AppInstallLogTable logs={q.data?.items} loading={q.isPending} showComputer={!computerId} />
       <Pagination total={q.data?.total ?? 0} limit={page.limit} offset={page.offset} onChange={setPage} />

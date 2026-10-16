@@ -5,7 +5,7 @@ VibeMDM vendors [Installomator](https://github.com/Installomator/Installomator) 
 
 | Where | What it does |
 | --- | --- |
-| **Mac Apps catalog** | Keep an app installed (and updated weekly, or install once) on every Mac in scope, optionally in Self Service |
+| **Mac apps catalog** | Keep an app installed (and updated weekly, or install once) on every Mac in scope, optionally in Self Service |
 | **Policy step** | A policy's *Apps* list runs Installomator labels alongside scripts and packages, with the policy's trigger, frequency and logs |
 | **Escrow Buddy remediation** | FileVault key repair installs Escrow Buddy with the `escrowbuddy` label |
 

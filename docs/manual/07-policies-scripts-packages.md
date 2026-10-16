@@ -157,7 +157,7 @@ verified against its SHA-256 and cached by checksum for 14 days, so a re-run ins
 3. `before` scripts, in order.
 4. Packages, in order (after their downloads finish).
 5. Apps (Installomator), in order.
-6. **Local Accounts** actions, in order (7.5.1).
+6. **Local accounts** actions, in order (7.5.1).
 7. **Execute Command**.
 8. `after` scripts, in order.
 9. **Update Inventory** (if enabled).
@@ -175,7 +175,7 @@ submitted.
 
 ### 7.5.1 Local Accounts
 
-The *Local Accounts* tab of a policy is Jamf Pro's Local Accounts payload. Each action names a user and runs in
+The *Local accounts* tab of a policy is Jamf Pro's Local Accounts payload. Each action names a user and runs in
 order:
 
 | Action | What the agent does |
