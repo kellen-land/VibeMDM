@@ -20,14 +20,17 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
 
 ## Console
 
-- **Passwords:** bcrypt (cost 12), with a minimum of 8 characters (12 for the bootstrap password).
+- **Passwords:** bcrypt (cost 12), 12 to 72 characters whenever a password is set.
   - Placeholder bootstrap passwords such as `change-me-please` are refused at start-up.
   - The bootstrap account, and any account whose password an admin resets, must choose a new password at the
     next login. Until then every API call except `POST /api/v1/auth/password` returns
     `403 password change required`.
 - **Sessions:**
   - 256-bit random tokens, stored as SHA-256 hashes.
-  - Cookies are HttpOnly, SameSite=Lax, and Secure on HTTPS.
+  - Cookies are HttpOnly, SameSite=Lax, and on HTTPS Secure with the `__Host-` prefix (a sibling subdomain cannot
+    set or overwrite them).
+  - A session ends after `VIBEMDM_SESSION_IDLE_MINUTES` (default 120) without requests, and after
+    `VIBEMDM_SESSION_TTL_HOURS` (default 168) in any case.
   - A password change ends every other session and issues a new cookie. An admin password reset ends all of the
     user's sessions.
 - **Login throttling:**
@@ -35,6 +38,7 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
   - Attempts for the same client or username run one at a time, and at most 8 password checks run at once, so
     parallel requests cannot outrun the lockout. A successful login clears only that username's counter.
   - Changing your own password checks the current one under the same lockout.
+  - Every lockout is audited (`auth.lockout`) and fires the `ConsoleLoginLockout` webhook.
   - Unknown usernames cost the same bcrypt work as real ones, so response timing does not reveal valid accounts.
 - **CSRF:** cookie-authenticated requests that change state, including login and logout, must come from the
   console's own origin. Cookie requests the browser marks as cross-site (`Sec-Fetch-Site`) are refused for every

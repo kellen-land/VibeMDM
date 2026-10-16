@@ -213,7 +213,10 @@ func (h *Handler) revealFileVaultKeyHistory(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	p := auth.FromContext(r.Context())
-	h.st.Audit(r.Context(), p.Username, "filevault.key_history_viewed", "computer", comp.ID, map[string]any{"reason": req.Reason, "ip": auth.ClientIP(r), "count": len(hist)})
+	if err := h.st.AuditStrict(r.Context(), p.Username, "filevault.key_history_viewed", "computer", comp.ID, map[string]any{"reason": req.Reason, "ip": auth.ClientIP(r), "count": len(hist)}); err != nil {
+		h.fail(w, err, "audit")
+		return
+	}
 	h.hooks.Fire(webhook.FileVaultKeyViewed, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "serial": comp.SerialNumber, "actor": p.Username, "reason": req.Reason, "history": true})
 	w.Header().Set("Cache-Control", "no-store")
 	if hist == nil {

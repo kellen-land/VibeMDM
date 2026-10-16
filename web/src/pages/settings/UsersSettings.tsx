@@ -141,8 +141,8 @@ function UserDialog({ open, onClose, user, isSelf }: { open: boolean; onClose: (
             <Select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })} disabled={isSelf} options={[{ value: 'admin', label: 'Administrator' }, { value: 'viewer', label: 'Viewer (read-only)' }]} />
           </Field>
           {!user && (
-            <Field label="Password" required hint="At least 8 characters." className="md:col-span-2">
-              <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} minLength={8} required autoComplete="new-password" />
+            <Field label="Password" required hint="At least 12 characters." className="md:col-span-2">
+              <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} minLength={12} required autoComplete="new-password" />
             </Field>
           )}
         </FormGrid>
@@ -185,8 +185,8 @@ function PasswordDialog({ user, onClose }: { user: AdminUser; onClose: () => voi
   return (
     <Modal open onClose={onClose} title={`Reset password for ${user.username}`} size="sm">
       <form onSubmit={submit} className="flex flex-col gap-4">
-        <Field label="New password" hint="At least 8 characters.">
-          <Input type="password" value={pw} onChange={(e) => setPw(e.target.value)} minLength={8} required autoFocus autoComplete="new-password" />
+        <Field label="New password" hint="At least 12 characters.">
+          <Input type="password" value={pw} onChange={(e) => setPw(e.target.value)} minLength={12} required autoFocus autoComplete="new-password" />
         </Field>
         <Field label="Confirm password">
           <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" />

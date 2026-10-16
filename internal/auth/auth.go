@@ -22,14 +22,24 @@ import (
 )
 
 const (
-	SessionCookie = "vibemdm_session"
-	tokenPrefix   = "vmdm_"
+	// SessionCookie is the session cookie over plain HTTP. Over HTTPS the "__Host-" form is used,
+	// which browsers only accept when Secure, host-only and Path=/, so a sibling subdomain cannot
+	// plant or overwrite it.
+	SessionCookie       = "vibemdm_session"
+	SecureSessionCookie = "__Host-vibemdm_session"
+	tokenPrefix         = "vmdm_"
 )
+
+// MinPasswordLength applies when a console password is set (existing passwords keep working).
+const MinPasswordLength = 12
 
 // HashPassword hashes a password with bcrypt.
 func HashPassword(pw string) (string, error) {
-	if len(pw) < 8 {
-		return "", errors.New("password must be at least 8 characters")
+	if len(pw) < MinPasswordLength {
+		return "", fmt.Errorf("password must be at least %d characters", MinPasswordLength)
+	}
+	if len(pw) > 72 { // bcrypt only uses the first 72 bytes
+		return "", errors.New("password must be at most 72 bytes")
 	}
 	b, err := bcrypt.GenerateFromPassword([]byte(pw), 12)
 	return string(b), err
@@ -86,13 +96,22 @@ type Authenticator struct {
 	Store         *store.Store
 	SecureCookies bool
 	SessionTTL    time.Duration
+	SessionIdle   time.Duration // sessions unused this long end (0 = never)
+	// OnLockout (optional) is told when a client IP or username gets locked out.
+	OnLockout func(key string, until time.Time)
 
 	limiter *loginLimiter
 }
 
 // New creates an Authenticator.
 func New(st *store.Store, secure bool, ttl time.Duration) *Authenticator {
-	return &Authenticator{Store: st, SecureCookies: secure, SessionTTL: ttl, limiter: newLoginLimiter()}
+	a := &Authenticator{Store: st, SecureCookies: secure, SessionTTL: ttl, limiter: newLoginLimiter()}
+	a.limiter.onLockout = func(key string, until time.Time) {
+		if a.OnLockout != nil {
+			a.OnLockout(key, until)
+		}
+	}
+	return a
 }
 
 // dummyHash gives unknown usernames the same bcrypt cost as real ones (no timing oracle).
@@ -163,7 +182,7 @@ func (a *Authenticator) startSession(w http.ResponseWriter, r *http.Request, use
 		return err
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name: SessionCookie, Value: tok, Path: "/", HttpOnly: true, Secure: a.SecureCookies,
+		Name: a.cookieName(), Value: tok, Path: "/", HttpOnly: true, Secure: a.SecureCookies,
 		SameSite: http.SameSiteLaxMode, Expires: time.Now().Add(a.SessionTTL),
 	})
 	return nil
@@ -180,10 +199,17 @@ func (a *Authenticator) RotateSession(w http.ResponseWriter, r *http.Request, us
 
 // Logout destroys the session.
 func (a *Authenticator) Logout(w http.ResponseWriter, r *http.Request) {
-	if c, err := r.Cookie(SessionCookie); err == nil {
+	if c, err := r.Cookie(a.cookieName()); err == nil {
 		a.Store.DeleteSession(r.Context(), store.HashToken(c.Value))
 	}
-	http.SetCookie(w, &http.Cookie{Name: SessionCookie, Value: "", Path: "/", HttpOnly: true, Secure: a.SecureCookies, MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: a.cookieName(), Value: "", Path: "/", HttpOnly: true, Secure: a.SecureCookies, MaxAge: -1})
+}
+
+func (a *Authenticator) cookieName() string {
+	if a.SecureCookies {
+		return SecureSessionCookie
+	}
+	return SessionCookie
 }
 
 // Resolve identifies the caller from cookie or bearer token.
@@ -198,9 +224,9 @@ func (a *Authenticator) Resolve(r *http.Request) *Principal {
 		}
 		return nil
 	}
-	if c, err := r.Cookie(SessionCookie); err == nil && c.Value != "" {
+	if c, err := r.Cookie(a.cookieName()); err == nil && c.Value != "" {
 		h := store.HashToken(c.Value)
-		u, err := a.Store.GetSessionUser(r.Context(), h)
+		u, err := a.Store.GetSessionUser(r.Context(), h, a.SessionIdle)
 		if err == nil {
 			return &Principal{UserID: u.ID, Username: u.Username, Role: u.Role, Via: "session", SessionHash: h, MustChangePassword: u.MustChangePassword}
 		}
@@ -358,6 +384,8 @@ type loginLimiter struct {
 	fails map[string]*failRec
 	busy  map[string]bool
 	slots chan struct{} // concurrent password checks across all clients
+
+	onLockout func(key string, until time.Time)
 }
 
 // maxConcurrentLogins bounds bcrypt work; loginWait is how long a request queues for its turn.
@@ -459,6 +487,10 @@ func (l *loginLimiter) fail(key string) {
 			n = len(steps) - 1
 		}
 		rec.until = time.Now().Add(steps[n])
+		if l.onLockout != nil {
+			key, until := key, rec.until
+			go l.onLockout(key, until)
+		}
 	}
 }
 

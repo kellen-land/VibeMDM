@@ -192,6 +192,7 @@ in `docker-compose.yml` does not reach the server; add it there if you need it.
 | `VIBEMDM_TRUSTED_PROXIES` | empty (`.env.example`: `172.16.0.0/12`) | yes (default `172.16.0.0/12`) | Comma-separated IPs/CIDRs allowed to set `X-Forwarded-For`. Without it the client IP is the direct peer |
 | `VIBEMDM_ALLOW_HTTP` | `false` | yes | Accept an `http://` server URL for a non-loopback host. Labs only: agents would run commands received without TLS |
 | `VIBEMDM_SESSION_TTL_HOURS` | `168` | **no** | Console session lifetime in hours (minimum 1) |
+| `VIBEMDM_SESSION_IDLE_MINUTES` | `120` | **no** | Console sessions end after this many minutes without requests (`0` turns the idle timeout off) |
 | `VIBEMDM_LOG_DB_LEVEL` | `info` | **no** | Minimum level stored in the searchable `server_logs` table: `debug`, `info`, `warn`, `error` |
 | `VIBEMDM_LOG_FORMAT` | `text` | yes | `json` switches stdout logging to JSON |
 | `VIBEMDM_DEBUG` | `false` | yes | Debug-level stdout logging; also logs MDM signature-verification errors |

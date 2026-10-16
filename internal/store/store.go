@@ -268,10 +268,15 @@ func (s *Store) CreateSession(ctx context.Context, tokenHash, userID string, ttl
 }
 
 // GetSessionUser returns the user for a valid session.
-func (s *Store) GetSessionUser(ctx context.Context, tokenHash string) (*model.AdminUser, error) {
+// A session idle for longer than idle (0 = never) no longer counts; each use refreshes it.
+func (s *Store) GetSessionUser(ctx context.Context, tokenHash string, idle time.Duration) (*model.AdminUser, error) {
 	row := s.DB.QueryRowContext(ctx, `SELECT `+prefixCols("u.", userCols)+`, u.password_hash FROM sessions s JOIN admin_users u ON u.id = s.user_id
-		WHERE s.token_hash = $1 AND s.expires_at > now() AND u.enabled`, tokenHash)
+		WHERE s.token_hash = $1 AND s.expires_at > now() AND u.enabled
+		AND ($2::float8 = 0 OR s.last_seen_at > now() - make_interval(secs => $2::float8))`, tokenHash, idle.Seconds())
 	u, _, err := scanUser(row)
+	if err == nil {
+		s.DB.ExecContext(ctx, `UPDATE sessions SET last_seen_at = now() WHERE token_hash = $1 AND last_seen_at < now() - interval '30 seconds'`, tokenHash)
+	}
 	return u, err
 }
 

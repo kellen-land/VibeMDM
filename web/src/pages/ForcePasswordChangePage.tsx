@@ -22,7 +22,7 @@ export function ForcePasswordChangePage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const problem = next && next.length < 8 ? 'Use at least 8 characters.' : next && next === current ? 'Choose a password different from the current one.' : confirm && next !== confirm ? 'The passwords don’t match.' : null
+  const problem = next && next.length < 12 ? 'Use at least 12 characters.' : next && next === current ? 'Choose a password different from the current one.' : confirm && next !== confirm ? 'The passwords don’t match.' : null
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -78,8 +78,8 @@ export function ForcePasswordChangePage() {
           <Field label="Current password">
             <Input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" autoFocus required />
           </Field>
-          <Field label="New password" hint="At least 8 characters, different from the current one.">
-            <Input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" minLength={8} required />
+          <Field label="New password" hint="At least 12 characters, different from the current one.">
+            <Input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" minLength={12} required />
           </Field>
           <Field label="Confirm new password" error={confirm && next !== confirm ? 'The passwords don’t match.' : undefined}>
             <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required />

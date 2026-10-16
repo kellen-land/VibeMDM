@@ -44,12 +44,14 @@ const (
 	LAPSPasswordViewed          = "LAPSPasswordViewed"  // an administrator revealed a local admin password
 	HealthIssueOpened           = "HealthIssueOpened"   // a warning/critical health finding opened or escalated
 	HealthIssueResolved         = "HealthIssueResolved" // a previously announced finding cleared
+	ConsoleLoginLockout         = "ConsoleLoginLockout" // repeated failed console logins locked a username or client IP
 )
 
 // AllEvents lists every event name for the UI.
 var AllEvents = []string{ComputerEnrolled, ComputerUnenrolled, MobileDeviceEnrolled, MobileDeviceUnenrolled, AgentEnrolled, ComputerCheckIn,
 	ComputerInventoryCompleted, PolicyCompleted, PolicyFailed, MDMCommandCompleted, RestrictedSoftwareViolation, ShellSessionOpened,
-	FileVaultKeyEscrowed, FileVaultKeyViewed, LAPSPasswordRotated, LAPSPasswordViewed, HealthIssueOpened, HealthIssueResolved}
+	FileVaultKeyEscrowed, FileVaultKeyViewed, LAPSPasswordRotated, LAPSPasswordViewed, HealthIssueOpened, HealthIssueResolved,
+	ConsoleLoginLockout}
 
 // Hook is a configured endpoint.
 type Hook struct {

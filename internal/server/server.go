@@ -250,6 +250,18 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	}
 	secure := strings.HasPrefix(settings.ServerURL, "https://") || strings.HasPrefix(cfg.ServerURL, "https://")
 	authn := auth.New(st, secure, cfg.SessionTTL)
+	authn.SessionIdle = cfg.SessionIdle
+	authn.OnLockout = func(key string, until time.Time) {
+		kind, subject := "ip", key
+		if u, ok := strings.CutPrefix(key, "u:"); ok {
+			kind, subject = "username", u
+		} else if u, ok := strings.CutPrefix(key, "pw:"); ok {
+			kind, subject = "password_change", u
+		}
+		details := map[string]any{"kind": kind, "subject": subject, "until": until.UTC()}
+		st.Audit(context.Background(), "system", "auth.lockout", kind, subject, details)
+		hooks.Fire(webhook.ConsoleLoginLockout, details)
+	}
 	adminAPI := api.New(api.Deps{
 		Cfg: cfg, Store: st, Auth: authn, Commander: commander, Engine: engine, Notifier: notifier, SCEP: scepServer,
 		PushStore: mdmStorage, Profile: s.enrollmentProfile, ShellHub: shellHub, Hooks: hooks, Escrow: escrowID, Health: s.health, Compliance: s.compliance, Super: s.superSvc, Onboarding: s.onboarding, AgentInstall: agentInstaller, Log: logger.With("component", "api"),
