@@ -32,19 +32,31 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
     user's sessions.
 - **Login throttling:**
   - Every 6 failures lock the client IP *and* the username for 1, then 5, 15 and 60 minutes.
+  - Attempts for the same client or username run one at a time, and at most 8 password checks run at once, so
+    parallel requests cannot outrun the lockout. A successful login clears only that username's counter.
+  - Changing your own password checks the current one under the same lockout.
   - Unknown usernames cost the same bcrypt work as real ones, so response timing does not reveal valid accounts.
 - **CSRF:** cookie-authenticated requests that change state, including login and logout, must come from the
-  console's own origin. API tokens (`Authorization: Bearer vmdm_…`) are exempt because browsers never send them
+  console's own origin. Cookie requests the browser marks as cross-site (`Sec-Fetch-Site`) are refused for every
+  method, because a few GETs have side effects (audited reveals, rotate-after-view). API tokens (`Authorization: Bearer vmdm_…`) are exempt because browsers never send them
   automatically.
 - **Headers:**
   - every response carries a strict Content-Security-Policy (no inline scripts, `frame-ancestors 'none'`),
     `X-Frame-Options: DENY`, `nosniff` and `Referrer-Policy: no-referrer`;
   - HSTS is sent when the server URL is HTTPS;
   - API responses are `Cache-Control: no-store`.
+- **API tokens:** a token stops working when the user who created it is disabled, and is deleted with that user.
+  Roles must be exactly `admin` or `viewer`; anything else is rejected rather than treated as admin, and a user
+  update leaves out fields unchanged.
 - **Roles:**
   - *Viewers* can read inventory and configuration but cannot change anything.
-  - They also do not see secrets embedded in configuration: profile payloads are redacted like MDM command plists,
-    script bodies are hidden, and task payloads lose command text and parameters.
+  - They also do not see secrets embedded in configuration: profile payloads are redacted like MDM command plists
+    (any key named like a password, secret, passphrase, token, challenge or license), Application & Custom
+    Settings values are redacted the same way, script and extension attribute bodies are hidden, policies lose their
+    command and script parameters, and task payloads lose command text and parameters.
+  - Secret reveals (FileVault keys, LAPS passwords and their history) are refused if the audit entry cannot be
+    written.
+  - CSV exports are audited.
   - Enrollment profile downloads, the SCEP challenge, the agent enrollment secret, FileVault keys, raw MDM payloads
     and shell transcripts are admin-only.
 - **Logs:**

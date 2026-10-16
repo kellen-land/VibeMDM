@@ -42,6 +42,6 @@ func (h *Handler) qrCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "image/svg+xml")
-	w.Header().Set("Cache-Control", "private, max-age=300")
+	w.Header().Set("Cache-Control", "no-store") // the text may be an enrollment link with a token
 	w.Write([]byte(svg))
 }

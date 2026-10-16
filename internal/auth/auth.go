@@ -106,11 +106,19 @@ var ErrRateLimited = errors.New("too many failed attempts; try again later")
 func (a *Authenticator) Login(w http.ResponseWriter, r *http.Request, username, password string) (*model.AdminUser, error) {
 	ip := clientIP(r)
 	ukey := "u:" + strings.ToLower(strings.TrimSpace(username))
+	// One attempt at a time per client and per username, and a cap on concurrent bcrypt work:
+	// otherwise parallel requests would all pass the lockout check before any failure is counted.
+	release, ok := a.limiter.acquire(r.Context(), ip, ukey)
+	if !ok {
+		return nil, ErrRateLimited
+	}
+	defer release()
 	if !a.limiter.allow(ip) || !a.limiter.allow(ukey) {
 		return nil, ErrRateLimited
 	}
 	user, hash, err := a.Store.GetUserByUsername(r.Context(), username)
-	if err != nil {
+	if err != nil || !user.Enabled {
+		// Same bcrypt work for unknown and disabled accounts as for real ones (no timing oracle).
 		bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
 	}
 	if err != nil || !user.Enabled || !CheckPassword(hash, password) {
@@ -118,13 +126,35 @@ func (a *Authenticator) Login(w http.ResponseWriter, r *http.Request, username, 
 		a.limiter.fail(ukey)
 		return nil, errors.New("invalid username or password")
 	}
-	a.limiter.reset(ip)
+	// Only the username's counter is cleared: logging in to one account must not wipe the
+	// client's failures against others (password spraying).
 	a.limiter.reset(ukey)
 	if err := a.startSession(w, r, user.ID); err != nil {
 		return nil, err
 	}
 	a.Store.TouchUserLogin(r.Context(), user.ID)
 	return user, nil
+}
+
+// VerifyOwnPassword checks a signed-in user's current password (for a password change), with
+// the same per-user lockout as logins so a stolen session cannot be used to guess it.
+func (a *Authenticator) VerifyOwnPassword(r *http.Request, userID, password string) (*model.AdminUser, error) {
+	key := "pw:" + userID
+	release, ok := a.limiter.acquire(r.Context(), key)
+	if !ok {
+		return nil, ErrRateLimited
+	}
+	defer release()
+	if !a.limiter.allow(key) {
+		return nil, ErrRateLimited
+	}
+	u, hash, err := a.Store.GetUserWithHash(r.Context(), userID)
+	if err != nil || !CheckPassword(hash, password) {
+		a.limiter.fail(key)
+		return nil, errors.New("current password is incorrect")
+	}
+	a.limiter.reset(key)
+	return u, nil
 }
 
 func (a *Authenticator) startSession(w http.ResponseWriter, r *http.Request, userID string) error {
@@ -193,6 +223,15 @@ func (a *Authenticator) Require(adminOnly bool, next http.Handler) http.Handler 
 		if adminOnly && !p.IsAdmin() {
 			writeJSONError(w, http.StatusForbidden, "admin role required")
 			return
+		}
+		// The SameSite=Lax cookie still rides along on cross-site top-level GETs (a link on another
+		// site). Some GETs have side effects (audited reveals, rotate-after-view, minted challenges),
+		// so cookie requests that browsers mark as cross-site are refused whatever the method.
+		if p.Via == "session" {
+			if fs := r.Header.Get("Sec-Fetch-Site"); fs == "cross-site" || fs == "same-site" {
+				writeJSONError(w, http.StatusForbidden, "cross-site request rejected")
+				return
+			}
 		}
 		// Mutating requests via session cookie must come from our own origin (CSRF).
 		if p.Via == "session" && r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions {
@@ -318,6 +357,59 @@ func writeJSONError(w http.ResponseWriter, code int, msg string) {
 type loginLimiter struct {
 	mu    sync.Mutex
 	fails map[string]*failRec
+	busy  map[string]bool
+	slots chan struct{} // concurrent password checks across all clients
+}
+
+// maxConcurrentLogins bounds bcrypt work; loginWait is how long a request queues for its turn.
+const (
+	maxConcurrentLogins = 8
+	loginWait           = 10 * time.Second
+)
+
+// acquire waits (up to loginWait) until no other attempt for any of keys is running and a
+// global slot is free. The returned func releases them.
+func (l *loginLimiter) acquire(ctx context.Context, keys ...string) (func(), bool) {
+	deadline := time.Now().Add(loginWait)
+	for {
+		l.mu.Lock()
+		free := true
+		for _, k := range keys {
+			if l.busy[k] {
+				free = false
+			}
+		}
+		if free {
+			for _, k := range keys {
+				l.busy[k] = true
+			}
+		}
+		l.mu.Unlock()
+		if free {
+			break
+		}
+		if time.Now().After(deadline) || ctx.Err() != nil {
+			return nil, false
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	unlock := func() {
+		l.mu.Lock()
+		for _, k := range keys {
+			delete(l.busy, k)
+		}
+		l.mu.Unlock()
+	}
+	select {
+	case l.slots <- struct{}{}:
+	case <-time.After(time.Until(deadline)):
+		unlock()
+		return nil, false
+	case <-ctx.Done():
+		unlock()
+		return nil, false
+	}
+	return func() { <-l.slots; unlock() }, true
 }
 
 type failRec struct {
@@ -326,7 +418,7 @@ type failRec struct {
 }
 
 func newLoginLimiter() *loginLimiter {
-	l := &loginLimiter{fails: map[string]*failRec{}}
+	l := &loginLimiter{fails: map[string]*failRec{}, busy: map[string]bool{}, slots: make(chan struct{}, maxConcurrentLogins)}
 	go func() {
 		for range time.Tick(5 * time.Minute) {
 			l.mu.Lock()

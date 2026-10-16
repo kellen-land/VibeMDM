@@ -262,7 +262,7 @@ func (h *Handler) downloadPackage(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "package")
 		return
 	}
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filepath.Base(p.Filename)))
+	attachmentHeaders(w, filepath.Base(p.Filename), "application/octet-stream")
 	http.ServeFile(w, r, filepath.Join(h.cfg.AssetsDir, assets.Packages, filepath.Base(p.Filename)))
 }
 
@@ -274,6 +274,9 @@ func (h *Handler) listEAs(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "extension attributes")
 		return
 	}
+	for i := range items {
+		redactEAFor(r, &items[i])
+	}
 	writeJSON(w, 200, listResp[model.ExtensionAttribute]{Items: items, Total: len(items)})
 }
 
@@ -283,6 +286,7 @@ func (h *Handler) getEA(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "extension attribute")
 		return
 	}
+	redactEAFor(r, e)
 	writeJSON(w, 200, e)
 }
 

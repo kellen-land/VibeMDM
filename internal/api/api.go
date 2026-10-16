@@ -624,8 +624,12 @@ func (h *Handler) changeOwnPassword(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err.Error())
 		return
 	}
-	u, hash, err := h.st.GetUserByUsername(r.Context(), p.Username)
-	if err != nil || !auth.CheckPassword(hash, req.Current) {
+	u, err := h.auth.VerifyOwnPassword(r, p.UserID, req.Current)
+	if errors.Is(err, auth.ErrRateLimited) {
+		writeErr(w, 429, err.Error())
+		return
+	}
+	if err != nil {
 		writeErr(w, 403, "current password is incorrect")
 		return
 	}

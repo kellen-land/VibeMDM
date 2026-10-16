@@ -245,6 +245,7 @@ func scanMobile(row interface{ Scan(...any) error }) (*model.MobileDevice, error
 
 // MobileDeviceFilter filters the mobile device list.
 type MobileDeviceFilter struct {
+	Export  bool // CSV export: up to ExportLimit rows instead of one page
 	Query   string
 	GroupID string
 	Sort    string
@@ -262,7 +263,7 @@ var mobileSortCols = map[string]string{
 
 // ListMobileDevices returns mobile devices matching a filter, and the total count.
 func (s *Store) ListMobileDevices(ctx context.Context, f MobileDeviceFilter) ([]model.MobileDevice, int, error) {
-	f.Limit, f.Offset = clampPage(f.Limit, f.Offset)
+	f.Limit, f.Offset = clampFilterPage(f.Limit, f.Offset, f.Export)
 	var where []string
 	var args []any
 	if q := strings.TrimSpace(f.Query); q != "" {
@@ -711,7 +712,7 @@ func (s *Store) RunMobileSearch(ctx context.Context, criteria []model.Criterion,
 	if limit <= 0 {
 		limit = 500
 	}
-	out, _, err := s.ListMobileDevices(ctx, MobileDeviceFilter{IDs: ids, Limit: limit})
+	out, _, err := s.ListMobileDevices(ctx, MobileDeviceFilter{IDs: ids, Limit: limit, Export: limit > 500})
 	return out, err
 }
 

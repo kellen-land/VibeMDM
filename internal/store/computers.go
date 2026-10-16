@@ -80,6 +80,7 @@ func scanComputer(row interface{ Scan(...any) error }) (*model.Computer, error) 
 
 // ComputerFilter filters the computer list.
 type ComputerFilter struct {
+	Export  bool // CSV export: up to ExportLimit rows instead of one page
 	Query   string
 	GroupID string
 	Sort    string
@@ -97,7 +98,7 @@ var computerSortCols = map[string]string{
 
 // ListComputers returns computers matching a filter.
 func (s *Store) ListComputers(ctx context.Context, f ComputerFilter) ([]model.Computer, int, error) {
-	f.Limit, f.Offset = clampPage(f.Limit, f.Offset)
+	f.Limit, f.Offset = clampFilterPage(f.Limit, f.Offset, f.Export)
 	var where []string
 	var args []any
 	if q := strings.TrimSpace(f.Query); q != "" {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
+	"github.com/vibemdm/vibemdm/internal/store"
 	"io"
 	"net/http"
 	"net/url"
@@ -423,20 +424,24 @@ func (h *Handler) exportSearchCSV(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "search")
 		return
 	}
-	comps, err := h.st.RunAdvancedSearch(r.Context(), it.Criteria, 10000)
+	comps, err := h.st.RunAdvancedSearch(r.Context(), it.Criteria, store.ExportLimit)
 	if err != nil {
 		writeErr(w, 400, err.Error())
 		return
 	}
+	h.st.Audit(r.Context(), actor(r), "search.export", "advanced_search", it.ID, map[string]any{"name": it.Name, "rows": len(comps)})
 	h.writeComputersCSV(w, strings.ReplaceAll(it.Name, " ", "_")+".csv", comps, it.DisplayFields)
 }
 
 func (h *Handler) exportComputersCSV(w http.ResponseWriter, r *http.Request) {
-	comps, _, err := h.st.ListComputers(r.Context(), computerFilterFrom(r, 10000))
+	f := computerFilterFrom(r, store.ExportLimit)
+	f.Export = true
+	comps, _, err := h.st.ListComputers(r.Context(), f)
 	if err != nil {
 		h.fail(w, err, "computers")
 		return
 	}
+	h.st.Audit(r.Context(), actor(r), "computers.export", "computer", "", map[string]any{"rows": len(comps)})
 	h.writeComputersCSV(w, "computers.csv", comps, strings.FieldsFunc(r.URL.Query().Get("fields"), func(c rune) bool { return c == ',' }))
 }
 

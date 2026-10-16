@@ -30,6 +30,7 @@ func (h *Handler) listPolicies(w http.ResponseWriter, r *http.Request) {
 		if st == nil {
 			st = map[string]int{}
 		}
+		redactPolicyFor(r, &p)
 		out = append(out, policyWithStatus{Policy: p, Status: st})
 	}
 	writeJSON(w, 200, listResp[policyWithStatus]{Items: out, Total: len(out)})
@@ -45,6 +46,7 @@ func (h *Handler) getPolicy(w http.ResponseWriter, r *http.Request) {
 	if st == nil {
 		st = map[string]int{}
 	}
+	redactPolicyFor(r, p)
 	writeJSON(w, 200, policyWithStatus{Policy: *p, Status: st})
 }
 

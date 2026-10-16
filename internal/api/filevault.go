@@ -185,7 +185,10 @@ func (h *Handler) revealFileVaultKey(w http.ResponseWriter, r *http.Request) {
 	}
 	p := auth.FromContext(r.Context())
 	details := map[string]any{"reason": req.Reason, "ip": auth.ClientIP(r), "fingerprint": st.Fingerprint}
-	h.st.Audit(r.Context(), p.Username, "filevault.key_viewed", "computer", comp.ID, details)
+	if err := h.st.AuditStrict(r.Context(), p.Username, "filevault.key_viewed", "computer", comp.ID, details); err != nil {
+		h.fail(w, err, "audit")
+		return
+	}
 	h.hooks.Fire(webhook.FileVaultKeyViewed, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "serial": comp.SerialNumber, "actor": p.Username, "reason": req.Reason})
 	h.log.Info("FileVault recovery key viewed", "computer", comp.Name, "actor", p.Username)
 	w.Header().Set("Cache-Control", "no-store")
