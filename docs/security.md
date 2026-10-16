@@ -102,6 +102,8 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
   certificates, so a removed device cannot quietly re-enroll with the certificate it still holds.
 - **Bounded challenges:** each Apple Configurator download from an invitation link uses up one of its uses, and an
   agent on a Mac that is already MDM-enrolled cannot fetch further enrollment profiles.
+- **Certificate requests:** the SCEP CA signs only RSA keys of 2048 bits or more and ECDSA keys on P-256 or larger,
+  and copies no DNS or email names from the request into the device certificate.
 - **Serial numbers are never proof:** an agent enrollment or MDM `Authenticate` only falls back to matching by
   serial number for a record that has no UDID yet (and, for MDM, no agent).
 - `/mdm` request bodies are capped at 16 MB.
@@ -172,7 +174,9 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
 - Webhooks never follow redirects.
 - They refuse loopback, link-local (including cloud metadata at 169.254.169.254) and unspecified addresses.
 - Private RFC 1918 networks stay allowed, because self-hosted relays commonly live there.
-- Deliveries are HMAC-signed (`X-VibeMDM-Signature`).
+- Deliveries are HMAC-signed (`X-VibeMDM-Signature`). `X-VibeMDM-Signature-V2` also covers the
+  `X-VibeMDM-Timestamp` header (HMAC of `timestamp + "." + body`), so receivers can reject old, replayed
+  deliveries; prefer it.
 - The SOFA catalog fetch backs off for 5 minutes after a failure.
 
 ## Known limitations

@@ -162,7 +162,7 @@ hooks; `GET /api/v1/webhooks/deliveries` lists recent deliveries with status, er
 | Property | Behaviour |
 | --- | --- |
 | Method / body | `POST`, `Content-Type: application/json`, the envelope below |
-| Headers | `User-Agent: vibemdm-webhook`, `X-VibeMDM-Event: <event>`, and `X-VibeMDM-Signature` when a secret is set |
+| Headers | `User-Agent: vibemdm-webhook`, `X-VibeMDM-Event: <event>`; with a secret also `X-VibeMDM-Signature` (base64 HMAC-SHA256 of the body), `X-VibeMDM-Timestamp` (Unix seconds) and `X-VibeMDM-Signature-V2` (base64 HMAC-SHA256 of `timestamp.body`; reject deliveries whose timestamp is more than a few minutes old) |
 | Signature | Base64 of HMAC-SHA256 over the raw body, keyed with the secret |
 | Success | Any status below 300 |
 | Retries | 3 attempts in total, waiting 5 s then 10 s |

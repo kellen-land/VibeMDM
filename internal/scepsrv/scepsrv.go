@@ -5,6 +5,7 @@ package scepsrv
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
@@ -230,6 +231,9 @@ func (s *Server) signCSR(ctx context.Context, m *scep.CSRReqMessage) (*x509.Cert
 	if err := m.CSR.CheckSignature(); err != nil {
 		return nil, fmt.Errorf("CSR signature: %w", err)
 	}
+	if err := checkCSRKey(m.CSR.PublicKey); err != nil {
+		return nil, err
+	}
 	if s.challenge == nil || m.ChallengePassword == "" || !s.challenge(ctx, m.ChallengePassword) {
 		return nil, errors.New("invalid SCEP challenge")
 	}
@@ -248,15 +252,13 @@ func (s *Server) signCSR(ctx context.Context, m *scep.CSRReqMessage) (*x509.Cert
 	skid := sha1.Sum(pubDER)
 	now := time.Now().UTC()
 	tmpl := &x509.Certificate{
-		SerialNumber:   big.NewInt(serialN),
-		Subject:        m.CSR.Subject,
-		NotBefore:      now.Add(-10 * time.Minute),
-		NotAfter:       now.Add(s.validity),
-		SubjectKeyId:   skid[:],
-		KeyUsage:       x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-		DNSNames:       m.CSR.DNSNames,
-		EmailAddresses: m.CSR.EmailAddresses,
+		SerialNumber: big.NewInt(serialN),
+		Subject:      m.CSR.Subject,
+		NotBefore:    now.Add(-10 * time.Minute),
+		NotAfter:     now.Add(s.validity),
+		SubjectKeyId: skid[:],
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
 	der, err := x509.CreateCertificate(rand.Reader, tmpl, caCert, m.CSR.PublicKey, caKey)
 	if err != nil {
@@ -341,4 +343,22 @@ func (s *Server) pkiOperation(ctx context.Context, data []byte) ([]byte, error) 
 		return nil, err
 	}
 	return rep.Raw, nil
+}
+
+// checkCSRKey accepts the key types Apple devices generate for their MDM identity: RSA of at
+// least 2048 bits, or ECDSA on P-256 or larger.
+func checkCSRKey(pub any) error {
+	switch k := pub.(type) {
+	case *rsa.PublicKey:
+		if k.N.BitLen() < 2048 {
+			return fmt.Errorf("CSR key too small: RSA-%d (need at least 2048 bits)", k.N.BitLen())
+		}
+		return nil
+	case *ecdsa.PublicKey:
+		if k.Curve.Params().BitSize < 256 {
+			return fmt.Errorf("CSR key too small: ECDSA-%d", k.Curve.Params().BitSize)
+		}
+		return nil
+	}
+	return fmt.Errorf("unsupported CSR key type %T", pub)
 }

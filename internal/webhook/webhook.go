@@ -17,6 +17,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -234,6 +235,11 @@ func (w *Dispatcher) deliver(ctx context.Context, d delivery) {
 			mac := hmac.New(sha256.New, []byte(d.hook.Secret))
 			mac.Write(d.payload)
 			req.Header.Set("X-VibeMDM-Signature", base64.StdEncoding.EncodeToString(mac.Sum(nil)))
+			// v2 also signs the send time, so a receiver can reject replayed deliveries
+			// (check the timestamp is recent before trusting the payload).
+			ts := strconv.FormatInt(time.Now().Unix(), 10)
+			req.Header.Set("X-VibeMDM-Timestamp", ts)
+			req.Header.Set("X-VibeMDM-Signature-V2", SignV2(d.hook.Secret, ts, d.payload))
 		}
 		resp, err := w.Client.Do(req)
 		if err != nil {
@@ -258,4 +264,12 @@ func (w *Dispatcher) deliver(ctx context.Context, d delivery) {
 	if lastErr != "" {
 		w.Log.Warn("webhook delivery failed", "hook", d.hook.Name, "event", d.event, "err", lastErr)
 	}
+}
+
+// SignV2 is the X-VibeMDM-Signature-V2 value: base64(HMAC-SHA256(secret, timestamp + "." + body)).
+func SignV2(secret, timestamp string, body []byte) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(timestamp + "."))
+	mac.Write(body)
+	return base64.StdEncoding.EncodeToString(mac.Sum(nil))
 }
