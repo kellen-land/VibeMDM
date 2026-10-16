@@ -6,7 +6,7 @@ import { Plug, PlugZap, RotateCw } from 'lucide-react'
 import { useTheme } from '../../theme/ThemeContext'
 import { Button } from '../ui/Button'
 import { cn } from '../../lib/cn'
-import { base64ToBytes, encodeFrameData, xtermTheme } from './xtermTheme'
+import { base64ToBytes, encodeFrameData, safeLinkHandler, xtermTheme } from './xtermTheme'
 
 type Status = 'connecting' | 'connected' | 'offline' | 'closed' | 'error'
 
@@ -49,6 +49,7 @@ export default function ShellTerminalImpl({ computerId, computerName }: ShellTer
       scrollback: 5000,
       theme: xtermTheme(dark),
       allowProposedApi: true,
+      linkHandler: safeLinkHandler,
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
