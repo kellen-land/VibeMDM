@@ -238,6 +238,11 @@ func (s *Service) CommandAndReportResults(r *mdm.Request, results *mdm.CommandRe
 		s.st.TouchMDMCheckin(r.Context(), results.UDID)
 		if results.CommandUUID != "" && results.Status != "Idle" && results.Status != "NotNow" {
 			s.processResult(r.Context(), results)
+			// Secrets in the payload (profiles, passwords, tokens) and the device's answer are not
+			// needed once every device has answered; keep only redacted copies.
+			if err := s.st.ScrubCommandSecrets(r.Context(), results.CommandUUID, inspector.Redact); err != nil {
+				s.log.Warn("scrubbing command secrets", "err", err, "uuid", results.CommandUUID)
+			}
 		}
 	}
 	return cmd, err

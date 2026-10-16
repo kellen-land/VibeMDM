@@ -102,6 +102,8 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
   certificates, so a removed device cannot quietly re-enroll with the certificate it still holds.
 - **Bounded challenges:** each Apple Configurator download from an invitation link uses up one of its uses, and an
   agent on a Mac that is already MDM-enrolled cannot fetch further enrollment profiles.
+- **Delivered commands:** once every device has answered a command, its stored plist and the devices' answers are
+  kept only in redacted form (no profile payloads, passwords, bypass codes or bootstrap tokens).
 - **Certificate requests:** the SCEP CA signs only RSA keys of 2048 bits or more and ECDSA keys on P-256 or larger,
   and copies no DNS or email names from the request into the device certificate.
 - **Serial numbers are never proof:** an agent enrollment or MDM `Authenticate` only falls back to matching by

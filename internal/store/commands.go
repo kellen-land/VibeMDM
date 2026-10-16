@@ -168,3 +168,47 @@ func (s *Store) EnrollmentEnabled(ctx context.Context, enrollmentID string) (boo
 	}
 	return enabled, err
 }
+
+// ScrubCommandSecrets rewrites a command's stored plist, and its devices' result plists, through
+// redact once no device still has it queued. Profiles, recovery-lock passwords and the agent
+// bootstrap token are needed only until delivery; the redacted copies keep the inspector useful.
+func (s *Store) ScrubCommandSecrets(ctx context.Context, commandUUID string, redact func(string) string) error {
+	var pending bool
+	if err := s.DB.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM enrollment_queue q
+		LEFT JOIN command_results r ON r.id = q.id AND r.command_uuid = q.command_uuid
+		WHERE q.command_uuid = $1 AND q.active AND (r.status IS NULL OR r.status = 'NotNow'))`, commandUUID).Scan(&pending); err != nil || pending {
+		return err
+	}
+	var cmd string
+	if err := s.DB.QueryRowContext(ctx, `SELECT command FROM commands WHERE command_uuid = $1`, commandUUID).Scan(&cmd); err != nil {
+		return wrapNotFound(err)
+	}
+	if red := redact(cmd); red != cmd {
+		if _, err := s.DB.ExecContext(ctx, `UPDATE commands SET command = $2 WHERE command_uuid = $1`, commandUUID, red); err != nil {
+			return err
+		}
+	}
+	rows, err := s.DB.QueryContext(ctx, `SELECT id, result FROM command_results WHERE command_uuid = $1`, commandUUID)
+	if err != nil {
+		return err
+	}
+	type res struct{ id, result string }
+	var all []res
+	for rows.Next() {
+		var x res
+		if err := rows.Scan(&x.id, &x.result); err != nil {
+			rows.Close()
+			return err
+		}
+		all = append(all, x)
+	}
+	rows.Close()
+	for _, x := range all {
+		if red := redact(x.result); red != x.result {
+			if _, err := s.DB.ExecContext(ctx, `UPDATE command_results SET result = $3 WHERE id = $1 AND command_uuid = $2`, x.id, commandUUID, red); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

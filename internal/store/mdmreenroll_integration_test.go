@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 )
@@ -89,5 +90,44 @@ func TestFileVaultKeyHistoryKeepsReplacedKeys(t *testing.T) {
 	hist, err := s.FileVaultKeyHistory(ctx, comp.ID)
 	if err != nil || len(hist) != 2 || hist[0].Key != "KEY-TWO" || hist[1].Key != "KEY-ONE" {
 		t.Fatalf("history = %+v, %v", hist, err)
+	}
+}
+
+func TestScrubCommandSecretsAfterLastDevice(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	stamp := time.Now().Format("150405.000000")
+	cmdUUID := "SCRUB-" + stamp
+	plistCmd := `<?xml version="1.0"?><plist><dict><key>Command</key><dict><key>Password</key><string>hunter2-secret</string></dict></dict></plist>`
+	mustExec := func(q string, args ...any) {
+		t.Helper()
+		if _, err := s.DB.ExecContext(ctx, q, args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, d := range []string{"A", "B"} {
+		id := "SCRUBDEV-" + d + stamp
+		mustExec(`INSERT INTO devices (id, authenticate, authenticate_at) VALUES ($1, 'x', now())`, id)
+		mustExec(`INSERT INTO enrollments (id, device_id, type, topic, push_magic, token_hex, last_seen_at) VALUES ($1, $1, 'Device', 't', 'p', 'aa', now())`, id)
+	}
+	mustExec(`INSERT INTO commands (command_uuid, request_type, command) VALUES ($1, 'SetRecoveryLock', $2)`, cmdUUID, plistCmd)
+	mustExec(`INSERT INTO enrollment_queue (id, command_uuid) VALUES ($1, $3), ($2, $3)`, "SCRUBDEV-A"+stamp, "SCRUBDEV-B"+stamp, cmdUUID)
+	mustExec(`INSERT INTO command_results (id, command_uuid, status, result) VALUES ($1, $2, 'Acknowledged', '<?xml version="1.0"?><plist/>')`, "SCRUBDEV-A"+stamp, cmdUUID)
+	redact := func(v string) string { return strings.ReplaceAll(v, "hunter2-secret", "[redacted]") }
+	if err := s.ScrubCommandSecrets(ctx, cmdUUID, redact); err != nil {
+		t.Fatal(err)
+	}
+	var stored string
+	s.DB.QueryRowContext(ctx, `SELECT command FROM commands WHERE command_uuid = $1`, cmdUUID).Scan(&stored)
+	if !strings.Contains(stored, "hunter2-secret") {
+		t.Fatal("payload scrubbed while another device still had it queued")
+	}
+	mustExec(`INSERT INTO command_results (id, command_uuid, status, result) VALUES ($1, $2, 'Acknowledged', '<?xml version="1.0"?><plist/>')`, "SCRUBDEV-B"+stamp, cmdUUID)
+	if err := s.ScrubCommandSecrets(ctx, cmdUUID, redact); err != nil {
+		t.Fatal(err)
+	}
+	s.DB.QueryRowContext(ctx, `SELECT command FROM commands WHERE command_uuid = $1`, cmdUUID).Scan(&stored)
+	if strings.Contains(stored, "hunter2-secret") {
+		t.Fatal("payload still holds the secret after every device answered")
 	}
 }
