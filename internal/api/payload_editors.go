@@ -104,7 +104,7 @@ func (h *Handler) previewProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 // legacySecret catches secrets in editors without x-secret marks (older saved values).
-var legacySecret = regexp.MustCompile(`(?i)(password|secret|challenge|presharedkey|passphrase)`)
+var legacySecret = regexp.MustCompile(`(?i)(password|secret|challenge|presharedkey|passphrase|passcode|privatekey|license)`)
 
 // redactPayloads hides fields the editor marks secret (passwords, shared secrets, SCEP
 // challenges, identity files) from viewers.

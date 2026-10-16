@@ -49,10 +49,10 @@ Computers can be named by ID, serial number or exact name.
 | `software_update_status` | read | DDM update plans and super deployment status |
 | `search_logs` | read | Server or agent logs |
 | `recent_mdm_commands` | read | A Mac's recent MDM commands and their status (no payloads) |
-| `recent_audit_events` | read | Recent administrative actions |
+| `recent_audit_events` | read (admin tokens only) | Recent administrative actions |
 | `send_push` | write | Wake a Mac with an APNs push |
 | `update_inventory` | write | Request fresh inventory (agent or MDM) |
-| `run_policy` | write | Run an existing policy on one Mac |
+| `run_policy` | write | Run an existing, enabled policy on one Mac |
 | `acknowledge_health_issue` | write | Acknowledge or snooze a health finding |
 | `remediate_health_issue` | write | Apply a runnable fix offered by a health finding |
 | `start_compliance_scan` | write | Scan a Mac or a baseline's scope. Remediation is never started from MCP. |

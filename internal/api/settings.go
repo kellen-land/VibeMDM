@@ -577,9 +577,12 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "username required")
 		return
 	}
-	if req.Role != "viewer" {
-		req.Role = "admin"
+	role, ok := parseRole(req.Role)
+	if !ok {
+		writeErr(w, 400, `role must be "admin" or "viewer"`)
+		return
 	}
+	req.Role = role
 	hash, err := auth.HashPassword(req.Password)
 	if err != nil {
 		writeErr(w, 400, err.Error())
@@ -595,33 +598,58 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) {
+	// Fields left out keep their current value (a missing "role" must not mean admin, nor a
+	// missing "enabled" mean disabled).
 	var req struct {
-		DisplayName string `json:"display_name"`
-		Email       string `json:"email"`
-		Role        string `json:"role"`
-		Enabled     bool   `json:"enabled"`
+		DisplayName *string `json:"display_name"`
+		Email       *string `json:"email"`
+		Role        *string `json:"role"`
+		Enabled     *bool   `json:"enabled"`
 	}
 	if err := decode(r, &req); err != nil {
 		writeErr(w, 400, err.Error())
 		return
 	}
-	if req.Role != "viewer" {
-		req.Role = "admin"
-	}
-	if r.PathValue("id") == auth.FromContext(r.Context()).UserID && (req.Role != "admin" || !req.Enabled) {
-		writeErr(w, 400, "you cannot demote or disable your own account")
-		return
-	}
-	if err := h.st.UpdateUser(r.Context(), r.PathValue("id"), req.DisplayName, req.Email, req.Role, req.Enabled); err != nil {
-		h.fail(w, err, "user")
-		return
-	}
-	u, err := h.st.GetUser(r.Context(), r.PathValue("id"))
+	cur, err := h.st.GetUser(r.Context(), r.PathValue("id"))
 	if err != nil {
 		h.fail(w, err, "user")
 		return
 	}
-	h.st.Audit(r.Context(), actor(r), "user.update", "user", u.ID, nil)
+	display, email, role, enabled := cur.DisplayName, cur.Email, cur.Role, cur.Enabled
+	if req.DisplayName != nil {
+		display = *req.DisplayName
+	}
+	if req.Email != nil {
+		email = *req.Email
+	}
+	if req.Role != nil {
+		var ok bool
+		if role, ok = parseRole(*req.Role); !ok {
+			writeErr(w, 400, `role must be "admin" or "viewer"`)
+			return
+		}
+	}
+	if req.Enabled != nil {
+		enabled = *req.Enabled
+	}
+	if cur.ID == auth.FromContext(r.Context()).UserID && (role != "admin" || !enabled) {
+		writeErr(w, 400, "you cannot demote or disable your own account")
+		return
+	}
+	if err := h.st.UpdateUser(r.Context(), cur.ID, display, email, role, enabled); err != nil {
+		h.fail(w, err, "user")
+		return
+	}
+	if !enabled && cur.Enabled {
+		h.st.DeleteUserSessions(r.Context(), cur.ID, "")
+	}
+	u, err := h.st.GetUser(r.Context(), cur.ID)
+	if err != nil {
+		h.fail(w, err, "user")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "user.update", "user", u.ID, map[string]any{"username": u.Username,
+		"role": map[string]string{"from": cur.Role, "to": u.Role}, "enabled": map[string]bool{"from": cur.Enabled, "to": u.Enabled}})
 	writeJSON(w, 200, u)
 }
 
@@ -688,9 +716,12 @@ func (h *Handler) createAPIToken(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "name required")
 		return
 	}
-	if req.Role != "viewer" {
-		req.Role = "admin"
+	role, ok := parseRole(req.Role)
+	if !ok {
+		writeErr(w, 400, `role must be "admin" or "viewer"`)
+		return
 	}
+	req.Role = role
 	tok, prefix := auth.NewAPIToken()
 	var exp *time.Time
 	if req.ExpiresDays != nil && *req.ExpiresDays > 0 {
@@ -702,7 +733,7 @@ func (h *Handler) createAPIToken(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "api token")
 		return
 	}
-	h.st.Audit(r.Context(), actor(r), "api_token.create", "api_token", t.ID, map[string]any{"name": t.Name})
+	h.st.Audit(r.Context(), actor(r), "api_token.create", "api_token", t.ID, map[string]any{"name": t.Name, "role": t.Role, "expires_at": t.ExpiresAt})
 	writeJSON(w, 201, map[string]any{"token": tok, "api_token": t})
 }
 
@@ -731,4 +762,16 @@ func creatorUserID(r *http.Request) string {
 		return p.UserID
 	}
 	return ""
+}
+
+// parseRole accepts exactly the two console roles. Anything else is an error rather than a
+// silent promotion to admin.
+func parseRole(s string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "admin":
+		return "admin", true
+	case "viewer":
+		return "viewer", true
+	}
+	return "", false
 }

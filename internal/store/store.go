@@ -170,6 +170,11 @@ func (s *Store) CreateUser(ctx context.Context, username, displayName, email, ro
 }
 
 // GetUserByUsername returns a user and their password hash.
+// GetUserWithHash returns a user and their password hash by ID.
+func (s *Store) GetUserWithHash(ctx context.Context, id string) (*model.AdminUser, string, error) {
+	return scanUser(s.DB.QueryRowContext(ctx, `SELECT `+userCols+`, password_hash FROM admin_users WHERE id = $1`, id))
+}
+
 func (s *Store) GetUserByUsername(ctx context.Context, username string) (*model.AdminUser, string, error) {
 	row := s.DB.QueryRowContext(ctx, `SELECT `+userCols+`, password_hash FROM admin_users WHERE lower(username) = lower($1)`, username)
 	return scanUser(row)
@@ -233,8 +238,19 @@ func (s *Store) DeleteUserSessions(ctx context.Context, userID, exceptHash strin
 
 // DeleteUser removes a user.
 func (s *Store) DeleteUser(ctx context.Context, id string) error {
-	_, err := s.DB.ExecContext(ctx, `DELETE FROM admin_users WHERE id=$1`, id)
-	return err
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	// The user's API tokens go with them (api_tokens.created_by would otherwise just become NULL).
+	if _, err := tx.ExecContext(ctx, `DELETE FROM api_tokens WHERE created_by = $1`, id); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM admin_users WHERE id=$1`, id); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // TouchUserLogin records a login.
@@ -298,8 +314,10 @@ func (s *Store) CreateAPIToken(ctx context.Context, name, tokenHash, prefix, rol
 func (s *Store) GetAPIToken(ctx context.Context, tokenHash string) (*model.APIToken, error) {
 	var t model.APIToken
 	var exp, last sql.NullTime
-	err := s.DB.QueryRowContext(ctx, `SELECT id, name, token_prefix, role, created_at, last_used_at, expires_at FROM api_tokens
-		WHERE token_hash = $1 AND (expires_at IS NULL OR expires_at > now())`, tokenHash).Scan(&t.ID, &t.Name, &t.TokenPrefix, &t.Role, &t.CreatedAt, &last, &exp)
+	// A token stops working when the user who created it is disabled (deleting a user deletes them).
+	err := s.DB.QueryRowContext(ctx, `SELECT t.id, t.name, t.token_prefix, t.role, t.created_at, t.last_used_at, t.expires_at FROM api_tokens t
+		LEFT JOIN admin_users u ON u.id = t.created_by
+		WHERE t.token_hash = $1 AND (t.expires_at IS NULL OR t.expires_at > now()) AND (t.created_by IS NULL OR u.enabled)`, tokenHash).Scan(&t.ID, &t.Name, &t.TokenPrefix, &t.Role, &t.CreatedAt, &last, &exp)
 	if err != nil {
 		return nil, wrapNotFound(err)
 	}
@@ -419,9 +437,21 @@ func (s *Store) Audit(ctx context.Context, actor, action, targetType, targetID s
 		actor, action, targetType, targetID, jsonArg(details))
 }
 
+// AuditStrict records an audit entry and reports failure. Secret reveals use it and withhold
+// the secret when the record could not be written.
+func (s *Store) AuditStrict(ctx context.Context, actor, action, targetType, targetID string, details map[string]any) error {
+	if details == nil {
+		details = map[string]any{}
+	}
+	_, err := s.DB.ExecContext(ctx, `INSERT INTO audit_log (actor, action, target_type, target_id, details) VALUES ($1,$2,$3,$4,$5::jsonb)`,
+		actor, action, targetType, targetID, jsonArg(details))
+	return err
+}
+
 // ListAudit returns recent audit entries.
 func (s *Store) ListAudit(ctx context.Context, limit, offset int, targetID string) ([]model.AuditEntry, int, error) {
 	// targetID ("" for all) limits the log to one object's history.
+	limit, offset = clampPage(limit, offset)
 	var total int
 	if err := s.DB.QueryRowContext(ctx, `SELECT count(*) FROM audit_log WHERE $1 = '' OR target_id = $1`, targetID).Scan(&total); err != nil {
 		return nil, 0, err
@@ -560,6 +590,20 @@ func (s *Store) GetPushCertPEM(ctx context.Context, topic string) (string, error
 }
 
 // Helper for paging.
+// ExportLimit caps CSV exports.
+const ExportLimit = 10000
+
+// clampFilterPage is clampPage, except that exports may return up to ExportLimit rows.
+func clampFilterPage(limit, offset int, export bool) (int, int) {
+	if !export {
+		return clampPage(limit, offset)
+	}
+	if limit <= 0 || limit > ExportLimit {
+		limit = ExportLimit
+	}
+	return limit, max(offset, 0)
+}
+
 func clampPage(limit, offset int) (int, int) {
 	if limit <= 0 || limit > 500 {
 		limit = 50

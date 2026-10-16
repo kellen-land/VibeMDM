@@ -212,7 +212,7 @@ func (s *Store) RunAdvancedSearch(ctx context.Context, criteria []model.Criterio
 	if limit <= 0 {
 		limit = 500
 	}
-	comps, _, err := s.ListComputers(ctx, ComputerFilter{IDs: ids, Limit: limit})
+	comps, _, err := s.ListComputers(ctx, ComputerFilter{IDs: ids, Limit: limit, Export: limit > 500})
 	return comps, err
 }
 

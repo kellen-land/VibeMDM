@@ -118,7 +118,7 @@ func Tools(d Deps) []*Tool {
 				"computer"), Idempotent: true, Run: t.commands},
 		{Name: "recent_audit_events", Title: "Audit log",
 			Description: "Recent administrative actions recorded in the audit log.",
-			Input:       schema(map[string]any{"limit": num("Maximum entries (default 50)", 1, 200)}), Idempotent: true, Run: t.audit},
+			Input:       schema(map[string]any{"limit": num("Maximum entries (default 50)", 1, 200)}), Idempotent: true, AdminOnly: true, Run: t.audit},
 
 		// ---- write tools (admin token + "allow write tools") ----
 		{Name: "send_push", Title: "Wake a Mac (APNs push)", Write: true, Idempotent: true,
@@ -587,6 +587,11 @@ func (t *tools) runPolicy(ctx context.Context, p *auth.Principal, args map[strin
 	}
 	if !c.AgentEnrolled {
 		return nil, fmt.Errorf("%s does not have the VibeMDM agent", c.Name)
+	}
+	// An AI client acts on text it reads from Macs, so it may only run policies an admin has
+	// enabled; the console's manual "Run policy" can still run disabled ones.
+	if !pol.Enabled {
+		return nil, fmt.Errorf("policy %q is disabled; enable it in the console before running it over MCP", pol.Name)
 	}
 	ap, err := t.d.Engine.PrepareFor(ctx, pol, c, "manual")
 	if err != nil {
