@@ -29,7 +29,8 @@ Sensitive values are redacted by default everywhere: lock and erase PINs, passwo
 CMS blobs, bootstrap and unlock tokens, PushMagic, SCEP challenges and similar keys. Placeholders note the original
 size, for example `[redacted 6 bytes]`.
 
-Admins can request raw payloads with `?reveal=1`. Every reveal is written to the audit log. Viewers always receive
+Once every device a command was queued for has answered, the stored payload and the devices' responses are
+rewritten with secrets redacted (profiles, passwords, tokens), so a database copy does not hold them. Admins can request raw payloads with `?reveal=1`; for delivered commands this returns the redacted copy. Every reveal is written to the audit log. Viewers always receive
 redacted payloads. Search matches against the redacted text, so it cannot be used to confirm a secret value.
 
 Timeline events are kept for 90 days.

@@ -51,6 +51,7 @@ type Handler struct {
 
 	compliance *compliance.Service
 	onboarding *onboarding.Service
+	logLimit   *deviceLimiter
 
 	// OnAgentEnrolled runs after a successful agent enrollment (removes the MDM bootstrap profile).
 	OnAgentEnrolled func(ctx context.Context, comp *model.Computer)
@@ -70,7 +71,8 @@ func (h *Handler) WithCompliance(svc *compliance.Service) *Handler {
 
 // New creates an agent API handler.
 func New(st *store.Store, engine *policy.Engine, notifier *Notifier, hub *shell.Hub, hooks *webhook.Dispatcher, dataDir, assetsDir, agentDir, version string, profile EnrollmentProfileFunc, logger *slog.Logger) *Handler {
-	return &Handler{st: st, engine: engine, notifier: notifier, shellHub: hub, hooks: hooks, log: logger, dataDir: dataDir, assetsDir: assetsDir, icons: appicons.Dir{Path: filepath.Join(assetsDir, assets.AppIcons)}, agentDir: agentDir, profile: profile, version: version}
+	return &Handler{st: st, engine: engine, notifier: notifier, shellHub: hub, hooks: hooks, log: logger, dataDir: dataDir, assetsDir: assetsDir, icons: appicons.Dir{Path: filepath.Join(assetsDir, assets.AppIcons)}, agentDir: agentDir, profile: profile, version: version,
+		logLimit: newDeviceLimiter(30, 6*time.Second)}
 }
 
 type ctxKey struct{}
@@ -180,6 +182,16 @@ func (h *Handler) validateEnrollmentToken(ctx context.Context, token string, req
 	if strings.HasPrefix(token, "vmbt_") {
 		if _, err := h.st.ConsumeBootstrapToken(ctx, store.HashToken(token), req.UDID, req.SerialNumber); err != nil {
 			if errors.Is(err, store.ErrBootstrapDevice) {
+				return err
+			}
+			var reused *store.BootstrapReusedError
+			if errors.As(err, &reused) {
+				// Fail closed: whoever enrolled first with this token loses its identity too.
+				if uerr := h.st.UnenrollAgent(ctx, reused.ComputerID); uerr != nil {
+					h.log.Error("revoking agent after bootstrap token reuse", "err", uerr, "computer", reused.ComputerID)
+				}
+				h.log.Warn("agent bootstrap token presented twice; agent identity revoked", "computer", reused.ComputerID)
+				h.st.Audit(ctx, "agent", "agent.bootstrap_reused", "computer", reused.ComputerID, map[string]any{"udid": req.UDID, "serial": req.SerialNumber})
 				return err
 			}
 			return errors.New("invalid or expired enrollment token")
@@ -519,8 +531,19 @@ func (h *Handler) inventory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) packageDownload(w http.ResponseWriter, r *http.Request) {
+	comp := computerFrom(r.Context())
 	pkg, err := h.st.GetPackage(r.Context(), r.PathValue("id"))
 	if err != nil {
+		writeErr(w, 404, "package not found")
+		return
+	}
+	// A Mac downloads only packages of policies it was given (like a scoped distribution point),
+	// so one enrolled Mac cannot pull every package on the server.
+	if ok, err := h.st.PackageAllowedForComputer(r.Context(), comp.ID, pkg.ID); err != nil || !ok {
+		if err != nil {
+			h.log.Error("checking package access", "err", err, "computer", comp.Name)
+		}
+		h.log.Warn("package download refused: no recent policy with this package", "computer", comp.Name, "package", pkg.Name)
 		writeErr(w, 404, "package not found")
 		return
 	}
@@ -534,6 +557,11 @@ func (h *Handler) packageDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) enrollmentProfile(w http.ResponseWriter, r *http.Request) {
+	// Each profile carries a fresh SCEP challenge; a Mac that is already enrolled has no use for one.
+	if comp := computerFrom(r.Context()); comp != nil && comp.MDMEnrolled {
+		writeErr(w, 409, "this Mac is already enrolled in MDM")
+		return
+	}
 	b, err := h.profile(enroll.WithPurpose(r.Context(), enroll.PurposeAgent))
 	if err != nil {
 		writeErr(w, 500, err.Error())

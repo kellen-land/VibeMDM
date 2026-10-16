@@ -431,3 +431,34 @@ func (h *Handler) resetAgent(w http.ResponseWriter, r *http.Request) {
 	h.st.Audit(r.Context(), actor(r), "agent.reset", "computer", comp.ID, map[string]any{"computer": comp.Name})
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
+
+// allowComputerMDMReenroll lets a wiped or replaced Mac enroll again with a new identity certificate.
+// Until then, an Authenticate for an enrolled UDID from a different certificate is refused.
+func (h *Handler) allowComputerMDMReenroll(w http.ResponseWriter, r *http.Request) {
+	comp, err := h.st.GetComputer(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "computer")
+		return
+	}
+	if err := h.st.AllowMDMReenroll(r.Context(), comp.UDID); err != nil {
+		h.fail(w, err, "computer")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "mdm.reenroll_allowed", "computer", comp.ID, map[string]any{"computer": comp.Name})
+	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+// allowMobileMDMReenroll is allowComputerMDMReenroll for iPhones and iPads.
+func (h *Handler) allowMobileMDMReenroll(w http.ResponseWriter, r *http.Request) {
+	dev, err := h.st.GetMobileDevice(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "mobile device")
+		return
+	}
+	if err := h.st.AllowMDMReenroll(r.Context(), dev.UDID); err != nil {
+		h.fail(w, err, "mobile device")
+		return
+	}
+	h.st.Audit(r.Context(), actor(r), "mdm.reenroll_allowed", "mobile_device", dev.ID, map[string]any{"device": dev.Name})
+	writeJSON(w, 200, map[string]bool{"ok": true})
+}

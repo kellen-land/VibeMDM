@@ -9,3 +9,11 @@ web/dist/
 internal/webui/dist/assets/
 internal/webui/dist/index.html
 *.log
+# secrets and local notes never belong in the build context
+.env
+**/.env
+*.pem
+*.key
+*.p12
+HANDOFF.md
+.vibemdm-sim-tokens.json

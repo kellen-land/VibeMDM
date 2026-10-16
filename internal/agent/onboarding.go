@@ -100,7 +100,11 @@ func collectUserEntry(ctx context.Context, p model.AgentOnboarding) (map[string]
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, dialogBinary, args...).Output()
+	bin, err := rootOwnedExecutable(dialogBinary)
+	if err != nil {
+		return nil, fmt.Errorf("swiftDialog: %w", err)
+	}
+	out, err := exec.CommandContext(ctx, bin, args...).Output()
 	if err != nil && len(out) == 0 {
 		return nil, fmt.Errorf("welcome dialog: %w", err)
 	}
@@ -184,6 +188,10 @@ type progressDialog struct {
 }
 
 func startProgressDialog(ctx context.Context, p model.AgentOnboarding) (*progressDialog, error) {
+	bin, err := rootOwnedExecutable(dialogBinary)
+	if err != nil {
+		return nil, fmt.Errorf("swiftDialog: %w", err)
+	}
 	os.Remove(dialogCommandFile) // never follow a planted symlink
 	f, err := os.OpenFile(dialogCommandFile, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
@@ -194,7 +202,7 @@ func startProgressDialog(ctx context.Context, p model.AgentOnboarding) (*progres
 	for _, s := range p.Steps {
 		args = append(args, "--listitem", dialogSafe(s.Title))
 	}
-	cmd := exec.CommandContext(ctx, dialogBinary, args...)
+	cmd := exec.CommandContext(ctx, bin, args...)
 	if err := cmd.Start(); err != nil {
 		f.Close()
 		return nil, err

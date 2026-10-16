@@ -185,11 +185,44 @@ func (h *Handler) revealFileVaultKey(w http.ResponseWriter, r *http.Request) {
 	}
 	p := auth.FromContext(r.Context())
 	details := map[string]any{"reason": req.Reason, "ip": auth.ClientIP(r), "fingerprint": st.Fingerprint}
-	h.st.Audit(r.Context(), p.Username, "filevault.key_viewed", "computer", comp.ID, details)
+	if err := h.st.AuditStrict(r.Context(), p.Username, "filevault.key_viewed", "computer", comp.ID, details); err != nil {
+		h.fail(w, err, "audit")
+		return
+	}
 	h.hooks.Fire(webhook.FileVaultKeyViewed, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "serial": comp.SerialNumber, "actor": p.Username, "reason": req.Reason})
 	h.log.Info("FileVault recovery key viewed", "computer", comp.Name, "actor", p.Username)
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, map[string]any{"key": prk, "status": st})
+}
+
+// revealFileVaultKeyHistory returns the recovery keys a Mac reported before its current one
+// (admin-only, audited like the current key).
+func (h *Handler) revealFileVaultKeyHistory(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	decode(r, &req)
+	comp, err := h.st.GetComputer(r.Context(), r.PathValue("id"))
+	if err != nil {
+		h.fail(w, err, "computer")
+		return
+	}
+	hist, err := h.st.FileVaultKeyHistory(r.Context(), comp.ID)
+	if err != nil {
+		h.fail(w, err, "filevault key history")
+		return
+	}
+	p := auth.FromContext(r.Context())
+	if err := h.st.AuditStrict(r.Context(), p.Username, "filevault.key_history_viewed", "computer", comp.ID, map[string]any{"reason": req.Reason, "ip": auth.ClientIP(r), "count": len(hist)}); err != nil {
+		h.fail(w, err, "audit")
+		return
+	}
+	h.hooks.Fire(webhook.FileVaultKeyViewed, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "serial": comp.SerialNumber, "actor": p.Username, "reason": req.Reason, "history": true})
+	w.Header().Set("Cache-Control", "no-store")
+	if hist == nil {
+		hist = []store.FileVaultKeyHistoryEntry{}
+	}
+	writeJSON(w, 200, map[string]any{"keys": hist})
 }
 
 // remediateFileVault queues Escrow Buddy on a Mac to generate and escrow a new key at next login.

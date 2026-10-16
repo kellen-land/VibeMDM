@@ -394,3 +394,19 @@ func (s *Store) ExpireStalePolicyLogs(ctx context.Context) {
 }
 
 var _ = time.Now
+
+// PackageDownloadWindow is how long after a policy was handed to a Mac it may still download
+// that policy's packages (covers retries and offline Macs catching up).
+const PackageDownloadWindow = 7 * 24 * time.Hour
+
+// PackageAllowedForComputer reports whether a computer may download a package: only when a
+// policy that installs it was handed to that computer recently (by a trigger, Self Service,
+// onboarding or a manual run, which all record a policy log first).
+func (s *Store) PackageAllowedForComputer(ctx context.Context, computerID, packageID string) (bool, error) {
+	var ok bool
+	err := s.DB.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM policy_logs l JOIN policies p ON p.id = l.policy_id
+		WHERE l.computer_id = $1 AND l.created_at > now() - make_interval(secs => $3::float8)
+		AND p.packages @> jsonb_build_array(jsonb_build_object('package_id', $2::text)))`,
+		computerID, packageID, PackageDownloadWindow.Seconds()).Scan(&ok)
+	return ok, err
+}

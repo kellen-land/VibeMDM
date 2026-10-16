@@ -36,7 +36,10 @@ services:
       - ${VIBEMDM_ASSETS_PATH:-./assets}:/assets
 
   vibemdm:
-    image: ${VIBEMDM_IMAGE:-vibemdm/vibemdm:latest}
+    # Built locally by default. The default name is not on any registry ("library/" names belong to
+    # Docker), so Compose can never pull someone else's image in its place. Set VIBEMDM_IMAGE to
+    # ghcr.io/<owner>/vibemdm:<tag> to run a published image instead.
+    image: ${VIBEMDM_IMAGE:-vibemdm-local:latest}
     build:
       context: ..
       dockerfile: deploy/Dockerfile
@@ -63,6 +66,11 @@ services:
       - ${VIBEMDM_ASSETS_PATH:-./assets}:/assets
     ports:
       - "13031:8080"
+    # The server needs no Linux capabilities and never gains privileges.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
 volumes:
   db-data:

@@ -52,6 +52,7 @@ type Tool struct {
 	Description string
 	Input       map[string]any // JSON Schema for arguments
 	Write       bool           // changes state: admin token + MCPAllowWrites required
+	AdminOnly   bool           // reads data the viewer role cannot see in the REST API
 	Destructive bool
 	Idempotent  bool
 	Run         func(ctx context.Context, p *auth.Principal, args map[string]any) (any, error)
@@ -158,6 +159,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) allowed(t *Tool, p *auth.Principal, writes bool) bool {
+	if t.AdminOnly && !p.IsAdmin() {
+		return false
+	}
 	return !t.Write || (writes && p.IsAdmin())
 }
 

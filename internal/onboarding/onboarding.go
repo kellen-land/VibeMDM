@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/vibemdm/vibemdm/internal/model"
@@ -238,4 +239,23 @@ func (s *Service) ApplyUserEntry(ctx context.Context, comp *model.Computer, entr
 	set(&e.AssignedEmail, "assigned_email")
 	set(&e.AssignedPosition, "assigned_position")
 	return s.st.UpdateComputer(ctx, comp.ID, e)
+}
+
+// CleanUserEntry keeps only the values a Mac may set: keys that are fields of the workflow's
+// welcome form, at most 256 characters, and one of the field's options when it has a picker.
+// The Mac reports these itself, so anything else (another department, a field the form never
+// showed) is dropped rather than applied to the computer record.
+func CleanUserEntry(fields []model.OnboardingField, entry map[string]string) map[string]string {
+	clean := map[string]string{}
+	for _, f := range fields {
+		v, ok := entry[f.Key]
+		if _, known := FieldKeys[f.Key]; !ok || !known || len(v) > 256 {
+			continue
+		}
+		if len(f.Options) > 0 && !slices.Contains(f.Options, v) {
+			continue
+		}
+		clean[f.Key] = v
+	}
+	return clean
 }

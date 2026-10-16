@@ -317,7 +317,7 @@ copyright content are skipped (that content is not CC BY 4.0).
 | `make agent-macos` | The same two binaries built on a Mac with cgo, adding unified logging (needs Xcode or the Command Line Tools) |
 | `make sim` | `bin/vibemdm-sim` |
 | `make test` / `make vet` | Go tests; `go vet` and the web type check |
-| `make docker` | Builds the image `vibemdm/vibemdm:<version>` and `:latest` |
+| `make docker` | Builds the image `vibemdm-local:<version>` and `:latest` |
 | `make up` / `make down` / `make logs` | Compose up (with build), down, follow the server log |
 | `make dev-db` | A local PostgreSQL 17 container (user/password `vibemdm`, port 5432) |
 | `make clean` | Removes `bin/` and the built console |

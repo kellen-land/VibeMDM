@@ -44,12 +44,64 @@ func (s *Store) SaveFileVaultKey(ctx context.Context, computerID, prk, source st
 	if err != nil {
 		return false, err
 	}
-	_, err = s.DB.ExecContext(ctx, `INSERT INTO filevault_keys (computer_id, key_encrypted, fingerprint, source, escrowed_at, rotated_count)
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+	// Keep the key being replaced (sealed as stored) and the last fileVaultKeyHistory of them.
+	if _, err = tx.ExecContext(ctx, `INSERT INTO filevault_key_history (computer_id, key_encrypted, fingerprint, source, escrowed_at)
+		SELECT computer_id, key_encrypted, fingerprint, source, escrowed_at FROM filevault_keys WHERE computer_id = $1`, computerID); err != nil {
+		return false, err
+	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM filevault_key_history WHERE computer_id = $1 AND id NOT IN
+		(SELECT id FROM filevault_key_history WHERE computer_id = $1 ORDER BY replaced_at DESC, id DESC LIMIT $2)`, computerID, fileVaultKeyHistory); err != nil {
+		return false, err
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO filevault_keys (computer_id, key_encrypted, fingerprint, source, escrowed_at, rotated_count)
 		VALUES ($1, $2, $3, $4, now(), 0)
 		ON CONFLICT (computer_id) DO UPDATE SET key_encrypted = EXCLUDED.key_encrypted, fingerprint = EXCLUDED.fingerprint,
 		source = EXCLUDED.source, escrowed_at = now(), rotated_count = filevault_keys.rotated_count + 1`,
 		computerID, sealed, escrow.Fingerprint(prk), source)
-	return err == nil, err
+	if err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
+}
+
+// fileVaultKeyHistory is how many replaced recovery keys are kept per computer.
+const fileVaultKeyHistory = 10
+
+// FileVaultKeyHistoryEntry is a replaced recovery key (decrypted only for admins, audited by the caller).
+type FileVaultKeyHistoryEntry struct {
+	Key         string    `json:"key"`
+	Fingerprint string    `json:"fingerprint"`
+	Source      string    `json:"source"`
+	EscrowedAt  time.Time `json:"escrowed_at"`
+	ReplacedAt  time.Time `json:"replaced_at"`
+}
+
+// FileVaultKeyHistory returns a computer's previous recovery keys, newest first.
+func (s *Store) FileVaultKeyHistory(ctx context.Context, computerID string) ([]FileVaultKeyHistoryEntry, error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT key_encrypted, fingerprint, source, escrowed_at, replaced_at FROM filevault_key_history
+		WHERE computer_id = $1 ORDER BY replaced_at DESC, id DESC`, computerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []FileVaultKeyHistoryEntry
+	for rows.Next() {
+		var e FileVaultKeyHistoryEntry
+		var sealed string
+		if err := rows.Scan(&sealed, &e.Fingerprint, &e.Source, &e.EscrowedAt, &e.ReplacedAt); err != nil {
+			return nil, err
+		}
+		if e.Key, err = s.Box.Open(sealed); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
 }
 
 // GetFileVaultKey returns a computer's decrypted recovery key.

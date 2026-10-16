@@ -119,7 +119,7 @@ function CreateTokenDialog({ open, onClose, onCreated }: { open: boolean; onClos
   const invalidate = useInvalidate()
   const [name, setName] = useState('')
   const [role, setRole] = useState<Role>('admin')
-  const [days, setDays] = useState('')
+  const [days, setDays] = useState('90')
   const [busy, setBusy] = useState(false)
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -128,7 +128,7 @@ function CreateTokenDialog({ open, onClose, onCreated }: { open: boolean; onClos
       const r = await api.post<{ token: string; api_token: APIToken }>('/api/v1/api-tokens', { name: name.trim(), role, expires_days: days ? Number(days) : null })
       await invalidate(qk.apiTokens)
       setName('')
-      setDays('')
+      setDays('90')
       onCreated(r)
     } catch (err) {
       toast.error('Could not create token', errorMessage(err))
@@ -146,7 +146,7 @@ function CreateTokenDialog({ open, onClose, onCreated }: { open: boolean; onClos
           <Field label="Role">
             <Select value={role} onChange={(e) => setRole(e.target.value as Role)} options={[{ value: 'admin', label: 'Administrator' }, { value: 'viewer', label: 'Viewer (read-only)' }]} />
           </Field>
-          <Field label="Expires in (days)" hint="Blank for no expiry.">
+          <Field label="Expires in (days)" hint="90 days by default, like a rotating credential. Blank for no expiry.">
             <Input type="number" min={1} value={days} onChange={(e) => setDays(e.target.value)} placeholder="Never" />
           </Field>
         </FormGrid>

@@ -147,9 +147,11 @@ func (s *Server) configuratorProfileHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	token := r.PathValue("token")
-	ok := settings.OpenEnrollment
+	// Each download from an invitation link uses up one of its uses, as on /enroll: a profile
+	// carries a reusable 24-hour SCEP challenge, so a single-use link must not mint more.
+	ok := settings.OpenEnrollment || secretMatches(token, settings.AgentEnrollmentSecret)
 	if !ok && token != "" {
-		if _, err := s.st.CheckInvitation(r.Context(), store.HashToken(token)); err == nil || secretMatches(token, settings.AgentEnrollmentSecret) {
+		if _, err := s.st.ConsumeInvitation(r.Context(), store.HashToken(token)); err == nil {
 			ok = true
 		}
 	}

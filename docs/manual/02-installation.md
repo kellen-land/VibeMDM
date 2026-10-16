@@ -30,7 +30,7 @@ proxy you already run (this chapter uses Nginx Proxy Manager) terminates HTTPS a
 | --- | --- | --- |
 | `db` | `postgres:17-alpine` | Database `vibemdm`, user `vibemdm`, volume `db-data`, health-checked with `pg_isready` |
 | `assets-init` | `alpine:3.21` | Runs once at each start: `chown -R 100:101 /assets`, so the assets folder belongs to the user VibeMDM runs as (uid 100, gid 101), then exits |
-| `vibemdm` | `${VIBEMDM_IMAGE:-vibemdm/vibemdm:latest}`, built from `deploy/Dockerfile` | Waits for a healthy `db` and for `assets-init`; volume `vibemdm-data` at `/data`; host folder `${VIBEMDM_ASSETS_PATH:-./assets}` at `/assets`; publishes host port `13031` to container port `8080` |
+| `vibemdm` | `${VIBEMDM_IMAGE:-vibemdm-local:latest}`, built from `deploy/Dockerfile` | Waits for a healthy `db` and for `assets-init`; volume `vibemdm-data` at `/data`; host folder `${VIBEMDM_ASSETS_PATH:-./assets}` at `/assets`; publishes host port `13031` to container port `8080` |
 
 ### Storage
 
@@ -148,7 +148,9 @@ certificate.
 4. Set `VIBEMDM_TRUSTED_PROXIES` in `.env` to the address VibeMDM sees NPM connect from, then
    `docker compose up -d` to apply it:
    - NPM in Docker on the same host: the default `172.16.0.0/12` covers Docker's bridge networks. Narrow it to
-     NPM's network (`docker network inspect <network>` shows the subnet) if you can.
+     NPM's network (`docker network inspect <network>` shows the subnet) if you can: with the broad default, a
+     client that reaches port 13031 directly can arrive from the bridge gateway (an address in that range) and
+     choose its own `X-Forwarded-For`, which weakens per-IP login lockout. Firewalling 13031 prevents that.
    - NPM on another machine: its LAN IP, for example `192.168.1.20`.
 
    VibeMDM reads `X-Forwarded-For` right to left and skips trusted addresses, so a client cannot spoof its IP by
@@ -190,6 +192,7 @@ in `docker-compose.yml` does not reach the server; add it there if you need it.
 | `VIBEMDM_TRUSTED_PROXIES` | empty (`.env.example`: `172.16.0.0/12`) | yes (default `172.16.0.0/12`) | Comma-separated IPs/CIDRs allowed to set `X-Forwarded-For`. Without it the client IP is the direct peer |
 | `VIBEMDM_ALLOW_HTTP` | `false` | yes | Accept an `http://` server URL for a non-loopback host. Labs only: agents would run commands received without TLS |
 | `VIBEMDM_SESSION_TTL_HOURS` | `168` | **no** | Console session lifetime in hours (minimum 1) |
+| `VIBEMDM_SESSION_IDLE_MINUTES` | `120` | **no** | Console sessions end after this many minutes without requests (`0` turns the idle timeout off) |
 | `VIBEMDM_LOG_DB_LEVEL` | `info` | **no** | Minimum level stored in the searchable `server_logs` table: `debug`, `info`, `warn`, `error` |
 | `VIBEMDM_LOG_FORMAT` | `text` | yes | `json` switches stdout logging to JSON |
 | `VIBEMDM_DEBUG` | `false` | yes | Debug-level stdout logging; also logs MDM signature-verification errors |
@@ -211,7 +214,7 @@ Booleans accept `1`, `true`, `yes`, `on` and `0`, `false`, `no`, `off`.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `POSTGRES_PASSWORD` | none (required) | Password for the `vibemdm` database user. Compose builds `VIBEMDM_DATABASE_URL` from it |
-| `VIBEMDM_IMAGE` | `vibemdm/vibemdm:latest` | Image name/tag |
+| `VIBEMDM_IMAGE` | `vibemdm-local:latest` | Image name/tag. The default is local-only so Compose never pulls an image it did not build; set `ghcr.io/<owner>/vibemdm:<tag>` to run a published image |
 | `VIBEMDM_VERSION` | `dev` | Build argument stamped into the server and agent binaries (`vibemdm version`). When unset, the build time is used (`dev-YYYYMMDD.HHMM`), so each rebuild, and each agent built with it, is distinguishable |
 
 ### Agent-side variable

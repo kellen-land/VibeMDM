@@ -73,3 +73,23 @@ export function base64ToBytes(b64: string): Uint8Array {
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
   return out
 }
+
+/**
+ * Link handling for terminal hyperlinks (OSC 8). The text a Mac prints can label a link with
+ * anything, so only http(s) links open, and only after the user confirms the real address.
+ */
+export const safeLinkHandler = {
+  activate(_event: MouseEvent, uri: string) {
+    let url: URL
+    try {
+      url = new URL(uri)
+    } catch {
+      return
+    }
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return
+    if (window.confirm(`Open this link from the terminal?\n\n${url.href}`)) {
+      window.open(url.href, '_blank', 'noopener,noreferrer')
+    }
+  },
+  allowNonHttpProtocols: false,
+}

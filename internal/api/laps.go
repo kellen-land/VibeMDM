@@ -93,8 +93,10 @@ func (h *Handler) doRevealLAPS(r *http.Request, comp *model.Computer, reason str
 	if err != nil {
 		return nil, nil, err
 	}
-	h.st.Audit(r.Context(), p.Username, "laps.password_viewed", "computer", comp.ID,
-		map[string]any{"reason": reason, "ip": auth.ClientIP(r), "fingerprint": st.Fingerprint, "rotate_after": st.RotateAfter})
+	if err := h.st.AuditStrict(r.Context(), p.Username, "laps.password_viewed", "computer", comp.ID,
+		map[string]any{"reason": reason, "ip": auth.ClientIP(r), "fingerprint": st.Fingerprint, "rotate_after": st.RotateAfter}); err != nil {
+		return nil, nil, err
+	}
 	h.hooks.Fire(webhook.LAPSPasswordViewed, map[string]any{"computer_id": comp.ID, "computer": comp.Name, "serial": comp.SerialNumber, "actor": p.Username, "reason": reason})
 	h.log.Info("LAPS password viewed", "computer", comp.Name, "actor", p.Username)
 	if h.notifier != nil {
@@ -412,7 +414,10 @@ func (h *Handler) jamfLapsAudit(w http.ResponseWriter, r *http.Request) {
 		h.fail(w, err, "laps")
 		return
 	}
-	h.st.Audit(r.Context(), actor(r), "laps.history_viewed", "computer", comp.ID, map[string]any{"ip": auth.ClientIP(r), "passwords": len(hist)})
+	if err := h.st.AuditStrict(r.Context(), actor(r), "laps.history_viewed", "computer", comp.ID, map[string]any{"ip": auth.ClientIP(r), "passwords": len(hist)}); err != nil {
+		h.fail(w, err, "audit")
+		return
+	}
 	type audit struct {
 		ViewedBy string `json:"viewedBy"`
 		DateSeen string `json:"dateSeen"`

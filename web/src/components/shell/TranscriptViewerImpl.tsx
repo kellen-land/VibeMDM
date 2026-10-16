@@ -3,7 +3,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { useTheme } from '../../theme/ThemeContext'
-import { xtermTheme } from './xtermTheme'
+import { safeLinkHandler, xtermTheme } from './xtermTheme'
 
 /** Read-only render of a recorded shell transcript into a detached xterm so ANSI is preserved. */
 export interface TranscriptViewerProps { transcript: string; height?: string }
@@ -24,6 +24,7 @@ export default function TranscriptViewerImpl({ transcript, height = "50vh" }: Tr
       theme: xtermTheme(dark),
       convertEol: true,
       allowProposedApi: true,
+      linkHandler: safeLinkHandler,
     })
     const fit = new FitAddon()
     term.loadAddon(fit)

@@ -245,6 +245,7 @@ func scanMobile(row interface{ Scan(...any) error }) (*model.MobileDevice, error
 
 // MobileDeviceFilter filters the mobile device list.
 type MobileDeviceFilter struct {
+	Export  bool // CSV export: up to ExportLimit rows instead of one page
 	Query   string
 	GroupID string
 	Sort    string
@@ -262,7 +263,7 @@ var mobileSortCols = map[string]string{
 
 // ListMobileDevices returns mobile devices matching a filter, and the total count.
 func (s *Store) ListMobileDevices(ctx context.Context, f MobileDeviceFilter) ([]model.MobileDevice, int, error) {
-	f.Limit, f.Offset = clampPage(f.Limit, f.Offset)
+	f.Limit, f.Offset = clampFilterPage(f.Limit, f.Offset, f.Export)
 	var where []string
 	var args []any
 	if q := strings.TrimSpace(f.Query); q != "" {
@@ -413,14 +414,25 @@ func (s *Store) UpdateMobileDevice(ctx context.Context, id string, e MobileDevic
 
 // DeleteMobileDevice removes a mobile device record (its MDM enrollment is untouched).
 func (s *Store) DeleteMobileDevice(ctx context.Context, id string) error {
-	res, err := s.DB.ExecContext(ctx, `DELETE FROM mobile_devices WHERE id::text = $1`, id)
+	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return ErrNotFound
+	defer tx.Rollback()
+	var udid sql.NullString
+	if err := tx.QueryRowContext(ctx, `DELETE FROM mobile_devices WHERE id::text = $1 RETURNING udid`, id).Scan(&udid); err != nil {
+		return wrapNotFound(err)
 	}
-	return nil
+	if udid.Valid && udid.String != "" {
+		// As for computers: drop the NanoMDM enrollment and revoke the identity certificate.
+		if _, err := tx.ExecContext(ctx, `DELETE FROM devices WHERE id = $1`, udid.String); err != nil {
+			return err
+		}
+		if err := revokeEnrollmentCerts(ctx, tx, udid.String); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 // ---- inventory from MDM ----
@@ -711,7 +723,7 @@ func (s *Store) RunMobileSearch(ctx context.Context, criteria []model.Criterion,
 	if limit <= 0 {
 		limit = 500
 	}
-	out, _, err := s.ListMobileDevices(ctx, MobileDeviceFilter{IDs: ids, Limit: limit})
+	out, _, err := s.ListMobileDevices(ctx, MobileDeviceFilter{IDs: ids, Limit: limit, Export: limit > 500})
 	return out, err
 }
 

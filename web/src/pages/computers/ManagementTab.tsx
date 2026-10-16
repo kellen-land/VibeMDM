@@ -53,6 +53,7 @@ type DialogKind =
   | 'agent-restart'
   | 'agent-shutdown'
   | 'reset-agent'
+  | 'allow-reenroll'
   | 'raw'
   | null
 
@@ -147,6 +148,20 @@ export function ManagementTab({ c }: { c: ComputerDetail }) {
     }
   }
 
+  const allowReenroll = async () => {
+    setBusy('allow-reenroll')
+    try {
+      await api.post(`/api/v1/computers/${c.id}/allow-mdm-reenroll`)
+      toast.success('Re-enrollment allowed', 'This Mac can now enroll in MDM again with a new identity.')
+      await invalidate(qk.computer(c.id), ['computers'])
+      close()
+    } catch (e) {
+      toast.error('Allow re-enrollment failed', errorMessage(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
   if (!isAdmin) {
     return (
       <CardBody>
@@ -193,6 +208,7 @@ export function ManagementTab({ c }: { c: ComputerDetail }) {
           <Action icon={<FileCode />} label="Send raw command" description="Send a hand-written MDM command plist." onClick={() => setDialog('raw')} disabled={mdmOff} />
           <Action icon={<ShieldOff />} label="Remove MDM profile" description="Unmanage the device by removing the enrollment profile." onClick={() => setDialog('remove-mdm')} disabled={mdmOff} danger />
           <Action icon={<Trash2 />} label="Wipe / erase" description="Erase all content and settings. This cannot be undone." onClick={() => setDialog('erase')} disabled={mdmOff} danger />
+          <Action icon={<KeyRound />} label="Allow MDM re-enrollment" description="Let this Mac enroll again with a new identity, for example after an erase." onClick={() => setDialog('allow-reenroll')} loading={busy === 'allow-reenroll'} disabled={!c.udid} />
         </Section>
 
         <Section title="Agent tasks" description="Executed by the VibeMDM agent on the device at its next check-in (immediately if online).">
@@ -208,6 +224,16 @@ export function ManagementTab({ c }: { c: ComputerDetail }) {
         </Section>
       </CardBody>
 
+      <ConfirmDialog
+        open={dialog === 'allow-reenroll'}
+        onClose={close}
+        destructive
+        title="Allow this Mac to enroll in MDM again?"
+        description="Ends the current MDM enrollment. Until the Mac enrolls again, no MDM commands reach it. Without this, a new enrollment for an enrolled Mac is refused."
+        confirmLabel="Allow re-enrollment"
+        onConfirm={allowReenroll}
+        loading={busy === 'allow-reenroll'}
+      />
       <ConfirmDialog
         open={dialog === 'reset-agent'}
         onClose={close}

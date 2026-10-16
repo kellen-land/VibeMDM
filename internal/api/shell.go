@@ -77,7 +77,8 @@ func (h *Handler) shellWS(w http.ResponseWriter, r *http.Request) {
 		h.log.Info("remote shell connected", "session", sessionID)
 	})
 	if err := h.st.CloseShellSession(ctx, sessionID, res.Status, res.Reason, res.Transcript, res.BytesIn, res.BytesOut); err != nil {
-		h.log.Warn("closing shell session record", "err", err)
+		h.log.Error("recording shell session transcript failed", "err", err, "session", sessionID)
+		h.st.Audit(ctx, "system", "shell.record_failed", "computer", comp.ID, map[string]any{"session": sessionID, "error": err.Error()})
 	}
 	h.st.Audit(ctx, p.Username, "shell.close", "computer", comp.ID, map[string]any{"session": sessionID, "status": res.Status, "bytes_out": res.BytesOut})
 	h.log.Info("remote shell closed", "session", sessionID, "status", res.Status, "bytes_in", res.BytesIn, "bytes_out", res.BytesOut)

@@ -72,6 +72,15 @@ func (s *Store) CreateBootstrapToken(ctx context.Context, computerID, tokenHash 
 // ErrBootstrapDevice means a bootstrap token was presented by a different Mac.
 var ErrBootstrapDevice = errors.New("this enrollment token belongs to a different Mac")
 
+// BootstrapReusedError means a bootstrap token that was already used came back for its own Mac.
+// Only one installer runs per token, so a second use means something on that Mac read the token
+// and enrolled first: the caller revokes the agent identity issued with it.
+type BootstrapReusedError struct{ ComputerID string }
+
+func (e *BootstrapReusedError) Error() string {
+	return "this enrollment token was already used; reset the agent and reinstall it"
+}
+
 // ConsumeBootstrapToken validates and uses a bootstrap token. It only works for the Mac it
 // was issued to (matched by UDID or serial number).
 func (s *Store) ConsumeBootstrapToken(ctx context.Context, tokenHash, udid, serial string) (computerID string, err error) {
@@ -81,14 +90,18 @@ func (s *Store) ConsumeBootstrapToken(ctx context.Context, tokenHash, udid, seri
 	}
 	defer tx.Rollback()
 	var cUDID, cSerial string
-	err = tx.QueryRowContext(ctx, `SELECT t.computer_id, COALESCE(c.udid,''), COALESCE(c.serial_number,'')
+	var used bool
+	err = tx.QueryRowContext(ctx, `SELECT t.computer_id, COALESCE(c.udid,''), COALESCE(c.serial_number,''), t.used_at IS NOT NULL
 		FROM agent_bootstrap_tokens t JOIN computers c ON c.id = t.computer_id
-		WHERE t.token_hash = $1 AND t.used_at IS NULL AND t.expires_at > now() FOR UPDATE OF t`, tokenHash).Scan(&computerID, &cUDID, &cSerial)
+		WHERE t.token_hash = $1 AND t.expires_at > now() FOR UPDATE OF t`, tokenHash).Scan(&computerID, &cUDID, &cSerial, &used)
 	if err != nil {
 		return "", wrapNotFound(err)
 	}
 	if !((udid != "" && udid == cUDID) || (serial != "" && serial == cSerial)) {
 		return "", ErrBootstrapDevice
+	}
+	if used {
+		return "", &BootstrapReusedError{ComputerID: computerID}
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE agent_bootstrap_tokens SET used_at = now() WHERE token_hash = $1`, tokenHash); err != nil {
 		return "", err

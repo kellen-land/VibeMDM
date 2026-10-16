@@ -212,7 +212,7 @@ func (s *Service) GetToken(r *mdm.Request, m *mdm.GetToken) (*mdm.GetTokenRespon
 // CommandAndReportResults records results into inventory.
 func (s *Service) CommandAndReportResults(r *mdm.Request, results *mdm.CommandResults) (*mdm.Command, error) {
 	cmd, err := s.next.CommandAndReportResults(r, results)
-	if enr := results.UDID; enr != "" && results.UserID == "" && results.EnrollmentUserID == "" {
+	if enr := results.UDID; err == nil && enr != "" && results.UserID == "" && results.EnrollmentUserID == "" {
 		ctx := r.Context()
 		if results.CommandUUID != "" {
 			ev := inspector.Acknowledged
@@ -234,10 +234,15 @@ func (s *Service) CommandAndReportResults(r *mdm.Request, results *mdm.CommandRe
 			s.st.RecordCommandEvent(ctx, cmd.CommandUUID, enr, inspector.Delivered, map[string]any{"request_type": cmd.Command.RequestType, "after_status": results.Status})
 		}
 	}
-	if results.UDID != "" && results.UserID == "" && results.EnrollmentUserID == "" {
+	if err == nil && results.UDID != "" && results.UserID == "" && results.EnrollmentUserID == "" {
 		s.st.TouchMDMCheckin(r.Context(), results.UDID)
 		if results.CommandUUID != "" && results.Status != "Idle" && results.Status != "NotNow" {
 			s.processResult(r.Context(), results)
+			// Secrets in the payload (profiles, passwords, tokens) and the device's answer are not
+			// needed once every device has answered; keep only redacted copies.
+			if err := s.st.ScrubCommandSecrets(r.Context(), results.CommandUUID, inspector.Redact); err != nil {
+				s.log.Warn("scrubbing command secrets", "err", err, "uuid", results.CommandUUID)
+			}
 		}
 	}
 	return cmd, err
@@ -245,6 +250,11 @@ func (s *Service) CommandAndReportResults(r *mdm.Request, results *mdm.CommandRe
 
 func (s *Service) processResult(ctx context.Context, results *mdm.CommandResults) {
 	meta, err := s.st.GetCommandMeta(ctx, results.CommandUUID)
+	if err == nil && meta.EnrollmentID != "" && meta.EnrollmentID != results.UDID {
+		// A device may only report on commands that were queued for it.
+		s.log.Warn("mdm: ignoring result for a command queued to another device", "udid", results.UDID, "command", results.CommandUUID)
+		return
+	}
 	requestType := ""
 	if err == nil {
 		requestType = meta.RequestType

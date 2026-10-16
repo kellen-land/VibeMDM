@@ -71,23 +71,34 @@ var sensitiveKeys = []string{
 	"VPNPassword", "ProxyPassword", "SharedSecret", "AuthPassword", "PrivateKey", "Secret", "PayloadContent",
 }
 
-var sensitiveRe = func() *regexp.Regexp {
-	esc := make([]string, len(sensitiveKeys))
-	for i, k := range sensitiveKeys {
-		esc[i] = regexp.QuoteMeta(k)
+var sensitiveSet = func() map[string]bool {
+	m := make(map[string]bool, len(sensitiveKeys))
+	for _, k := range sensitiveKeys {
+		m[k] = true
 	}
-	// <key>NAME</key> followed by a <string>/<data>/<integer> value, across whitespace.
-	return regexp.MustCompile(`(?s)(<key>(?:` + strings.Join(esc, "|") + `)</key>\s*<(string|data|integer)>)(.*?)(</(?:string|data|integer)>)`)
+	return m
 }()
+
+// secretKeyRe catches keys that are secrets by name in any payload (UserPassword,
+// IncomingPassword, clientSecret, LDAPAccountPassword, KeyPassword, LicenseFile, ...).
+var secretKeyRe = regexp.MustCompile(`(?i)(password|secret|passphrase|presharedkey|passcode|challenge|token|license|privatekey)`)
+
+// keyValueRe matches <key>NAME</key>, optional whitespace and comments, then a
+// <string>/<data>/<integer> value.
+var keyValueRe = regexp.MustCompile(`(?s)(<key>([^<]*)</key>(?:\s|<!--.*?-->)*<(?:string|data|integer)>)(.*?)(</(?:string|data|integer)>)`)
 
 // Redact replaces sensitive plist values with a placeholder noting the original size.
 func Redact(raw string) string {
 	if raw == "" {
 		return raw
 	}
-	return sensitiveRe.ReplaceAllStringFunc(raw, func(m string) string {
-		sub := sensitiveRe.FindStringSubmatch(m)
+	return keyValueRe.ReplaceAllStringFunc(raw, func(m string) string {
+		sub := keyValueRe.FindStringSubmatch(m)
 		if len(sub) < 5 {
+			return m
+		}
+		key := strings.TrimSpace(sub[2])
+		if !sensitiveSet[key] && !secretKeyRe.MatchString(key) {
 			return m
 		}
 		n := len(strings.TrimSpace(sub[3]))

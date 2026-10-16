@@ -38,7 +38,7 @@ vet:
 
 ## Docker image
 docker:
-	docker build -f deploy/Dockerfile --build-arg VERSION=$(VERSION) -t vibemdm/vibemdm:$(VERSION) -t vibemdm/vibemdm:latest .
+	docker build -f deploy/Dockerfile --build-arg VERSION=$(VERSION) -t vibemdm-local:$(VERSION) -t vibemdm-local:latest .
 
 up:
 	cd deploy && docker compose up -d --build
@@ -51,7 +51,7 @@ logs:
 
 ## Local Postgres for development (no TLS, port 5432)
 dev-db:
-	docker run -d --name vibemdm-dev-db -e POSTGRES_PASSWORD=vibemdm -e POSTGRES_USER=vibemdm -e POSTGRES_DB=vibemdm -p 5432:5432 postgres:17-alpine
+	docker run -d --name vibemdm-dev-db -e POSTGRES_PASSWORD=vibemdm -e POSTGRES_USER=vibemdm -e POSTGRES_DB=vibemdm -p 127.0.0.1:5432:5432 postgres:17-alpine
 
 clean:
 	rm -rf bin internal/webui/dist/assets internal/webui/dist/index.html

@@ -42,7 +42,11 @@ on, the escrow profile installed, and no escrowed key.
 | Ask every Mac missing a key for SecurityInfo now | `POST /api/v1/filevault/check` |
 | Escrow status for one Mac (never the key) | `GET /api/v1/computers/{id}/filevault` |
 | Reveal a key (admin only, audited, fires `FileVaultKeyViewed`) | `POST /api/v1/computers/{id}/filevault/reveal` `{"reason": "…"}` |
+| Reveal the keys a Mac reported before its current one (admin only, audited) | `POST /api/v1/computers/{id}/filevault/history/reveal` `{"reason": "…"}` |
 | Run Escrow Buddy remediation on one Mac | `POST /api/v1/computers/{id}/filevault/remediate` |
+
+A newly reported key never destroys the previous one: the last 10 replaced keys are kept (sealed like the current
+key) so an unexpected report cannot lose a key that still unlocks the disk.
 
 The optional **FileVault Enforcement** profile (`com.apple.MCX.FileVault2`) turns FileVault on with a personal
 recovery key, deferred to the next login, so new keys are escrowed from the start.

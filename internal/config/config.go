@@ -25,6 +25,7 @@ type Config struct {
 	EncryptionKey string     // passphrase for at-rest encryption of secrets
 	LogDBLevel    slog.Level // minimum level stored in the searchable log table
 	SessionTTL    time.Duration
+	SessionIdle   time.Duration // 0 = no idle timeout
 	Version       string
 	// TrustedProxies may set X-Forwarded-For (CIDRs/IPs, comma separated).
 	TrustedProxies []string
@@ -80,6 +81,11 @@ func FromEnv(version string) (*Config, error) {
 		return nil, fmt.Errorf("invalid VIBEMDM_SESSION_TTL_HOURS")
 	}
 	c.SessionTTL = time.Duration(ttlHours) * time.Hour
+	idleMin, err := strconv.Atoi(env("VIBEMDM_SESSION_IDLE_MINUTES", "120"))
+	if err != nil || idleMin < 0 {
+		return nil, fmt.Errorf("invalid VIBEMDM_SESSION_IDLE_MINUTES")
+	}
+	c.SessionIdle = time.Duration(idleMin) * time.Minute
 	if err := c.LogDBLevel.UnmarshalText([]byte(env("VIBEMDM_LOG_DB_LEVEL", "info"))); err != nil {
 		return nil, fmt.Errorf("invalid VIBEMDM_LOG_DB_LEVEL (use debug, info, warn or error)")
 	}

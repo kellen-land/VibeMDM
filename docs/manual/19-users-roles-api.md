@@ -32,7 +32,7 @@ challenge and the agent enrollment secret are returned only to admins.
 Every signed-in user (viewers too) can change their own password with `POST /api/v1/auth/password`
 `{"current_password", "new_password"}`; this works only from a browser session, not with an API token.
 
-Passwords: bcrypt (cost 12), at least 8 characters (12 for the bootstrap password). Login throttling locks the client
+Passwords: bcrypt (cost 12), 12 to 72 characters when set (existing shorter passwords keep working until changed). Sessions end after `VIBEMDM_SESSION_IDLE_MINUTES` (default 120) without requests and after `VIBEMDM_SESSION_TTL_HOURS` in any case. Login throttling locks the client
 IP and the username after every 6 failures for 1, then 5, 15 and 60 minutes (`429`). Sessions last
 `VIBEMDM_SESSION_TTL_HOURS` (default 168 = 7 days).
 
@@ -162,7 +162,7 @@ hooks; `GET /api/v1/webhooks/deliveries` lists recent deliveries with status, er
 | Property | Behaviour |
 | --- | --- |
 | Method / body | `POST`, `Content-Type: application/json`, the envelope below |
-| Headers | `User-Agent: vibemdm-webhook`, `X-VibeMDM-Event: <event>`, and `X-VibeMDM-Signature` when a secret is set |
+| Headers | `User-Agent: vibemdm-webhook`, `X-VibeMDM-Event: <event>`; with a secret also `X-VibeMDM-Signature` (base64 HMAC-SHA256 of the body), `X-VibeMDM-Timestamp` (Unix seconds) and `X-VibeMDM-Signature-V2` (base64 HMAC-SHA256 of `timestamp.body`; reject deliveries whose timestamp is more than a few minutes old) |
 | Signature | Base64 of HMAC-SHA256 over the raw body, keyed with the secret |
 | Success | Any status below 300 |
 | Retries | 3 attempts in total, waiting 5 s then 10 s |
@@ -196,6 +196,7 @@ The Health check **Failing webhooks** opens when an enabled hook's last 5 delive
 | `FileVaultKeyViewed` | An admin revealed a key | `computer_id`, `computer`, `serial`, `actor`, `reason` |
 | `LAPSPasswordRotated` | A new local admin password was applied and escrowed | `computer_id`, `computer`, `serial` |
 | `LAPSPasswordViewed` | An admin revealed a local admin password | `computer_id`, `computer`, `serial`, `actor`, `reason` |
+| `ConsoleLoginLockout` | Repeated failed logins locked a username or client IP | `kind` (`username`, `ip`, `password_change`), `subject`, `until` |
 | `HealthIssueOpened` / `HealthIssueResolved` | [§15.6](15-health.md#156-webhooks) | `finding_id`, `check_id`, `check`, `severity`, `summary`, `object_type`, `object_id`, `object_name` |
 | `Test` | `POST /webhooks/test` | `message`, `fired_by`, `at` |
 

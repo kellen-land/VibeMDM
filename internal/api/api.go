@@ -221,6 +221,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("POST /api/v1/computers/{id}/update-inventory", h.updateInventory)
 	r("POST /api/v1/computers/{id}/checkin", h.checkinNow)
 	adm("POST /api/v1/computers/{id}/reset-agent", h.resetAgent)
+	adm("POST /api/v1/computers/{id}/allow-mdm-reenroll", h.allowComputerMDMReenroll)
 	mux.Handle("GET /api/v1/computers/{id}/shell", h.auth.Require(true, http.HandlerFunc(h.shellWS)))
 	adm("GET /api/v1/shell-sessions", h.listShellSessions)
 	adm("GET /api/v1/shell-sessions/{id}", h.getShellTranscript)
@@ -331,6 +332,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	adm("POST /api/v1/filevault/check", h.checkMissingKeys)
 	r("GET /api/v1/computers/{id}/filevault", h.computerFileVault)
 	adm("POST /api/v1/computers/{id}/filevault/reveal", h.revealFileVaultKey)
+	adm("POST /api/v1/computers/{id}/filevault/history/reveal", h.revealFileVaultKeyHistory)
 	adm("POST /api/v1/computers/{id}/filevault/remediate", h.remediateFileVault)
 
 	// Automatic agent installation through MDM
@@ -421,6 +423,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	r("POST /api/v1/mobile-devices/{id}/update-inventory", h.mobileUpdateInventory)
 	r("PUT /api/v1/mobile-devices/{id}/ea-values/{ea}", h.setMobileEAValue)
 	adm("POST /api/v1/mobile-devices/{id}/actions", h.mobileCommand)
+	adm("POST /api/v1/mobile-devices/{id}/allow-mdm-reenroll", h.allowMobileMDMReenroll)
 	adm("POST /api/v1/mobile-devices/{id}/activation-lock-bypass/reveal", h.revealActivationLockBypass)
 	r("GET /api/v1/mobile-extension-attributes", h.listMobileEAs)
 	adm("POST /api/v1/mobile-extension-attributes", h.saveMobileEA)
@@ -624,8 +627,12 @@ func (h *Handler) changeOwnPassword(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err.Error())
 		return
 	}
-	u, hash, err := h.st.GetUserByUsername(r.Context(), p.Username)
-	if err != nil || !auth.CheckPassword(hash, req.Current) {
+	u, err := h.auth.VerifyOwnPassword(r, p.UserID, req.Current)
+	if errors.Is(err, auth.ErrRateLimited) {
+		writeErr(w, 429, err.Error())
+		return
+	}
+	if err != nil {
 		writeErr(w, 403, "current password is incorrect")
 		return
 	}

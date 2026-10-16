@@ -108,7 +108,7 @@ func (h *Handler) downloadLogArchive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.st.Audit(r.Context(), actor(r), "logs.archive_download", "logs", name, nil)
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, name))
+	attachmentHeaders(w, name, "application/gzip")
 	http.ServeFile(w, r, path)
 }
 
@@ -158,7 +158,6 @@ func (h *Handler) downloadDiagnostics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.st.Audit(r.Context(), auth.FromContext(r.Context()).Username, "diagnostics.download", "computer", b.ComputerID, map[string]any{"bundle_id": b.ID})
-	w.Header().Set("Content-Type", "application/gzip")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, b.Filename))
+	attachmentHeaders(w, b.Filename, "application/gzip")
 	http.ServeFile(w, r, filepath.Join(h.cfg.DataDir, "diagnostics", b.ID+".tar.gz"))
 }

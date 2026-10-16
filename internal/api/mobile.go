@@ -646,7 +646,10 @@ func (h *Handler) revealActivationLockBypass(w http.ResponseWriter, r *http.Requ
 		h.fail(w, err, "activation lock")
 		return
 	}
-	h.st.Audit(r.Context(), actor(r), "mobile_device.activation_lock_bypass_viewed", "mobile_device", d.ID, map[string]any{"reason": req.Reason, "ip": auth.ClientIP(r)})
+	if err := h.st.AuditStrict(r.Context(), actor(r), "mobile_device.activation_lock_bypass_viewed", "mobile_device", d.ID, map[string]any{"reason": req.Reason, "ip": auth.ClientIP(r)}); err != nil {
+		h.fail(w, err, "audit")
+		return
+	}
 	h.log.Info("Activation Lock bypass code viewed", "mobile_device", d.Name, "actor", actor(r))
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, map[string]string{"code": code})
