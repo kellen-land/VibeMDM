@@ -184,8 +184,9 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
 - The at-rest encryption key is derived with SHA-256 from the passphrase, so use a long random value. Ciphertexts
   are not bound to their row. Webhook signing secrets, the SCEP challenge and the agent enrollment secret are
   stored unencrypted.
-- Any enrolled agent can download any package by ID. Packages are treated as non-secret: don't put credentials
-  in packages.
+- An agent can download a package only within 7 days of being handed a policy that installs it (by a trigger, Self
+  Service, onboarding or a manual run). Packages are still not encrypted or signed by VibeMDM: don't put
+  credentials in them.
 - Task output (stdout and stderr) remains visible to viewers. Avoid scripts that print secrets.
 - An agent proves its identity with a bearer token, not the Mac's MDM identity certificate. Anyone holding an
   enrollment token (master secret or invitation) and a Mac's UDID can enroll as the agent of an MDM-only Mac that

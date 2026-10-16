@@ -531,8 +531,19 @@ func (h *Handler) inventory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) packageDownload(w http.ResponseWriter, r *http.Request) {
+	comp := computerFrom(r.Context())
 	pkg, err := h.st.GetPackage(r.Context(), r.PathValue("id"))
 	if err != nil {
+		writeErr(w, 404, "package not found")
+		return
+	}
+	// A Mac downloads only packages of policies it was given (like a scoped distribution point),
+	// so one enrolled Mac cannot pull every package on the server.
+	if ok, err := h.st.PackageAllowedForComputer(r.Context(), comp.ID, pkg.ID); err != nil || !ok {
+		if err != nil {
+			h.log.Error("checking package access", "err", err, "computer", comp.Name)
+		}
+		h.log.Warn("package download refused: no recent policy with this package", "computer", comp.Name, "package", pkg.Name)
 		writeErr(w, 404, "package not found")
 		return
 	}
