@@ -189,7 +189,9 @@ func (s *Store) UpsertComputerFromAuthenticate(ctx context.Context, a MDMAuthent
 	var id string
 	err := s.DB.QueryRowContext(ctx, `SELECT id FROM computers WHERE udid = $1`, a.UDID).Scan(&id)
 	if err == sql.ErrNoRows && a.SerialNumber != "" {
-		err = s.DB.QueryRowContext(ctx, `SELECT id FROM computers WHERE serial_number = $1 AND udid IS NULL ORDER BY created_at LIMIT 1`, a.SerialNumber).Scan(&id)
+		// Merge only into a record no agent has claimed: an agent record without a UDID could have
+		// been created by anyone who knows the serial number.
+		err = s.DB.QueryRowContext(ctx, `SELECT id FROM computers WHERE serial_number = $1 AND udid IS NULL AND agent_token_hash IS NULL ORDER BY created_at LIMIT 1`, a.SerialNumber).Scan(&id)
 	}
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
@@ -260,7 +262,9 @@ func (s *Store) EnrollAgent(ctx context.Context, req model.AgentEnrollRequest, t
 	var last sql.NullTime
 	err := s.DB.QueryRowContext(ctx, `SELECT id, agent_token_hash, agent_last_checkin FROM computers WHERE udid = $1`, req.UDID).Scan(&id, &curHash, &last)
 	if err == sql.ErrNoRows && req.SerialNumber != "" {
-		err = s.DB.QueryRowContext(ctx, `SELECT id, agent_token_hash, agent_last_checkin FROM computers WHERE serial_number = $1 ORDER BY created_at LIMIT 1`,
+		// Serial numbers are printed on the box: only fall back to them for records that have no
+		// UDID yet, so an agent can never attach itself to another Mac's MDM record by serial.
+		err = s.DB.QueryRowContext(ctx, `SELECT id, agent_token_hash, agent_last_checkin FROM computers WHERE serial_number = $1 AND udid IS NULL ORDER BY created_at LIMIT 1`,
 			req.SerialNumber).Scan(&id, &curHash, &last)
 	}
 	if err != nil && err != sql.ErrNoRows {
@@ -414,7 +418,7 @@ func (s *Store) DeleteComputer(ctx context.Context, id string) error {
 		if _, err := tx.ExecContext(ctx, `DELETE FROM devices WHERE id = $1`, udid.String); err != nil {
 			return err
 		}
-		if _, err := tx.ExecContext(ctx, `DELETE FROM cert_auth_associations WHERE id = $1`, udid.String); err != nil {
+		if err := revokeEnrollmentCerts(ctx, tx, udid.String); err != nil {
 			return err
 		}
 	}

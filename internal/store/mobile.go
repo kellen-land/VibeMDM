@@ -413,14 +413,25 @@ func (s *Store) UpdateMobileDevice(ctx context.Context, id string, e MobileDevic
 
 // DeleteMobileDevice removes a mobile device record (its MDM enrollment is untouched).
 func (s *Store) DeleteMobileDevice(ctx context.Context, id string) error {
-	res, err := s.DB.ExecContext(ctx, `DELETE FROM mobile_devices WHERE id::text = $1`, id)
+	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return ErrNotFound
+	defer tx.Rollback()
+	var udid sql.NullString
+	if err := tx.QueryRowContext(ctx, `DELETE FROM mobile_devices WHERE id::text = $1 RETURNING udid`, id).Scan(&udid); err != nil {
+		return wrapNotFound(err)
 	}
-	return nil
+	if udid.Valid && udid.String != "" {
+		// As for computers: drop the NanoMDM enrollment and revoke the identity certificate.
+		if _, err := tx.ExecContext(ctx, `DELETE FROM devices WHERE id = $1`, udid.String); err != nil {
+			return err
+		}
+		if err := revokeEnrollmentCerts(ctx, tx, udid.String); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 // ---- inventory from MDM ----

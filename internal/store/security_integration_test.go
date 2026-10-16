@@ -66,9 +66,18 @@ func TestEnrollAgentRefusesTakeover(t *testing.T) {
 	if _, err := s.EnrollAgent(ctx, req, HashToken("tok-2")); !errors.Is(err, ErrAgentActive) {
 		t.Fatalf("takeover without proof: err = %v, want ErrAgentActive", err)
 	}
+	// A serial number alone never reaches a record that already has a UDID: it gets its own record.
 	bySerial := model.AgentEnrollRequest{SerialNumber: req.SerialNumber}
-	if _, err := s.EnrollAgent(ctx, bySerial, HashToken("tok-2")); !errors.Is(err, ErrAgentActive) {
-		t.Fatalf("takeover by serial: err = %v", err)
+	other, err := s.EnrollAgent(ctx, bySerial, HashToken("tok-2"))
+	if err != nil || other.ID == first.ID {
+		t.Fatalf("enroll by serial attached to the existing record: %+v %v", other, err)
+	}
+	t.Cleanup(func() { s.DeleteComputer(ctx, other.ID) })
+	if _, err := s.UpsertComputerFromAuthenticate(ctx, MDMAuthenticateInfo{UDID: udid + "-new", SerialNumber: req.SerialNumber}); err != nil {
+		t.Fatal(err)
+	}
+	if c, _ := s.GetComputer(ctx, other.ID); c.UDID != "" {
+		t.Fatal("MDM enrollment merged into an agent-only record matched by serial")
 	}
 	req.PreviousDeviceToken = "tok-1"
 	if _, err := s.EnrollAgent(ctx, req, HashToken("tok-3")); err != nil {

@@ -194,6 +194,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	agentInstaller.Register(s.mux)
 	var mdmService service.CheckinAndCommandService = mdmsvc.New(st, core, commander, hooks, logger.With("component", "mdm")).WithEscrow(escrowID).WithAgentInstall(agentInstaller)
 	mdmService = certauth.New(mdmService, mdmStorage, certauth.WithLogger(nlog.With("service", "certauth")))
+	mdmService = mdmsvc.NewReenrollGuard(mdmService, st, logger.With("component", "mdm"))
 	if cfg.DumpMDM {
 		mdmService = dump.New(mdmService, os.Stdout)
 	}
@@ -205,7 +206,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	var mdmHandler http.Handler = httpmdm.CheckinAndCommandHandler(mdmService, nlog.With("handler", "checkin-command"))
 	mdmHandler = httpmdm.CertVerifyMiddleware(mdmHandler, scepServer, nlog.With("handler", "cert-verify"))
 	mdmHandler = httpmdm.CertExtractMdmSignatureMiddleware(mdmHandler, httpmdm.MdmSignatureVerifierFunc(cryptoutil.VerifyMdmSignature), sigOpts...)
-	s.mux.Handle("/mdm", mdmHandler)
+	s.mux.Handle("/mdm", limitBody(mdmHandler, maxMDMBody))
 	s.mux.Handle("/scep", scepServer)
 
 	// Enrollment page & profile
@@ -645,4 +646,20 @@ func (s *Server) housekeeping(ctx context.Context) {
 			s.st.DeleteExpiredSessions(ctx)
 		}
 	}
+}
+
+// maxMDMBody caps check-in and command-report bodies. Device reports (inventory, installed apps,
+// certificate lists) stay far below this; NanoMDM reads the whole body before verifying it.
+const maxMDMBody = 16 << 20
+
+// limitBody rejects request bodies larger than n bytes.
+func limitBody(h http.Handler, n int64) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ContentLength > n {
+			http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+			return
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, n)
+		h.ServeHTTP(w, r)
+	})
 }

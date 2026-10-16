@@ -30,8 +30,10 @@
 - Console sessions: bcrypt passwords, HttpOnly cookies, same-origin check on mutations, login rate limiting,
   roles (admin/viewer), API tokens (`vmdm_…`, hashed at rest), audit log.
 - Agent: per-device bearer tokens (hashed at rest), enrollment tokens are consumable invitations or a rotatable secret.
-- MDM: identity certificates are verified against the SCEP CA; NanoMDM's `certauth` binds each enrollment to its
-  certificate so devices cannot impersonate one another.
+- MDM: identity certificates are verified against the SCEP CA and checked against the revocation list (certificates
+  of deleted devices). NanoMDM's `certauth` binds each enrollment to its certificate, and VibeMDM's re-enrollment
+  guard refuses an `Authenticate` from a different certificate while the existing enrollment is live (see
+  [security.md](security.md#enrollment)). Command results are only applied to the device the command was queued for.
 - **Secrets at rest.** With `VIBEMDM_ENCRYPTION_KEY` set, the SCEP CA key, APNs key, APNs request key, FileVault
   escrow key, profile-signing key and FileVault recovery keys are encrypted with AES-256-GCM before they reach
   PostgreSQL. Existing plaintext values are sealed automatically at start-up.

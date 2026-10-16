@@ -534,6 +534,11 @@ func (h *Handler) packageDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) enrollmentProfile(w http.ResponseWriter, r *http.Request) {
+	// Each profile carries a fresh SCEP challenge; a Mac that is already enrolled has no use for one.
+	if comp := computerFrom(r.Context()); comp != nil && comp.MDMEnrolled {
+		writeErr(w, 409, "this Mac is already enrolled in MDM")
+		return
+	}
 	b, err := h.profile(enroll.WithPurpose(r.Context(), enroll.PurposeAgent))
 	if err != nil {
 		writeErr(w, 500, err.Error())

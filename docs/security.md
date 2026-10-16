@@ -75,6 +75,21 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
 
   Refused attempts return `409` and are audited as `agent.enroll_refused`.
 
+- **MDM re-enrollment guard:** UDIDs are not secrets either, so an `Authenticate` that presents a different
+  identity certificate for a device that is still enrolled is refused with `403` and audited as
+  `mdm.enroll_refused`. It is accepted when the device checked out (removed its MDM profile), when its enrollment
+  has been silent for 30 days, or after an admin chose **Allow MDM re-enrollment**
+  (`POST /api/v1/computers/{id}/allow-mdm-reenroll`, or `/mobile-devices/{id}/…`), for example after an erase.
+  *Untested on real hardware:* re-enrolling a Mac after removing its profile relies on macOS sending `CheckOut`
+  (the enrollment profile sets `CheckOutWhenRemoved`); an erased Mac needs the admin action or the 30-day window.
+- **Revocation:** deleting a computer or mobile device revokes its identity certificate; `/mdm` refuses revoked
+  certificates, so a removed device cannot quietly re-enroll with the certificate it still holds.
+- **Bounded challenges:** each Apple Configurator download from an invitation link uses up one of its uses, and an
+  agent on a Mac that is already MDM-enrolled cannot fetch further enrollment profiles.
+- **Serial numbers are never proof:** an agent enrollment or MDM `Authenticate` only falls back to matching by
+  serial number for a record that has no UDID yet (and, for MDM, no agent).
+- `/mdm` request bodies are capped at 16 MB.
+
 ## Agent
 
 - **Transport:**

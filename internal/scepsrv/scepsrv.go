@@ -8,9 +8,11 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -192,15 +194,32 @@ func (s *Server) CAPEM() []byte {
 }
 
 // Verify checks that a client certificate was issued by our CA (implements NanoMDM's verifier).
-func (s *Server) Verify(_ context.Context, cert *x509.Certificate) error {
+func (s *Server) Verify(ctx context.Context, cert *x509.Certificate) error {
 	if cert == nil {
 		return errors.New("missing MDM certificate")
 	}
 	s.mu.RLock()
 	pool := s.pool
 	s.mu.RUnlock()
-	_, err := cert.Verify(x509.VerifyOptions{Roots: pool, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}})
-	return err
+	if _, err := cert.Verify(x509.VerifyOptions{Roots: pool, KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}}); err != nil {
+		return err
+	}
+	if rc, ok := s.depot.(RevocationChecker); ok {
+		sum := sha256.Sum256(cert.Raw)
+		revoked, err := rc.IsCertHashRevoked(ctx, hex.EncodeToString(sum[:]))
+		if err != nil {
+			return err
+		}
+		if revoked {
+			return errors.New("MDM certificate has been revoked")
+		}
+	}
+	return nil
+}
+
+// RevocationChecker is implemented by depots that track revoked identity certificates.
+type RevocationChecker interface {
+	IsCertHashRevoked(ctx context.Context, certHash string) (bool, error)
 }
 
 // signCSR issues a certificate for a decrypted CSR.
