@@ -58,7 +58,7 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
     (any key named like a password, secret, passphrase, token, challenge or license), Application & Custom
     Settings values are redacted the same way, script and extension attribute bodies are hidden, policies lose their
     command and script parameters, and task payloads lose command text and parameters.
-  - Secret reveals (FileVault keys, LAPS passwords and their history) are refused if the audit entry cannot be
+  - Secret reveals (FileVault keys, LAPS passwords, their history and Activation Lock bypass codes) are refused if the audit entry cannot be
     written.
   - CSV exports are audited.
   - Enrollment profile downloads, the SCEP challenge, the agent enrollment secret, FileVault keys, raw MDM payloads
