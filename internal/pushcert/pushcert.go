@@ -153,6 +153,13 @@ func DecryptSignedRequest(encrypted []byte, req *Request) ([]byte, error) {
 }
 
 func decodeFlexible(in []byte) []byte {
+	// Raw DER (a SEQUENCE) is used as is: trimming would eat 0x09/0x0A/0x20 bytes that are
+	// part of the binary data at either end.
+	if len(in) > 0 && in[0] == 0x30 {
+		if _, err := pkcs7.Parse(in); err == nil {
+			return in
+		}
+	}
 	trim := bytes.TrimSpace(in)
 	if b, err := hex.DecodeString(string(trim)); err == nil && len(b) > 0 {
 		return b
