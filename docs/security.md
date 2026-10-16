@@ -110,6 +110,19 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
 - **Device-side veto:** if the root-owned file `/Library/Application Support/VibeMDM/disable-remote-shell`
   exists, the Mac refuses all shells regardless of server settings.
 
+## Build and deployment
+
+- The Compose file builds the image locally under a name no registry can serve (`vibemdm-local`), so
+  `docker compose up` can never pull a look-alike image. Set `VIBEMDM_IMAGE` to run a published image.
+- The container runs as an unprivileged user with every Linux capability dropped and `no-new-privileges`.
+- `.dockerignore` keeps `.env`, keys, certificates and local notes out of the build context.
+- `make dev-db` publishes PostgreSQL on `127.0.0.1` only.
+- CI runs with a read-only token unless a job needs more, every third-party action is pinned to a commit SHA
+  (Dependabot proposes updates), and each release carries a `SHA256SUMS` file for the agent binaries.
+- The client IP for rate limiting and audit comes from `X-Forwarded-For` via a trusted proxy; `X-Real-IP` is ignored.
+- Terminal hyperlinks in the remote shell and transcripts open only for `http(s)` addresses, after a prompt that
+  shows the real address.
+
 ## Outbound requests
 
 - Webhooks never follow redirects.

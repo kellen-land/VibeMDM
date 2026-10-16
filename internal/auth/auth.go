@@ -298,9 +298,8 @@ func clientIP(r *http.Request) string {
 			return ip.Unmap().String()
 		}
 	}
-	if xr, err := netip.ParseAddr(strings.TrimSpace(r.Header.Get("X-Real-IP"))); err == nil {
-		return xr.Unmap().String()
-	}
+	// X-Real-IP is not consulted: a client that reaches the published port directly (from an
+	// address inside the trusted range, such as the Docker bridge gateway) could set it freely.
 	return host
 }
 
