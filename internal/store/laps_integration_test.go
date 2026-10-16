@@ -180,8 +180,9 @@ func TestAgentBootstrapTokens(t *testing.T) {
 	if id, err := s.ConsumeBootstrapToken(ctx, HashToken("vmbt_a"+stamp), "", "BOOT"+stamp); err != nil || id != comp.ID {
 		t.Fatalf("own Mac: %q %v", id, err)
 	}
-	if _, err := s.ConsumeBootstrapToken(ctx, HashToken("vmbt_a"+stamp), "", "BOOT"+stamp); err == nil {
-		t.Fatal("token used twice")
+	var reused *BootstrapReusedError
+	if _, err := s.ConsumeBootstrapToken(ctx, HashToken("vmbt_a"+stamp), "", "BOOT"+stamp); !errors.As(err, &reused) || reused.ComputerID != comp.ID {
+		t.Fatalf("token used twice: err = %v", err)
 	}
 	// Install attempts are never downgraded once the agent enrolled.
 	s.RecordAgentInstall(ctx, comp.ID, "CMD-"+stamp, "test")

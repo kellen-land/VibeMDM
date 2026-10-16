@@ -158,6 +158,12 @@ func (s *Store) LogComponents(ctx context.Context, source string) ([]string, err
 	return out, rows.Err()
 }
 
+// Limits on what one agent log entry may carry.
+const (
+	agentLogMaxAge   = 30 * 24 * time.Hour
+	agentLogMaxAttrs = 8 << 10
+)
+
 // InsertAgentLogs stores a batch of agent log entries for a computer.
 func (s *Store) InsertAgentLogs(ctx context.Context, computerID string, entries []model.AgentLogEntry) (int, error) {
 	if len(entries) == 0 {
@@ -166,15 +172,28 @@ func (s *Store) InsertAgentLogs(ctx context.Context, computerID string, entries 
 	if len(entries) > 2000 {
 		entries = entries[len(entries)-2000:]
 	}
+	now := time.Now().UTC()
 	for i := range entries {
-		if len(entries[i].Msg) > 4096 {
-			entries[i].Msg = entries[i].Msg[:4096] + "…"
+		e := &entries[i]
+		if len(e.Msg) > 4096 {
+			e.Msg = e.Msg[:4096] + "…"
 		}
-		if entries[i].At.IsZero() || entries[i].At.After(time.Now().Add(time.Hour)) {
-			entries[i].At = time.Now().UTC()
+		// Agents buffer while offline, but a Mac must not back- or future-date entries freely.
+		if e.At.IsZero() || e.At.After(now.Add(time.Hour)) || e.At.Before(now.Add(-agentLogMaxAge)) {
+			e.At = now
 		}
-		if entries[i].Attrs == nil {
-			entries[i].Attrs = map[string]any{}
+		switch strings.ToUpper(e.Level) {
+		case "DEBUG", "INFO", "WARN", "ERROR":
+		default:
+			e.Level = "INFO"
+		}
+		if len(e.Component) > 64 {
+			e.Component = e.Component[:64]
+		}
+		if e.Attrs == nil {
+			e.Attrs = map[string]any{}
+		} else if b, err := json.Marshal(e.Attrs); err != nil || len(b) > agentLogMaxAttrs {
+			e.Attrs = map[string]any{"attrs_dropped": "too large"}
 		}
 	}
 	res, err := s.DB.ExecContext(ctx, `INSERT INTO agent_logs (computer_id, at, level, component, msg, attrs)

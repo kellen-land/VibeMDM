@@ -758,6 +758,7 @@ func (s *Store) ApplyAgentInventory(ctx context.Context, computerID string, inv 
 	if len(inv.ExtensionAttributes) > 0 {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO computer_ea_values (computer_id, ea_id, value, updated_at)
 			SELECT $1, e.id, x.value, now() FROM jsonb_each_text($2::jsonb) AS x(key, value) JOIN extension_attributes e ON e.id::text = x.key
+			WHERE e.input_type = 'script' AND e.enabled
 			ON CONFLICT (computer_id, ea_id) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, computerID, jsonArg(inv.ExtensionAttributes)); err != nil {
 			return err
 		}

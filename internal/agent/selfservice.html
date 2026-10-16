@@ -94,10 +94,12 @@ tr:last-child td,tr:last-child th{border-bottom:0}
 </main>
 <div class="sheet" id="sheet"><div class="panel" id="panel"></div></div>
 <div class="toast" id="toast"></div>
-<script>
+<script nonce="{{.Nonce}}">
 const CFG = {{.ConfigJSON}};
 const $ = (s) => document.querySelector(s);
-const esc = (s) => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+// Broken icons fall back to the letter tile (a listener, since the CSP forbids inline handlers).
+document.addEventListener('error', (e) => { const t = e.target; if (t instanceof HTMLImageElement && t.dataset.tile) t.outerHTML = t.dataset.tile; }, true);
 const ICONS = {
   discover: '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z"/>',
   all: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
@@ -121,7 +123,7 @@ function iconHTML(it, cls) {
   if (it.icon_version) src = `/api/icon?id=${encodeURIComponent(it.id)}&v=${encodeURIComponent(it.icon_version)}`;
   else if (it.app_name && it.installed) src = `/api/icon?app=${encodeURIComponent(it.app_name)}`;
   if (!src) return tile;
-  return `<img class="icon ${cls||''}" src="${src}" onerror="this.outerHTML=this.dataset.tile" data-tile='${tile.replace(/'/g,'&#39;')}'>`;
+  return `<img class="icon ${cls||''}" src="${src}" data-tile="${esc(tile)}">`;
 }
 function buttonLabel(it) {
   const j = jobs[it.kind + ':' + it.id];
