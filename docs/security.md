@@ -108,10 +108,22 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
     `network_change` triggers.
   - Custom triggers need the root-only `/var/run/vibemdm-agent.sock.root`. `sudo vibemdm-agent policy -trigger …`
     uses it automatically.
+- **MDM bootstrap token:** the token in the MDM-installed agent profile works once, for its own Mac. If it is
+  presented a second time, the server assumes something on that Mac read it and enrolled first: it revokes the
+  agent identity issued with it (audited as `agent.bootstrap_reused`), so an admin resets and reinstalls the agent.
+- **What a Mac may report about itself:** agent inventory only fills script-type, enabled extension attributes
+  (never admin-entered text attributes), and the onboarding welcome form only sets the fields its workflow shows,
+  with picker fields limited to their options.
+- **Helpers run as root:** the agent runs swiftDialog only when the resolved binary and every folder above it are
+  owned by root and not writable by others, and executes that resolved path.
+- **Log uploads:** at most a burst of 30 uploads per Mac, then one every 6 seconds (`429` otherwise; the agent keeps
+  its buffer). Levels are limited to DEBUG/INFO/WARN/ERROR, attributes to 8 KB, and timestamps to the last 30 days.
 - **Self Service portal (127.0.0.1:8571):**
   - Requests must use the portal's own Host name, which defeats DNS rebinding.
   - Requests that run anything need a custom header and a JSON body. Other websites cannot send these without a
     CORS preflight, which the portal never approves.
+  - The page sends a Content-Security-Policy that only runs its own script (per-request nonce) and escapes every
+    value, including quotes, before it reaches the HTML.
 
 ## Remote shell
 
@@ -141,3 +153,12 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
 - Any enrolled agent can download any package by ID. Packages are treated as non-secret: don't put credentials
   in packages.
 - Task output (stdout and stderr) remains visible to viewers. Avoid scripts that print secrets.
+- An agent proves its identity with a bearer token, not the Mac's MDM identity certificate. Anyone holding an
+  enrollment token (master secret or invitation) and a Mac's UDID can enroll as the agent of an MDM-only Mac that
+  has no agent yet. Prefer the MDM-installed agent (single-use bootstrap token) and short-lived invitations.
+- LAPS rotation, policy local accounts and super's service-account setup pass passwords to `dscl`, `sysadminctl`
+  and super as command-line arguments while they run, where other local users may see them with `ps`
+  (untested on real hardware).
+- The agent binary is installed in `/usr/local/bin`, which Homebrew makes user-writable on Intel Macs.
+- Network segments use the IP address the agent reports, so a compromised Mac can choose its building and
+  department.

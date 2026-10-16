@@ -2,8 +2,10 @@ package agent
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	_ "embed"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"html/template"
@@ -226,9 +228,13 @@ func (d *Daemon) serveSelfService(ctx context.Context) {
 		if welcome == "" {
 			welcome = "Apps and tools your IT team has made available for this Mac. Choose one to install it, no administrator password needed."
 		}
+		nonce := make([]byte, 16)
+		rand.Read(nonce)
+		n := base64.StdEncoding.EncodeToString(nonce)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store")
-		ssPage.Execute(w, map[string]any{"AppName": c.AppName, "Accent": template.CSS(c.Accent),
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'nonce-"+n+"'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+		ssPage.Execute(w, map[string]any{"AppName": c.AppName, "Accent": template.CSS(c.Accent), "Nonce": n,
 			"ConfigJSON": ssConfig{AppName: c.AppName, Org: c.OrgName, Welcome: welcome, WelcomeTitle: "Welcome to " + c.AppName, Embedded: r.URL.Query().Get("embedded") == "1"}})
 	})
 	mux.HandleFunc("GET /api/items", func(w http.ResponseWriter, r *http.Request) {

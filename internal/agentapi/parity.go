@@ -142,12 +142,12 @@ func (h *Handler) onboardingUserEntry(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "invalid JSON")
 		return
 	}
-	clean := map[string]string{}
-	for k, v := range req.UserEntry {
-		if _, ok := onboarding.FieldKeys[k]; ok && len(v) <= 256 {
-			clean[k] = v
-		}
+	fields, err := h.st.OnboardingRunFields(r.Context(), r.PathValue("id"), comp.ID)
+	if err != nil {
+		writeErr(w, 404, "onboarding run not found")
+		return
 	}
+	clean := onboarding.CleanUserEntry(fields, req.UserEntry)
 	if err := h.st.StartOnboardingRun(r.Context(), r.PathValue("id"), comp.ID, clean); err != nil {
 		writeErr(w, 404, "onboarding run not found")
 		return
@@ -311,6 +311,10 @@ func (h *Handler) selfServiceRun(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ingestLogs(w http.ResponseWriter, r *http.Request) {
 	comp := computerFrom(r.Context())
+	if !h.logLimit.allow(comp.ID) {
+		writeErr(w, http.StatusTooManyRequests, "too many log uploads; try again later")
+		return
+	}
 	var req struct {
 		Entries []model.AgentLogEntry `json:"entries"`
 	}

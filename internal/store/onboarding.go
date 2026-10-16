@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/vibemdm/vibemdm/internal/db"
 	"github.com/vibemdm/vibemdm/internal/model"
@@ -84,6 +85,21 @@ func (s *Store) CreateOnboardingRun(ctx context.Context, workflowID, computerID 
 // SetOnboardingRunTask links the agent task.
 func (s *Store) SetOnboardingRunTask(ctx context.Context, runID, taskID string) {
 	s.DB.ExecContext(ctx, `UPDATE onboarding_runs SET task_id = $2 WHERE id = $1`, runID, taskID)
+}
+
+// OnboardingRunFields returns the welcome-form fields of the workflow behind one of a computer's runs.
+func (s *Store) OnboardingRunFields(ctx context.Context, runID, computerID string) ([]model.OnboardingField, error) {
+	var raw []byte
+	err := s.DB.QueryRowContext(ctx, `SELECT w.config FROM onboarding_runs r JOIN onboarding_workflows w ON w.id = r.workflow_id
+		WHERE r.id::text = $1 AND r.computer_id = $2`, runID, computerID).Scan(&raw)
+	if err != nil {
+		return nil, wrapNotFound(err)
+	}
+	var cfg model.OnboardingConfig
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return nil, err
+	}
+	return cfg.Fields, nil
 }
 
 // StartOnboardingRun marks a run running and stores the collected user entry.
