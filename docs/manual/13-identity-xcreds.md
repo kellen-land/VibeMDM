@@ -4,7 +4,7 @@
 replaces the macOS login window with your identity provider's sign-in page, using OpenID Connect (OIDC). It
 creates the local account on first sign-in and keeps the local password in sync with the cloud password. VibeMDM:
 
-1. installs XCreds with the Installomator `xcreds` label, as a Mac Apps catalog entry that keeps it updated; and
+1. installs XCreds with the Installomator `xcreds` label, as a Mac apps catalog entry that keeps it updated; and
 2. configures it with a managed-preferences profile (`com.vibemdm.xcreds`, domain `com.twocanoes.xcreds`) built from
    the bundled `builtin:com.twocanoes.xcreds` schema.
 
@@ -125,7 +125,7 @@ doesn't define, the API rejects it, so check the XCreds admin guide and consider
 1. **Use a pilot Mac you can erase**, with a separate local admin account that you know works.
 2. Start with `shouldShowMacLoginButton: true` and `shouldDetectNetworkToDetermineLoginWindow: true`, so you can
    always reach the standard login window and offline logins still work.
-3. Scope XCreds to the pilot group, confirm the app installed (Mac Apps → XCreds logs) and the profile is
+3. Scope XCreds to the pilot group, confirm the app installed (Mac apps → XCreds logs) and the profile is
    `installed`, then log out.
 4. Sign in with a cloud account. Check that the local account was created with the expected short name and that it
    has a **Secure Token** if FileVault is on (`sysadminctl -secureTokenStatus <user>`; VibeMDM inventory shows it per

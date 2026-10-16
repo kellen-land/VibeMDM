@@ -139,12 +139,12 @@ export function PolicyEditorPage() {
     { key: 'scope', label: 'Scope' },
     { key: 'scripts', label: 'Scripts', count: p.scripts?.length },
     { key: 'packages', label: 'Packages', count: p.packages?.length },
-    { key: 'apps', label: 'Mac Apps', count: p.apps?.length },
-    { key: 'accounts', label: 'Local Accounts', count: p.accounts?.length },
-    { key: 'files', label: 'Files & Processes' },
+    { key: 'apps', label: 'Mac apps', count: p.apps?.length },
+    { key: 'accounts', label: 'Local accounts', count: p.accounts?.length },
+    { key: 'files', label: 'Files and processes' },
     { key: 'maintenance', label: 'Maintenance' },
     { key: 'restart', label: 'Restart' },
-    { key: 'interaction', label: 'User Interaction' },
+    { key: 'interaction', label: 'User interaction' },
     { key: 'selfservice', label: 'Self Service' },
   ]
   if (!isNew) tabs.push({ key: 'logs', label: 'Logs', shortcut: 'logs' })
@@ -496,7 +496,7 @@ function AppsSection({ value, onChange, disabled }: { value: PolicyApp[]; onChan
     })
   return (
     <Card>
-      <CardHeader title="Mac Apps" description="Apps from the Mac Apps catalog, installed with Installomator in this order, after packages and before Files & Processes. Each app's Installomator options come from its catalog entry." />
+      <CardHeader title="Mac apps" description="Apps from the Mac apps catalog, installed with Installomator in this order, after packages and before Files and processes. Each app's Installomator options come from its catalog entry." />
       <CardBody className="flex flex-col gap-4">
         {value.length === 0 && <p className="text-sm text-ink-muted">No apps added.</p>}
         {value.map((pa, i) => {
@@ -555,7 +555,7 @@ function AppsSection({ value, onChange, disabled }: { value: PolicyApp[]; onChan
         {!disabled && (
           <>
             <div className="flex items-end gap-2">
-              <Field label="Add a Mac App" className="max-w-md flex-1" hint={(apps.data?.items.length ?? 0) === 0 ? 'Define apps under Mac Apps first.' : undefined}>
+              <Field label="Add a Mac app" className="max-w-md flex-1" hint={(apps.data?.items.length ?? 0) === 0 ? 'Define apps under Mac apps first.' : undefined}>
                 <Select value={adding} onChange={(e) => setAdding(e.target.value)}>
                   <option value="">{apps.isPending ? 'Loading…' : 'Select an app…'}</option>
                   {(apps.data?.items ?? [])

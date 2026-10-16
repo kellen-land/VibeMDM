@@ -41,7 +41,7 @@ export function Tabs<K extends string>({
               className={cn(
                 'inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-medium transition-colors focus-ring disabled:opacity-45',
                 variant === 'underline'
-                  ? cn('px-3 py-2.5 border-b-2', active ? 'border-accent-500 text-ink' : 'border-transparent text-ink-muted hover:text-ink hover:border-line-strong')
+                  ? cn('px-3 py-2.5 border-b-2', active ? 'border-accent-700 dark:border-accent-400 text-ink' : 'border-transparent text-ink-muted hover:text-ink hover:border-line-strong')
                   : cn('px-3 py-1.5 rounded-md', active ? 'bg-surface-raised text-ink shadow-sm' : 'text-ink-muted hover:text-ink'),
               )}
             >

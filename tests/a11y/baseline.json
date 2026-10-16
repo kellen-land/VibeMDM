@@ -1,0 +1,521 @@
+{
+ "note": "Known accessibility problems, removed as they are fixed. Never add entries by hand: fix new problems instead.",
+ "known": [
+  {
+   "rule": "aria-allowed-attr",
+   "route": "/apps/new",
+   "impact": "critical",
+   "help": "Elements must only use supported ARIA attributes"
+  },
+  {
+   "rule": "aria-input-field-name",
+   "route": "/extension-attributes/new",
+   "impact": "serious",
+   "help": "ARIA input fields must have an accessible name"
+  },
+  {
+   "rule": "aria-input-field-name",
+   "route": "/scripts/:id",
+   "impact": "serious",
+   "help": "ARIA input fields must have an accessible name"
+  },
+  {
+   "rule": "aria-input-field-name",
+   "route": "/scripts/new",
+   "impact": "serious",
+   "help": "ARIA input fields must have an accessible name"
+  },
+  {
+   "rule": "button-name",
+   "route": "/policies",
+   "impact": "critical",
+   "help": "Buttons must have discernible text"
+  },
+  {
+   "rule": "color-contrast",
+   "route": "/groups/:id",
+   "impact": "serious",
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  },
+  {
+   "rule": "color-contrast",
+   "route": "/laps",
+   "impact": "serious",
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  },
+  {
+   "rule": "color-contrast",
+   "route": "/policies/:id",
+   "impact": "serious",
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  },
+  {
+   "rule": "color-contrast",
+   "route": "/updates",
+   "impact": "serious",
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  },
+  {
+   "rule": "definition-list",
+   "route": "/updates",
+   "impact": "serious",
+   "help": "<dl> elements must only directly contain properly-ordered <dt> and <dd> groups, <script>, <template> or <div> elements"
+  },
+  {
+   "rule": "dlitem",
+   "route": "/updates",
+   "impact": "serious",
+   "help": "<dt> and <dd> elements must be contained by a <dl>"
+  },
+  {
+   "rule": "empty-table-header",
+   "route": "/activity",
+   "impact": "minor",
+   "help": "Table header text should not be empty"
+  },
+  {
+   "rule": "empty-table-header",
+   "route": "/enrollment",
+   "impact": "minor",
+   "help": "Table header text should not be empty"
+  },
+  {
+   "rule": "empty-table-header",
+   "route": "/filevault",
+   "impact": "minor",
+   "help": "Table header text should not be empty"
+  },
+  {
+   "rule": "empty-table-header",
+   "route": "/logs",
+   "impact": "minor",
+   "help": "Table header text should not be empty"
+  },
+  {
+   "rule": "empty-table-header",
+   "route": "/packages",
+   "impact": "minor",
+   "help": "Table header text should not be empty"
+  },
+  {
+   "rule": "empty-table-header",
+   "route": "/profiles/custom-settings",
+   "impact": "minor",
+   "help": "Table header text should not be empty"
+  },
+  {
+   "rule": "empty-table-header",
+   "route": "/settings/users",
+   "impact": "minor",
+   "help": "Table header text should not be empty"
+  },
+  {
+   "rule": "label-title-only",
+   "route": "/computers",
+   "impact": "serious",
+   "help": "Form elements should have a visible label"
+  },
+  {
+   "rule": "label-title-only",
+   "route": "/mobile-devices",
+   "impact": "serious",
+   "help": "Form elements should have a visible label"
+  },
+  {
+   "rule": "label",
+   "route": "/enrollment",
+   "impact": "critical",
+   "help": "Form elements must have labels"
+  },
+  {
+   "rule": "landmark-one-main",
+   "route": "/identity",
+   "impact": "moderate",
+   "help": "Document should have one main landmark"
+  },
+  {
+   "rule": "landmark-one-main",
+   "route": "/identity/xcreds",
+   "impact": "moderate",
+   "help": "Document should have one main landmark"
+  },
+  {
+   "rule": "landmark-one-main",
+   "route": "/login",
+   "impact": "moderate",
+   "help": "Document should have one main landmark"
+  },
+  {
+   "rule": "landmark-unique",
+   "route": "/groups/:id",
+   "impact": "moderate",
+   "help": "Landmarks should have a unique role or role/label/title (i.e. accessible name) combination"
+  },
+  {
+   "rule": "landmark-unique",
+   "route": "/policies/:id",
+   "impact": "moderate",
+   "help": "Landmarks should have a unique role or role/label/title (i.e. accessible name) combination"
+  },
+  {
+   "rule": "landmark-unique",
+   "route": "/scripts/:id",
+   "impact": "moderate",
+   "help": "Landmarks should have a unique role or role/label/title (i.e. accessible name) combination"
+  },
+  {
+   "rule": "landmark-unique",
+   "route": "/scripts/new",
+   "impact": "moderate",
+   "help": "Landmarks should have a unique role or role/label/title (i.e. accessible name) combination"
+  },
+  {
+   "rule": "link-in-text-block",
+   "route": "/profiles/custom-settings",
+   "impact": "serious",
+   "help": "Links must be distinguishable without relying on color"
+  },
+  {
+   "rule": "nested-interactive",
+   "route": "/updates",
+   "impact": "serious",
+   "help": "Interactive controls must not be nested"
+  },
+  {
+   "rule": "page-has-heading-one",
+   "route": "/identity",
+   "impact": "moderate",
+   "help": "Page should contain a level-one heading"
+  },
+  {
+   "rule": "page-has-heading-one",
+   "route": "/identity/xcreds",
+   "impact": "moderate",
+   "help": "Page should contain a level-one heading"
+  },
+  {
+   "rule": "region",
+   "route": "/identity",
+   "impact": "moderate",
+   "help": "All page content should be contained by landmarks"
+  },
+  {
+   "rule": "region",
+   "route": "/identity/xcreds",
+   "impact": "moderate",
+   "help": "All page content should be contained by landmarks"
+  },
+  {
+   "rule": "region",
+   "route": "/login",
+   "impact": "moderate",
+   "help": "All page content should be contained by landmarks"
+  },
+  {
+   "rule": "select-name",
+   "route": "/activity",
+   "impact": "critical",
+   "help": "Select element must have an accessible name"
+  },
+  {
+   "rule": "select-name",
+   "route": "/groups/:id",
+   "impact": "critical",
+   "help": "Select element must have an accessible name"
+  },
+  {
+   "rule": "select-name",
+   "route": "/policies/:id",
+   "impact": "critical",
+   "help": "Select element must have an accessible name"
+  },
+  {
+   "rule": "select-name",
+   "route": "/policies/new",
+   "impact": "critical",
+   "help": "Select element must have an accessible name"
+  },
+  {
+   "rule": "target-size",
+   "route": "/activity",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/apps",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/apps/custom-labels",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/apps/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/compliance",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/compliance/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/computers",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/computers/:id",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/enrollment",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/extension-attributes",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/extension-attributes/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/filevault",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/groups",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/groups/:id",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/groups/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/laps",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/logs",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/mobile-devices",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/mobile-devices/:id",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/mobile-enrollment",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/mobile-groups",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/mobile-groups/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/mobile-profiles",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/mobile-profiles/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/mobile-searches",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/mobile-searches/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/onboarding",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/onboarding/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/packages",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/policies",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/policies/:id",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/policies/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/profiles",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/profiles/custom-settings",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/profiles/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/restricted-software",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/restricted-software/events",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/restricted-software/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/scripts",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/scripts/:id",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/scripts/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/searches",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/searches/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/settings",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/settings/users",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/updates",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  },
+  {
+   "rule": "target-size",
+   "route": "/updates/plans/new",
+   "impact": "serious",
+   "help": "All touch targets must be 24px large, or leave sufficient space"
+  }
+ ]
+}

@@ -32,11 +32,17 @@
   --color-ink-muted: var(--ink-muted);
   --color-ink-faint: var(--ink-faint);
 
-  /* Status (fixed, semantic — never teal). */
-  --color-good: #22c55e;
-  --color-warning: #f0a92a;
-  --color-serious: #f97b4f;
-  --color-critical: #ef4444;
+  /* Status (semantic — never teal). Theme-aware so status text stays readable: deeper
+     tones on light backgrounds (≥4.5:1 on every light surface), bright ones on dark. */
+  --color-good: var(--good);
+  --color-warning: var(--warning);
+  --color-serious: var(--serious);
+  --color-critical: var(--critical);
+  /* Fills that carry white text (Saved pill, danger button): ≥4.5:1 in both themes. */
+  --color-good-strong: #15803d;
+  --color-critical-strong: #c62828;
+  /* Outlines of form controls (inputs, switch track): ≥3:1 against the surface. */
+  --color-line-control: var(--line-control);
 
   --radius-xl: 0.625rem;
   --radius-2xl: 0.875rem;
@@ -53,7 +59,12 @@
   --line-strong: #2f2948;
   --ink: #ece9f8;            /* bright ink */
   --ink-muted: #9a94b6;      /* muted ink */
-  --ink-faint: #67618a;
+  --ink-faint: #8a84ab;      /* ≥5.2:1 on every dark surface */
+  --line-control: #67618a;
+  --good: #22c55e;
+  --warning: #f0a92a;
+  --serious: #f97b4f;
+  --critical: #ef4444;
   --glow-cyan: rgb(34 211 238 / 0.6);
   --glow-violet: rgb(139 92 246 / 0.7);
   --glow-under-cyan: rgb(34 211 238 / 0.85);
@@ -78,7 +89,12 @@
   --line-strong: #d0c9e6;
   --ink: #120f24;
   --ink-muted: #5b5677;
-  --ink-faint: #8f89aa;
+  --ink-faint: #6b6589;      /* ≥4.9:1 on every light surface */
+  --line-control: #847e9e;
+  --good: #15803d;
+  --warning: #b45309;
+  --serious: #c2410c;
+  --critical: #c62828;
   --glow-cyan: rgb(8 145 178 / 0.35);
   --glow-violet: rgb(124 58 237 / 0.4);
   --glow-under-cyan: rgb(8 145 178 / 0.5);
@@ -129,6 +145,25 @@ body,
   height: 100%;
 }
 
+/* Every focusable element gets the same visible outline, unless a component styles its own
+   (the focus-ring utility). The base layer keeps utilities in charge. */
+@layer base {
+  :where(a[href], button, summary, select, input, textarea, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]):focus-visible {
+    outline: 2px solid var(--color-accent-700);
+    outline-offset: 2px;
+  }
+  [data-theme="dark"] :where(a[href], button, summary, select, input, textarea, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]):focus-visible {
+    outline-color: var(--color-accent-400);
+  }
+}
+
+/* Keep a focused field clear of the sticky header and the sticky ObjectBar. */
+html,
+main {
+  scroll-padding-top: 3.5rem;
+  scroll-padding-bottom: 5rem;
+}
+
 body {
   background: var(--page);
   color: var(--ink);
@@ -164,9 +199,10 @@ body {
   background-clip: content-box;
 }
 
-/* Cyan focus ring with a soft glow */
+/* Focus indicator: a solid 2px outline (≥5:1 in both themes). An outline, unlike a shadow,
+   survives Windows high-contrast mode. */
 @utility focus-ring {
-  @apply outline-none focus-visible:ring-2 focus-visible:ring-accent-500/55 focus-visible:border-accent-500/70;
+  @apply outline-hidden focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-700 dark:focus-visible:outline-accent-400;
 }
 
 /* Uppercase micro-label used for section/column headers */
@@ -189,9 +225,11 @@ body {
   background: var(--surface-sunken);
 }
 .cm-editor.cm-focused {
-  outline: none;
-  border-color: var(--color-accent-500);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-accent-500) 22%, transparent);
+  outline: 2px solid var(--color-accent-700);
+  outline-offset: 2px;
+}
+[data-theme="dark"] .cm-editor.cm-focused {
+  outline-color: var(--color-accent-400);
 }
 .cm-editor .cm-scroller {
   font-family: var(--font-mono);

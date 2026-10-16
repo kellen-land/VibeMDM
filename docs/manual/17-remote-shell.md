@@ -73,7 +73,7 @@ Every session is recorded in `shell_sessions`:
 | `bytes_in`, `bytes_out` | Volume each way |
 | transcript | The terminal output stream (up to 1 MiB). Keystrokes are not stored separately; the transcript shows what was echoed |
 
-Review sessions in the console's Shell Sessions view, or with `GET /api/v1/shell-sessions` and
+Review sessions in the console's Shell sessions view, or with `GET /api/v1/shell-sessions` and
 `GET /api/v1/shell-sessions/{id}` (transcript), both admin only. Opening and closing a session also writes
 `shell.open` / `shell.close` audit entries.
 

@@ -1,0 +1,13 @@
+{
+  "name": "vibemdm-a11y",
+  "private": true,
+  "type": "module",
+  "description": "Automated accessibility checks of the VibeMDM console (axe-core in Chromium).",
+  "scripts": {
+    "scan": "node scan.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "playwright": "1.56.0"
+  }
+}

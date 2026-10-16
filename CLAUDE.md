@@ -41,6 +41,9 @@ All SQL lives in `internal/store`. Admin routes are registered in `internal/api/
   - Never record shell keystrokes or other input that may contain passwords.
   - Pin GitHub Actions to commit SHAs; Compose builds the local `vibemdm-local` image name.
 - Migrations are applied by name, so parallel branches must not reuse a number.
+- Accessibility (WCAG 2.2 AA): follow the "Accessibility" section of `docs/ui-guidelines.md`. CI scans every console
+  page (`tests/a11y`, axe-core); new problems fail the build, and fixed ones are removed from `tests/a11y/baseline.json`
+  with `--update-baseline`, never added by hand.
 - Keep Go and TypeScript API types in sync (`internal/model/model.go` ↔ `web/src/api/types.ts`).
 - UI must stay calm and simple (owner is ADHD-sensitive to clutter): group features under nested menus/tabs like Jamf
   rather than adding top-level items, one primary action per screen, collapse advanced options.

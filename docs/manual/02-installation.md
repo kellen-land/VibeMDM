@@ -157,7 +157,7 @@ certificate.
    sending its own header. With no trusted proxies configured, every request appears to come from NPM, and one
    person's failed logins lock out everyone behind the proxy.
 5. Check it from outside your network: test an enrollment, a package upload, **Check in now** on a computer
-   (long-poll) and a remote shell (WebSockets). Then open **Activity → Shell Sessions** and confirm the **From**
+   (long-poll) and a remote shell (WebSockets). Then open **Activity → Shell sessions** and confirm the **From**
    column shows your public address, not NPM's.
 
 > **Caution:** proxies that inspect or rewrite traffic (some CDN and tunnel modes) can break large uploads,

@@ -66,7 +66,7 @@ export function LocalAccountsSection({ value, onChange, disabled }: { value: Pol
   return (
     <Card>
       <CardHeader
-        title="Local Accounts"
+        title="Local accounts"
         description="Create, change or remove local accounts on the Mac. Actions run in order, after Installomator apps. Passwords are encrypted on the server and never shown again."
       />
       <CardBody className="flex flex-col gap-3">

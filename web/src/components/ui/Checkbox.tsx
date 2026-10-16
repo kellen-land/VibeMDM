@@ -48,7 +48,7 @@ export function Toggle({ checked, onChange, label, description, disabled, size =
         className={cn(
           'relative inline-flex shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-ring',
           dims.track,
-          checked ? 'bg-accent-600' : 'bg-line-strong',
+          checked ? 'bg-accent-600' : 'bg-line-control',
         )}
       >
         <span className={cn('inline-block rounded-full bg-white shadow transition-transform', dims.knob, checked ? dims.on : 'translate-x-0')} />

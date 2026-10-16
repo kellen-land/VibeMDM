@@ -32,7 +32,7 @@ footer{color:var(--muted);font-size:13px;text-align:center;margin-top:32px}
 <div class="card"><div class="step"><div class="num">1</div><div>
 <h2>Download the enrollment profile</h2>
 <p>Open this page in <strong>Safari</strong>, tap the button and choose <strong>Allow</strong>.</p>
-<a class="btn" href="{{.ProfileURL}}">Download Enrollment Profile</a>
+<a class="btn" href="{{.ProfileURL}}">Download enrollment profile</a>
 </div></div></div>
 <div class="card"><div class="step"><div class="num">2</div><div>
 <h2>Install it in Settings</h2>
@@ -47,7 +47,7 @@ footer{color:var(--muted);font-size:13px;text-align:center;margin-top:32px}
 <div class="card"><div class="step"><div class="num">1</div><div>
 <h2>Download the enrollment profile</h2>
 <p>This installs the management certificate and connects your Mac to {{.Org}}.</p>
-<a class="btn" href="{{.ProfileURL}}">Download Enrollment Profile</a>
+<a class="btn" href="{{.ProfileURL}}">Download enrollment profile</a>
 </div></div></div>
 <div class="card"><div class="step"><div class="num">2</div><div>
 <h2>Approve the profile</h2>

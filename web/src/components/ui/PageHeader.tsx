@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { pageTitle } from '../layout/RouteAnnouncer'
 
 export interface Crumb {
   label: ReactNode
@@ -23,6 +24,12 @@ export function PageHeader({
   className?: string
   meta?: ReactNode
 }) {
+  // Keep the browser tab title in step with the heading (an object's name often arrives after
+  // the page has rendered).
+  const h1 = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    document.title = pageTitle(h1.current?.textContent)
+  })
   return (
     <div className={cn('mb-6 flex flex-col gap-3', className)}>
       {crumbs && crumbs.length > 0 && (
@@ -35,7 +42,9 @@ export function PageHeader({
                   {c.label}
                 </Link>
               ) : (
-                <span className="text-ink">{c.label}</span>
+                <span className="text-ink" aria-current={i === crumbs.length - 1 ? 'page' : undefined}>
+                  {c.label}
+                </span>
               )}
             </span>
           ))}
@@ -43,7 +52,7 @@ export function PageHeader({
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold tracking-tight text-ink truncate">{title}</h1>
+          <h1 ref={h1} className="text-lg font-semibold tracking-tight text-ink break-words">{title}</h1>
           {description && <p className="mt-1 text-sm text-ink-muted">{description}</p>}
           {meta && <div className="mt-2 flex flex-wrap items-center gap-2">{meta}</div>}
         </div>

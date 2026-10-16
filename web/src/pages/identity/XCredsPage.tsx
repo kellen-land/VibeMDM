@@ -380,7 +380,7 @@ function AppStatus({ v }: { v: XCredsView }) {
   if (!v.app)
     return (
       <div className="rounded-lg border border-line px-3.5 py-3 text-xs text-ink-muted">
-        <span className="font-medium text-ink">XCreds app:</span> not set up yet. It is added to Mac Apps when you enable XCreds with Installomator.
+        <span className="font-medium text-ink">XCreds app:</span> not set up yet. It is added to Mac apps when you enable XCreds with Installomator.
       </div>
     )
   const entries = Object.entries(v.app.status ?? {}).filter(([, n]) => n > 0)
@@ -401,7 +401,7 @@ function AppStatus({ v }: { v: XCredsView }) {
         ))
       )}
       <Link to={`/apps/${v.app.id}`} className="ml-auto text-accent-700 hover:underline dark:text-accent-300">
-        Open in Mac Apps
+        Open in Mac apps
       </Link>
     </div>
   )

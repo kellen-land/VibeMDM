@@ -32,6 +32,68 @@ jobs:
           name: vibemdm-agent
           path: bin/agents/
 
+  # Accessibility: starts the server on a throwaway database, fills it with simulated Macs and
+  # iPhones, and runs axe-core on every console page in light and dark theme. A problem that is
+  # not in tests/a11y/baseline.json fails the build. See docs/ui-guidelines.md (Accessibility).
+  a11y:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: vibemdm
+          POSTGRES_PASSWORD: vibemdm
+          POSTGRES_DB: vibemdm
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U vibemdm -d vibemdm"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            tests/a11y/package-lock.json
+      - name: Build the console, server and simulator
+        run: make web build sim
+      - name: Install the browser
+        working-directory: tests/a11y
+        run: npm ci --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Start a throwaway server
+        run: |
+          mkdir -p "$RUNNER_TEMP/a11y/data"
+          cd "$RUNNER_TEMP/a11y"
+          openssl rand -base64 24 | tr -d '\n=+/' > admin-password
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -keyout push.key -out push.pem \
+            -subj "/UID=com.apple.mgmt.External.ci/CN=APSP:ci" 2>/dev/null
+          VIBEMDM_DATABASE_URL='postgres://vibemdm:vibemdm@127.0.0.1:5432/vibemdm?sslmode=disable' \
+          VIBEMDM_SERVER_URL=http://127.0.0.1:8080 VIBEMDM_LISTEN=127.0.0.1:8080 \
+          VIBEMDM_DATA_DIR="$RUNNER_TEMP/a11y/data" VIBEMDM_AGENT_DIR="$GITHUB_WORKSPACE/bin/agents" \
+          VIBEMDM_ADMIN_PASSWORD="$(cat admin-password)" VIBEMDM_ENCRYPTION_KEY="$(openssl rand -base64 32)" \
+            nohup "$GITHUB_WORKSPACE/bin/vibemdm" > server.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8080/healthz >/dev/null && exit 0; sleep 1; done
+          cat server.log; exit 1
+      - name: Accessibility scan
+        working-directory: tests/a11y
+        env:
+          VIBEMDM_SIM: ${{ github.workspace }}/bin/vibemdm-sim
+          A11Y_PUSH_CERT: ${{ runner.temp }}/a11y/push.pem
+          A11Y_PUSH_KEY: ${{ runner.temp }}/a11y/push.key
+        run: node scan.mjs --base http://127.0.0.1:8080 --admin-password-file "$RUNNER_TEMP/a11y/admin-password" --seed
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: a11y-report
+          path: tests/a11y/a11y-report.json
+          if-no-files-found: ignore
+
   docker:
     needs: test
     if: github.event_name != 'pull_request'

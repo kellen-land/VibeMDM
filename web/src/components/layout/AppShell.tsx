@@ -50,6 +50,7 @@ import { hasModifier, modLabel } from '../../lib/shortcuts'
 import { EditGuardProvider } from '../editor/EditGuard'
 import { SaveFeedbackProvider } from '../editor/SaveFeedback'
 import { ChangePasswordDialog } from './ChangePasswordDialog'
+import { RouteAnnouncer, SkipLink } from './RouteAnnouncer'
 import { useToast } from '../ui/Toast'
 import { errorMessage } from '../../api/client'
 import { useHealthSummary } from '../../api/queries'
@@ -96,7 +97,7 @@ const navGroups: { heading: string; items: NavItem[] }[] = [
       { to: '/profiles', label: 'Configuration profiles', icon: ShieldCheck },
       { to: '/updates', label: 'Software updates', icon: RefreshCcwDot },
       { to: '/packages', label: 'Packages', icon: Package },
-      { to: '/apps', label: 'Mac Apps', icon: AppWindow },
+      { to: '/apps', label: 'Mac apps', icon: AppWindow },
       { to: '/extension-attributes', label: 'Extension attributes', icon: Puzzle },
     ],
   },
@@ -378,6 +379,8 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-full">
+      <SkipLink />
+      <RouteAnnouncer />
       <aside
         className={cn(
           'hidden lg:flex fixed inset-y-0 left-0 flex-col border-r border-line z-30 transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
@@ -407,7 +410,7 @@ export function AppShell() {
           <span className="text-[13px] font-semibold">{status?.org_name || 'VibeMDM'}</span>
           <ThemeToggle className="ml-auto" />
         </header>
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-7 max-w-[1440px] w-full mx-auto">
+        <main id="main" tabIndex={-1} className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-7 max-w-[1440px] w-full mx-auto focus:outline-hidden">
           {/* Keyed by page: every object page (including /x/new after /x/1, or a Clone) starts fresh. */}
           <EditGuardProvider>
             <SaveFeedbackProvider>

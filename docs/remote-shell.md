@@ -32,7 +32,7 @@ offline the console reports that and no session opens — this is not a way into
   times, byte counts, and an output transcript (capped at 1 MiB). Opening and closing a session also writes
   `shell.open` / `shell.close` audit-log entries. Review sessions and replay transcripts under
   `GET /api/v1/shell-sessions` and `GET /api/v1/shell-sessions/{id}` (admin only), or in the console's
-  Shell Sessions view.
+  Shell sessions view.
 
 ## Transport
 

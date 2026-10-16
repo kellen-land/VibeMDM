@@ -12,7 +12,7 @@ import { useToast } from '../components/ui/Toast'
 import { ScopeSummary } from '../components/pickers/ScopeEditor'
 import { Tabs } from '../components/ui/Tabs'
 import { IndexPage } from '../components/templates/IndexPage'
-/** Catalog / Custom labels switch shared by the Mac Apps pages. */
+/** Catalog / Custom labels switch shared by the Mac apps pages. */
 export function AppsTabs({ active }: { active: 'catalog' | 'custom-labels' }) {
   const navigate = useNavigate()
   return (

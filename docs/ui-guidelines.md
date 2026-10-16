@@ -76,3 +76,23 @@ Jamf Pro's shortcuts, with Control on a Mac and Alt elsewhere (see the manual, Â
 
 `MetricsCard` (one figure, optional link), `CalloutCard` (one next step; at most one on a page), `SummaryCard`
 (label/value rows), `EmptyState`, `Table`, `Badge`, `Alert`. Prefer these over one-off cards.
+
+## Accessibility
+
+The console targets WCAG 2.2 AA. Build on the shared components, which carry most of it:
+
+- **Focus:** every focusable element shows the accent outline (`focus-ring`, or the base style). Never remove an
+  outline without replacing it. Pages start with "Skip to content", and the browser title follows the page's `h1`
+  (`PageHeader`).
+- **Colour:** body text uses `ink` or `ink-muted`; `ink-faint` is for secondary text and still meets 4.5:1. Status
+  text uses `good`/`warning`/`serious`/`critical`, which are theme-aware; white text on a status fill uses
+  `good-strong`/`critical-strong`. Form control outlines use `line-control` (3:1). Never let colour be the only signal.
+- **Keyboard:** anything clickable is a `<button>` or a link, never a `div`, `span` or `tr` with `onClick`. Composite
+  widgets (tabs, menus, comboboxes) follow the ARIA Authoring Practices pattern for their role.
+- **Names:** every control has a visible label or an `aria-label` that says which object it acts on ("Enable
+  Weekly cache cleanup", not "Toggle").
+
+`.github/workflows/build.yml` runs an accessibility scan on every PR (`tests/a11y`): axe-core on every console page in
+light and dark theme, plus a check that each page has its own title. A problem that is not in
+`tests/a11y/baseline.json` fails the build. When you fix a known problem, re-run the scan with `--update-baseline`
+and commit the smaller baseline; never add entries by hand.

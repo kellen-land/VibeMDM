@@ -8,7 +8,7 @@ export const badgeToneClass: Record<BadgeTone, string> = {
   neutral: 'bg-line/40 text-ink-muted border-line',
   accent: 'bg-accent-500/12 text-accent-700 border-accent-500/25 dark:text-accent-300',
   info: 'bg-accent-500/10 text-accent-700 border-accent-500/20 dark:text-accent-300',
-  good: 'bg-good/12 text-[#1a7f3c] border-good/25 dark:text-[#5fd98a]',
+  good: 'bg-good/12 text-[#166534] border-good/25 dark:text-[#5fd98a]',
   warning: 'bg-warning/14 text-[#8a5a0a] border-warning/30 dark:text-[#f0c070]',
   serious: 'bg-serious/14 text-[#9a4420] border-serious/30 dark:text-[#f6a683]',
   critical: 'bg-critical/12 text-[#b22424] border-critical/28 dark:text-[#f28b8b]',
