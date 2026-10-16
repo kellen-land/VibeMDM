@@ -1,6 +1,8 @@
 # VibeMDM
 
-**VibeMDM** is a self-hosted Apple MDM for Macs, shipped as a Docker container. It pairs the
+***This platform was made by AI! Use in production systems at your own risk!***
+
+**VibeMDM** is a vibe coded, self-hosted Apple MDM for Macs, shipped as a Docker container. It pairs the
 [NanoMDM](https://github.com/micromdm/nanomdm) protocol engine with everything a small fleet admin
 expects from a commercial product: a web console, inventory, smart groups, policies, a script library,
 configuration profiles, a package distribution point, and a lightweight macOS agent (`vibemdm-agent`)
