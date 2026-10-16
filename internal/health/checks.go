@@ -39,6 +39,8 @@ type Deps struct {
 	Rescan func(ctx context.Context, baselineID, computerID string) error
 	// InstallAgent installs the agent through MDM (optional; needs an uploaded package).
 	InstallAgent func(ctx context.Context, computerID string) error
+	// CloseShells ends every open remote shell (optional); called when a fix turns the feature off.
+	CloseShells func(reason string) int
 }
 
 const actor = "health"
@@ -431,6 +433,10 @@ func (c *checks) remoteShell(ctx context.Context) ([]Finding, error) {
 						return err
 					}
 					c.d.St.Audit(ctx, actor, "settings.remote_shell", "settings", "core", map[string]any{"enabled": false})
+					// As in Settings: turning the feature off ends the shells that are open now.
+					if c.d.CloseShells != nil {
+						c.d.CloseShells("remote shell was disabled by a health fix")
+					}
 					return nil
 				}},
 		}}}, nil

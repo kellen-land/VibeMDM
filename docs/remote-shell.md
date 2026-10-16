@@ -38,5 +38,8 @@ offline the console reports that and no session opens — this is not a way into
 
 Both legs speak JSON text frames over WebSocket: `{"t":"d","b":"<base64>"}` for data, `{"t":"r","c","w"}`
 for terminal resize, `{"t":"x","code"}` on exit, `{"t":"e","msg"}` for errors. The agent runs the login
-shell (`$SHELL` or `/bin/zsh`) under a PTY as root. The server never stores keystrokes separately; the
-transcript is the terminal output stream, which reflects what was typed and shown.
+shell (`$SHELL` or `/bin/zsh`) under a PTY as root. The server never stores keystrokes separately (they
+may be passwords typed at a prompt); the transcript is the terminal output stream. It shows what the shell
+echoed, so input typed with echo turned off (`stty -echo`, password prompts) does not appear in it. Treat the
+transcript as a record of what the operator saw, not proof of every command. Transcripts are cleaned of NUL bytes
+and invalid UTF-8 before they are stored, and a failure to store one is audited as `shell.record_failed`.

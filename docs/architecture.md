@@ -33,8 +33,10 @@
 - MDM: identity certificates are verified against the SCEP CA; NanoMDM's `certauth` binds each enrollment to its
   certificate so devices cannot impersonate one another.
 - **Secrets at rest.** With `VIBEMDM_ENCRYPTION_KEY` set, the SCEP CA key, APNs key, APNs request key, FileVault
-  escrow key, profile-signing key and FileVault recovery keys are encrypted with AES-256-GCM before they reach
-  PostgreSQL. Existing plaintext values are sealed automatically at start-up.
+  escrow key, profile-signing and package-signing keys, FileVault recovery keys (and their history), LAPS passwords
+  (current, pending, admin-set, history and Secure Token grants), Activation Lock bypass codes, policy Local Accounts
+  passwords and super's service-account password are encrypted with AES-256-GCM before they reach PostgreSQL. Key
+  rotation and the start-up key check cover all of them (one list in `internal/store/secrets.go`). Existing plaintext values are sealed automatically at start-up.
 - **Fail-safe start-up.** The server opens every stored ciphertext before doing anything else and refuses to start if
   the key is wrong or missing. A CA that exists but cannot be read is never replaced; first-boot CA creation is
   insert-only. Back up the key: without it, stored secrets are unrecoverable.

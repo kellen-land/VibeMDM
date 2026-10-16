@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -67,6 +68,121 @@ func (s *Store) StorePushCertSealed(ctx context.Context, topic string, certPEM, 
 
 // ---- re-seal pass ----
 
+// sealedColumn is one column that holds values sealed with s.Box.
+type sealedColumn struct{ table, col, id string }
+
+// sealedColumns lists every column written with s.Box.Seal. ResealSecrets, VerifyEncryptionKey
+// and RekeySecrets all walk this list (plus the JSON-held secrets below), so a key rotation
+// cannot leave a secret behind under the old key. TestSealedColumnsCoverSealCalls guards it.
+var sealedColumns = []sealedColumn{
+	{"scep_ca", "key_pem", "id"},
+	{"push_cert_requests", "key_pem", "id"},
+	{"escrow_identity", "key_pem", "id"},
+	{"push_certs", "key_pem", "topic"},
+	{"pkg_signing_ca", "key_pem", "id"},
+	{"filevault_keys", "key_encrypted", "computer_id"},
+	{"filevault_key_history", "key_encrypted", "id"},
+	{"laps_passwords", "password_encrypted", "computer_id"},
+	{"laps_passwords", "pending_encrypted", "computer_id"},
+	{"laps_passwords", "desired_encrypted", "computer_id"},
+	{"laps_password_history", "password_encrypted", "id"},
+	{"laps_token_grants", "admin_password_encrypted", "computer_id"},
+	{"mobile_device_activation_lock", "bypass_code_encrypted", "mobile_device_id"},
+	{"super_config", "auth_password", "id"},
+}
+
+// queryer is the part of *sql.DB and *sql.Tx the secret passes need.
+type queryer interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+type sealedValue struct{ id, val string }
+
+// readSealed returns the non-empty values of one column (nothing if the table does not exist,
+// e.g. before its migration).
+func readSealed(ctx context.Context, q queryer, c sealedColumn) ([]sealedValue, error) {
+	var exists bool
+	if err := q.QueryRowContext(ctx, `SELECT to_regclass($1) IS NOT NULL`, c.table).Scan(&exists); err != nil || !exists {
+		return nil, err
+	}
+	rows, err := q.QueryContext(ctx, `SELECT `+c.id+`::text, `+c.col+` FROM `+c.table+` WHERE `+c.col+` IS NOT NULL AND `+c.col+` <> ''`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []sealedValue
+	for rows.Next() {
+		var v sealedValue
+		if err := rows.Scan(&v.id, &v.val); err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
+func writeSealed(ctx context.Context, q queryer, c sealedColumn, id, val string) error {
+	_, err := q.ExecContext(ctx, `UPDATE `+c.table+` SET `+c.col+` = $2 WHERE `+c.id+`::text = $1`, id, val)
+	return err
+}
+
+// policyAccountSecrets returns each policy's Local Accounts JSON (passwords sealed inside).
+func policyAccountSecrets(ctx context.Context, q queryer) (map[string][]map[string]any, error) {
+	rows, err := q.QueryContext(ctx, `SELECT id::text, accounts FROM policies WHERE accounts::text LIKE '%password_sealed%'`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string][]map[string]any{}
+	for rows.Next() {
+		var id string
+		var raw []byte
+		if err := rows.Scan(&id, &raw); err != nil {
+			return nil, err
+		}
+		var accs []map[string]any
+		if err := json.Unmarshal(raw, &accs); err != nil {
+			return nil, fmt.Errorf("policy %s accounts: %w", id, err)
+		}
+		out[id] = accs
+	}
+	return out, rows.Err()
+}
+
+// transformPolicyAccounts rewrites every password_sealed value with fn.
+func transformPolicyAccounts(ctx context.Context, q queryer, fn func(string) (string, bool, error)) (int, error) {
+	pols, err := policyAccountSecrets(ctx, q)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for id, accs := range pols {
+		changed := false
+		for _, a := range accs {
+			v, _ := a["password_sealed"].(string)
+			if v == "" {
+				continue
+			}
+			nv, ch, err := fn(v)
+			if err != nil {
+				return n, fmt.Errorf("policy %s account password: %w", id, err)
+			}
+			if ch {
+				a["password_sealed"], changed = nv, true
+				n++
+			}
+		}
+		if changed {
+			if _, err := q.ExecContext(ctx, `UPDATE policies SET accounts = $2::jsonb WHERE id::text = $1`, id, jsonArg(accs)); err != nil {
+				return n, err
+			}
+		}
+	}
+	return n, nil
+}
+
 // ResealSecrets encrypts any sensitive values still stored as plaintext. It is
 // a no-op when encryption is disabled. Returns the number of values sealed.
 func (s *Store) ResealSecrets(ctx context.Context) (int, error) {
@@ -74,42 +190,36 @@ func (s *Store) ResealSecrets(ctx context.Context) (int, error) {
 		return 0, nil
 	}
 	n := 0
-	type target struct{ table, keyCol, idCol string }
-	for _, t := range []target{
-		{"scep_ca", "key_pem", "id"},
-		{"push_cert_requests", "key_pem", "id"},
-		{"escrow_identity", "key_pem", "id"},
-		{"push_certs", "key_pem", "topic"},
-		{"filevault_keys", "key_encrypted", "computer_id"},
-	} {
-		rows, err := s.DB.QueryContext(ctx, `SELECT `+t.idCol+`::text, `+t.keyCol+` FROM `+t.table)
+	for _, c := range sealedColumns {
+		vals, err := readSealed(ctx, s.DB, c)
 		if err != nil {
 			return n, err
 		}
-		type pending struct{ id, val string }
-		var todo []pending
-		for rows.Next() {
-			var p pending
-			if err := rows.Scan(&p.id, &p.val); err != nil {
-				rows.Close()
-				return n, err
+		for _, v := range vals {
+			if secrets.IsEncrypted(v.val) {
+				continue
 			}
-			if p.val != "" && !secrets.IsEncrypted(p.val) {
-				todo = append(todo, p)
-			}
-		}
-		rows.Close()
-		for _, p := range todo {
-			sealed, err := s.Box.Seal(p.val)
+			sealed, err := s.Box.Seal(v.val)
 			if err != nil {
 				return n, err
 			}
 			// Same plaintext, so push_certs' stale token is intentionally left alone.
-			if _, err := s.DB.ExecContext(ctx, `UPDATE `+t.table+` SET `+t.keyCol+` = $2 WHERE `+t.idCol+`::text = $1`, p.id, sealed); err != nil {
+			if err := writeSealed(ctx, s.DB, c, v.id, sealed); err != nil {
 				return n, err
 			}
 			n++
 		}
+	}
+	m, err := transformPolicyAccounts(ctx, s.DB, func(v string) (string, bool, error) {
+		if secrets.IsEncrypted(v) {
+			return v, false, nil
+		}
+		sealed, err := s.Box.Seal(v)
+		return sealed, err == nil, err
+	})
+	n += m
+	if err != nil {
+		return n, err
 	}
 	// Settings: the profile signing key.
 	var raw sql.NullString
@@ -135,27 +245,29 @@ var ErrKeyMismatch = errors.New("stored secrets cannot be decrypted with VIBEMDM
 // VerifyEncryptionKey opens every stored ciphertext once. It fails if any value
 // is encrypted but the configured key (or lack of one) cannot open it.
 func (s *Store) VerifyEncryptionKey(ctx context.Context) error {
-	checks := []struct{ table, col string }{
-		{"scep_ca", "key_pem"}, {"push_cert_requests", "key_pem"}, {"escrow_identity", "key_pem"},
-		{"push_certs", "key_pem"}, {"filevault_keys", "key_encrypted"},
-	}
-	for _, c := range checks {
-		rows, err := s.DB.QueryContext(ctx, `SELECT `+c.col+` FROM `+c.table+` WHERE `+c.col+` LIKE 'enc:v1:%'`)
+	for _, c := range sealedColumns {
+		vals, err := readSealed(ctx, s.DB, c)
 		if err != nil {
 			return err
 		}
-		for rows.Next() {
-			var v string
-			if err := rows.Scan(&v); err != nil {
-				rows.Close()
-				return err
+		for _, v := range vals {
+			if !secrets.IsEncrypted(v.val) {
+				continue
 			}
-			if _, err := s.Box.Open(v); err != nil {
-				rows.Close()
-				return fmt.Errorf("%w (failed on %s)", ErrKeyMismatch, c.table)
+			if _, err := s.Box.Open(v.val); err != nil {
+				return fmt.Errorf("%w (failed on %s.%s)", ErrKeyMismatch, c.table, c.col)
 			}
 		}
-		rows.Close()
+	}
+	if _, err := transformPolicyAccounts(ctx, s.DB, func(v string) (string, bool, error) {
+		if secrets.IsEncrypted(v) {
+			if _, err := s.Box.Open(v); err != nil {
+				return v, false, fmt.Errorf("%w (failed on policies.accounts)", ErrKeyMismatch)
+			}
+		}
+		return v, false, nil
+	}); err != nil {
+		return err
 	}
 	var sk sql.NullString
 	if err := s.DB.QueryRowContext(ctx, `SELECT value->>'signing_key_pem' FROM settings WHERE key = $1`, settingsKey).Scan(&sk); err == nil && sk.Valid && secrets.IsEncrypted(sk.String) {
@@ -175,41 +287,35 @@ func (s *Store) RekeySecrets(ctx context.Context, oldBox, newBox *secrets.Box) (
 		return 0, err
 	}
 	defer tx.Rollback()
+	rekey := func(v string) (string, bool, error) {
+		plain, err := oldBox.Open(v)
+		if err != nil {
+			return "", false, fmt.Errorf("cannot open with the old key: %w", err)
+		}
+		sealed, err := newBox.Seal(plain)
+		return sealed, err == nil, err
+	}
 	n := 0
-	type target struct{ table, col, id string }
-	for _, t := range []target{
-		{"scep_ca", "key_pem", "id"}, {"push_cert_requests", "key_pem", "id"}, {"escrow_identity", "key_pem", "id"},
-		{"push_certs", "key_pem", "topic"}, {"filevault_keys", "key_encrypted", "computer_id"},
-	} {
-		rows, err := tx.QueryContext(ctx, `SELECT `+t.id+`::text, `+t.col+` FROM `+t.table+` WHERE `+t.col+` <> ''`)
+	for _, c := range sealedColumns {
+		vals, err := readSealed(ctx, tx, c)
 		if err != nil {
 			return n, err
 		}
-		type item struct{ id, val string }
-		var items []item
-		for rows.Next() {
-			var it item
-			if err := rows.Scan(&it.id, &it.val); err != nil {
-				rows.Close()
-				return n, err
-			}
-			items = append(items, it)
-		}
-		rows.Close()
-		for _, it := range items {
-			plain, err := oldBox.Open(it.val)
+		for _, v := range vals {
+			sealed, _, err := rekey(v.val)
 			if err != nil {
-				return n, fmt.Errorf("%s: cannot open with the old key: %w", t.table, err)
+				return n, fmt.Errorf("%s.%s: %w", c.table, c.col, err)
 			}
-			sealed, err := newBox.Seal(plain)
-			if err != nil {
-				return n, err
-			}
-			if _, err := tx.ExecContext(ctx, `UPDATE `+t.table+` SET `+t.col+` = $2 WHERE `+t.id+`::text = $1`, it.id, sealed); err != nil {
+			if err := writeSealed(ctx, tx, c, v.id, sealed); err != nil {
 				return n, err
 			}
 			n++
 		}
+	}
+	m, err := transformPolicyAccounts(ctx, tx, rekey)
+	n += m
+	if err != nil {
+		return n, err
 	}
 	var sk sql.NullString
 	if err := tx.QueryRowContext(ctx, `SELECT value->>'signing_key_pem' FROM settings WHERE key = $1`, settingsKey).Scan(&sk); err == nil && sk.Valid && sk.String != "" {

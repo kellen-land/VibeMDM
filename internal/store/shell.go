@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/vibemdm/vibemdm/internal/db"
@@ -24,10 +25,18 @@ func (s *Store) MarkShellConnected(ctx context.Context, id string) error {
 }
 
 // CloseShellSession finalizes a session with counters and transcript.
+// Raw PTY output may hold NUL bytes or invalid UTF-8, which a TEXT column rejects; it is cleaned
+// first so the record can always be written.
 func (s *Store) CloseShellSession(ctx context.Context, id, status, reason, transcript string, in, out int64) error {
-	_, err := s.DB.ExecContext(ctx, `UPDATE shell_sessions SET status=$2, reason=$3, transcript=$4, bytes_in=$5, bytes_out=$6, ended_at=now()
-		WHERE id=$1 AND ended_at IS NULL`, id, status, reason, transcript, in, out)
-	return err
+	res, err := s.DB.ExecContext(ctx, `UPDATE shell_sessions SET status=$2, reason=$3, transcript=$4, bytes_in=$5, bytes_out=$6, ended_at=now()
+		WHERE id=$1 AND ended_at IS NULL`, id, status, reason, cleanText(transcript), in, out)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("shell session %s was already closed; transcript not recorded", id)
+	}
+	return nil
 }
 
 // ActiveShellCount returns the number of pending/active sessions for a computer.
@@ -85,10 +94,12 @@ func (s *Store) GetShellTranscript(ctx context.Context, id string) (model.ShellS
 	return ss, transcript, nil
 }
 
-// ExpireStaleShellSessions closes sessions that never finalized.
+// ExpireStaleShellSessions closes sessions that never finalized. Sessions may last up to 4 hours
+// (shell.MaxSessionDuration), so only rows older than that are abandoned; expiring a live one would drop
+// its transcript and free the one-shell-per-Mac slot while it still runs.
 func (s *Store) ExpireStaleShellSessions(ctx context.Context) {
 	s.DB.ExecContext(ctx, `UPDATE shell_sessions SET status='error', reason='server restarted or session abandoned', ended_at=now()
-		WHERE status IN ('pending','active') AND started_at < now() - interval '1 hour'`)
+		WHERE status IN ('pending','active') AND started_at < now() - interval '4 hours 5 minutes'`)
 }
 
 var _ = time.Now

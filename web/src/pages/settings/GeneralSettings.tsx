@@ -206,7 +206,7 @@ export function GeneralSettings({ section = 'general' }: { section?: GeneralSect
           <CardHeader title="Remote shell" description="Interactive terminal access to online Macs from the console." actions={form.remote_shell_enabled ? <Badge tone="good" dot>Enabled</Badge> : <Badge>Disabled</Badge>} />
           <CardBody className="flex flex-col gap-5">
             <Alert tone="warning" title="High-privilege feature">
-              Enabling remote shell grants administrators an interactive <strong>root</strong> shell to any agent-enrolled Mac that is currently online. Every keystroke and all output is recorded to a session transcript visible under Activity. Only enable this if your team is authorized to use it.
+              Enabling remote shell grants administrators an interactive <strong>root</strong> shell to any agent-enrolled Mac that is currently online. All terminal output is recorded to a session transcript visible under Activity (input the shell does not echo, such as passwords, is not recorded). Only enable this if your team is authorized to use it.
             </Alert>
             <Toggle
               checked={form.remote_shell_enabled}
