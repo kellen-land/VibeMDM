@@ -22,6 +22,25 @@ that runs scripts and policies on the Mac.
                                             └─────────────┘
 ```
 
+## Screenshots
+
+![Dashboard: fleet health, macOS versions, models and policy outcomes](docs/images/dashboard.webp)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/computers.webp" alt="Computers list with MDM and agent status"><br><sub><b>Computers</b>: inventory at a glance, MDM and agent status per Mac</sub></td>
+    <td width="50%"><img src="docs/images/computer.webp" alt="Computer details: identity and management status"><br><sub><b>Computer details</b>: hardware, security, apps, profiles and history</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/smart-group.webp" alt="Smart group criteria builder"><br><sub><b>Smart groups</b>: Jamf-style criteria builder with live preview</sub></td>
+    <td><img src="docs/images/policy.webp" alt="Policy editor with triggers and execution frequency"><br><sub><b>Policies</b>: triggers, frequency, scope, scripts and packages</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/mobile-device.webp" alt="iPhone details in the Mobile Devices area"><br><sub><b>Mobile devices</b>: iPhone and iPad inventory and commands</sub></td>
+    <td valign="top"><sub>Captured from a local server populated by <code>vibemdm-sim</code> (simulated Macs and iPhones, no real devices).</sub></td>
+  </tr>
+</table>
+
 ## Features
 
 | Area | What you get |
