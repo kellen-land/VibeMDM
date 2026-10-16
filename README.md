@@ -37,7 +37,6 @@ that runs scripts and policies on the Mac.
   </tr>
   <tr>
     <td><img src="docs/images/mobile-device.webp" alt="iPhone details in the Mobile Devices area"><br><sub><b>Mobile devices</b>: iPhone and iPad inventory and commands</sub></td>
-    <td valign="top"><sub>Captured from a local server populated by <code>vibemdm-sim</code> (simulated Macs and iPhones, no real devices).</sub></td>
   </tr>
 </table>
 
