@@ -231,6 +231,7 @@ func New(ctx context.Context, cfg *config.Config, logger *slog.Logger) (*Server,
 	// Health: misconfiguration detection, remediation and self-healing.
 	s.health = health.NewEngine(health.Builtin(health.Deps{
 		St: st, Cmdr: commander, EncryptionEnabled: box.Enabled(), Wake: notifier.Notify, AgentDir: cfg.AgentDir, Rescan: s.compliance.Rescan,
+		CloseShells: shellHub.CloseAll,
 		InstallAgent: func(ctx context.Context, id string) error {
 			c, err := st.GetComputer(ctx, id)
 			if err != nil {

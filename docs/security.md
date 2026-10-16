@@ -145,7 +145,8 @@ The Health page flags several of these automatically: no HTTPS, no encryption ke
   - one live shell per Mac, enforced by the database;
   - a configurable idle timeout;
   - a hard 4-hour maximum per session.
-- **Turning it off** immediately ends every open shell.
+- **Turning it off** immediately ends every open shell, whether from Settings or the Health fix.
+- **Transcripts** record terminal output, not keystrokes; see [remote-shell.md](remote-shell.md).
 - **Device-side veto:** if the root-owned file `/Library/Application Support/VibeMDM/disable-remote-shell`
   exists, the Mac refuses all shells regardless of server settings.
 
